@@ -11,6 +11,7 @@
   },
   "scripts": {},
   "dependencies": {
+    "@fal-ai/client": "^1.8.3",
     "@ig/auth": "workspace:*",
     "@ig/db": "workspace:*",
     "@ig/env": "workspace:*",
@@ -19,6 +20,8 @@
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
     "dotenv": "catalog:",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.11.4",
     "zod": "catalog:"
   },
   "devDependencies": {

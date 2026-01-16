@@ -1,4 +1,3 @@
-import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createContext } from "@ig/api/context";
 import { appRouter } from "@ig/api/routers/index";
@@ -9,10 +8,12 @@ import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
-import { streamText, convertToModelMessages, wrapLanguageModel } from "ai";
+import { streamText, convertToModelMessages } from "ai";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+
+import { falWebhook } from "./webhooks/fal";
 
 const app = new Hono();
 
@@ -26,6 +27,8 @@ app.use(
     credentials: true,
   }),
 );
+
+app.route("/webhooks/fal", falWebhook);
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
@@ -80,12 +83,8 @@ app.post("/ai", async (c) => {
   const google = createGoogleGenerativeAI({
     apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
   });
-  const model = wrapLanguageModel({
-    model: google("gemini-2.5-flash"),
-    middleware: devToolsMiddleware(),
-  });
   const result = streamText({
-    model,
+    model: google("gemini-2.5-flash"),
     messages: await convertToModelMessages(uiMessages),
   });
 
