@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Always read @VISION.md for a high level understanding of our project.
 
-- `apps/server/` is currently our main focus, along with its supporting packages.
-- `apps/web/` will become our admin console UI.
+- `apps/server/` is the main backend service.
+- `apps/web/` will become our admin console UI, which should be purely developer focused, utilising the server's APIs for artifact/job obervability and management, and can also have a basic generation playground.
 
 ## Commands
 

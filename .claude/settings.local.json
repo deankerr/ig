@@ -5,7 +5,11 @@
       "Bash(bun add:*)",
       "Bash(bun run check-types:*)",
       "WebFetch(domain:fal.ai)",
-      "Bash(bun run deploy:*)"
+      "Bash(bun run deploy:*)",
+      "WebFetch(domain:orpc.unnoq.com)",
+      "WebFetch(domain:orpc.dev)",
+      "Bash(bunx shadcn@latest add dialog:*)",
+      "Bash(bun run check:*)"
     ]
   }
 }

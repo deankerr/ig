@@ -38,17 +38,14 @@ Consumers include traditional web apps, Discord bots, CLI tools - anything I bui
 ig is deliberately limited in scope:
 
 - **Not multi-user** - no auth, no permissions, no tenancy. Consumers handle their own users.
-- **Not a UI** - API only. Admin console (ig-console) is a separate package.
 - **Not a workflow engine** - single inference requests only. Chaining is consumer's job.
 - **Not real-time** - async by nature. Consumers poll or wait for completion.
 
-## Future Possibilities
+## Hypothetical Consumer Apps
 
-These are separate concerns, potentially separate packages:
-
-- **ig-console** - Admin UI, gallery, inference playground
 - **Semantic search** - Embeddings, vector storage, similarity queries
-- **Cost tracking** - Usage aggregation, budgets, alerts
+- **Multi-User Generative AI App** - Handles all of the user management aspects
+- **Discord bot** - Uses tags to group by channel, user, etc.
 
 ## fal.ai
 
