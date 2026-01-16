@@ -1,0 +1,3 @@
+{
+  "extends": "@ig/config/tsconfig.base.json"
+}

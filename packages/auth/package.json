@@ -1,0 +1,24 @@
+{
+  "name": "@ig/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@ig/db": "workspace:*",
+    "@ig/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@ig/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
