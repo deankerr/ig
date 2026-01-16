@@ -2,6 +2,8 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createContext } from "@ig/api/context";
 import { appRouter } from "@ig/api/routers/index";
 import { auth } from "@ig/auth";
+import { db } from "@ig/db";
+import { artifacts } from "@ig/db/schema";
 import { env } from "@ig/env/server";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
@@ -9,6 +11,7 @@ import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { streamText, convertToModelMessages } from "ai";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -29,6 +32,35 @@ app.use(
 );
 
 app.route("/webhooks/fal", falWebhook);
+
+app.get("/artifacts/:id/file", async (c) => {
+  const id = c.req.param("id");
+
+  const result = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1);
+  const artifact = result[0];
+
+  if (!artifact) {
+    return c.json({ error: "Artifact not found" }, 404);
+  }
+
+  if (artifact.status !== "ready") {
+    return c.json({ error: "Artifact not ready", status: artifact.status }, 400);
+  }
+
+  const r2Key = `artifacts/${id}`;
+  const object = await env.ARTIFACTS_BUCKET.get(r2Key);
+
+  if (!object) {
+    return c.json({ error: "File not found in storage" }, 404);
+  }
+
+  return new Response(object.body, {
+    headers: {
+      "Content-Type": artifact.contentType ?? "application/octet-stream",
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
+});
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 

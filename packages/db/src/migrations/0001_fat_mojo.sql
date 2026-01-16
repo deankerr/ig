@@ -9,7 +9,7 @@ CREATE TABLE `artifacts` (
 	`error_code` text,
 	`error_message` text,
 	`fal_request_id` text,
-	`fal_metrics` text,
+	`fal_output` text,
 	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
 	`completed_at` integer
 );

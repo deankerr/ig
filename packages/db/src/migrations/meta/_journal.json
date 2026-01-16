@@ -15,6 +15,13 @@
       "when": 1768572203275,
       "tag": "0001_fat_mojo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1768580000000,
+      "tag": "0002_rename_fal_output",
+      "breakpoints": true
     }
   ]
 }

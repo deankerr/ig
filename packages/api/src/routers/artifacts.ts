@@ -2,6 +2,7 @@ import { fal } from "@fal-ai/client";
 import { db } from "@ig/db";
 import { artifacts } from "@ig/db/schema";
 import { and, desc, eq, lt } from "drizzle-orm";
+import { v7 as uuidv7 } from "uuid";
 
 import { publicProcedure } from "../index";
 import {
@@ -13,24 +14,9 @@ import {
   updateTagsInputSchema,
 } from "../schemas/artifacts";
 
-function generateUuidv7(): string {
-  const timestamp = Date.now();
-  const timestampHex = timestamp.toString(16).padStart(12, "0");
-  const randomBytes = crypto.getRandomValues(new Uint8Array(10));
-  const randomHex = Array.from(randomBytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-
-  // UUIDv7 format: tttttttt-tttt-7xxx-yxxx-xxxxxxxxxxxx
-  const uuid =
-    `${timestampHex.slice(0, 8)}-${timestampHex.slice(8, 12)}-7${randomHex.slice(0, 3)}-${(0x80 | (parseInt(randomHex.slice(3, 5), 16) & 0x3f)).toString(16).padStart(2, "0")}${randomHex.slice(5, 7)}-${randomHex.slice(7, 19)}`;
-
-  return uuid;
-}
-
 export const artifactsRouter = {
   create: publicProcedure.input(createArtifactInputSchema).handler(async ({ input, context }) => {
-    const id = generateUuidv7();
+    const id = uuidv7();
 
     // Insert artifact with creating status
     await db.insert(artifacts).values({
@@ -57,6 +43,7 @@ export const artifactsRouter = {
       .set({ falRequestId: result.request_id })
       .where(eq(artifacts.id, id));
 
+    console.log('artifact_created', { id, endpoint: input.endpoint, requestId: result.request_id });
     return { id, requestId: result.request_id };
   }),
 
@@ -153,7 +140,22 @@ export const artifactsRouter = {
     // Delete from database
     await db.delete(artifacts).where(eq(artifacts.id, input.id));
 
+    console.log('artifact_deleted', { id: input.id });
     return { deleted: true };
+  }),
+
+  listTags: publicProcedure.handler(async () => {
+    const results = await db.select({ tags: artifacts.tags }).from(artifacts);
+
+    // Aggregate all unique tags
+    const tagSet = new Set<string>();
+    for (const row of results) {
+      for (const tag of row.tags) {
+        tagSet.add(tag);
+      }
+    }
+
+    return { tags: [...tagSet].sort() };
   }),
 
   retry: publicProcedure.input(retryArtifactInputSchema).handler(async ({ input, context }) => {
@@ -164,7 +166,7 @@ export const artifactsRouter = {
       throw new Error("Artifact not found");
     }
 
-    const id = generateUuidv7();
+    const id = uuidv7();
 
     // Create new artifact with same input
     await db.insert(artifacts).values({
@@ -190,6 +192,7 @@ export const artifactsRouter = {
       .set({ falRequestId: result.request_id })
       .where(eq(artifacts.id, id));
 
+    console.log('artifact_retried', { id, originalId: input.id, endpoint: original.endpoint, requestId: result.request_id });
     return { id, requestId: result.request_id, originalId: input.id };
   }),
 };

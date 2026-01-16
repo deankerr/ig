@@ -14,7 +14,7 @@ export const artifacts = sqliteTable(
     errorCode: text("error_code"),
     errorMessage: text("error_message"),
     falRequestId: text("fal_request_id"),
-    falMetrics: text("fal_metrics", { mode: "json" }).$type<Record<string, unknown>>(),
+    falOutput: text("fal_output", { mode: "json" }).$type<Record<string, unknown>>(),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),

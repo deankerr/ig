@@ -3,7 +3,9 @@
     "allow": [
       "mcp__fal__SearchFal",
       "Bash(bun add:*)",
-      "Bash(bun run check-types:*)"
+      "Bash(bun run check-types:*)",
+      "WebFetch(domain:fal.ai)",
+      "Bash(bun run deploy:*)"
     ]
   }
 }

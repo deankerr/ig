@@ -1,137 +1,179 @@
-import { db } from "@ig/db";
-import { artifacts } from "@ig/db/schema";
-import { env } from "@ig/env/server";
-import { eq } from "drizzle-orm";
-import { Hono } from "hono";
+import type { WebHookResponse } from '@fal-ai/client'
+import { db } from '@ig/db'
+import { artifacts } from '@ig/db/schema'
+import { env } from '@ig/env/server'
+import { eq } from 'drizzle-orm'
+import { Hono } from 'hono'
 
-type FalImage = {
-  url: string;
-  width?: number;
-  height?: number;
-  content_type?: string;
-};
+type FalFile = {
+  url: string
+  content_type?: string
+}
 
-type FalWebhookPayload =
-  | {
-      status: "OK";
-      request_id: string;
-      payload: {
-        images?: FalImage[];
-        image?: FalImage;
-        timings?: Record<string, number>;
-        seed?: number;
-        [key: string]: unknown;
-      };
+function findFileInPayload(payload: Record<string, unknown>): FalFile | null {
+  // Common field names for file outputs
+  const fileFields = ['images', 'image', 'video', 'audio', 'audio_url']
+
+  for (const field of fileFields) {
+    const value = payload[field]
+
+    // Array of files - take first
+    if (Array.isArray(value) && value[0]?.url) {
+      return value[0] as FalFile
     }
-  | {
-      status: "ERROR";
-      request_id: string;
-      error: string;
-      payload?: unknown;
-    };
 
-export const falWebhook = new Hono();
+    // Single file object
+    if (value && typeof value === 'object' && 'url' in value) {
+      return value as FalFile
+    }
+  }
 
-falWebhook.post("/", async (c) => {
-  const artifactId = c.req.query("artifact_id");
+  return null
+}
+
+function findTextInPayload(payload: Record<string, unknown>): string | null {
+  // Common field names for text outputs
+  const textFields = ['output', 'text']
+
+  for (const field of textFields) {
+    const value = payload[field]
+    if (typeof value === 'string') {
+      return value
+    }
+  }
+
+  return null
+}
+
+export const falWebhook = new Hono()
+
+falWebhook.post('/', async (c) => {
+  const artifactId = c.req.query('artifact_id')
 
   if (!artifactId) {
-    console.error("Webhook received without artifact_id");
-    return c.json({ error: "Missing artifact_id" }, 400);
+    console.error('Webhook received without artifact_id')
+    return c.json({ error: 'Missing artifact_id' }, 400)
   }
 
-  const body = (await c.req.json()) as FalWebhookPayload;
-  console.table({ event: "fal_webhook_received", artifactId, status: body.status, requestId: body.request_id });
+  const body = (await c.req.json()) as WebHookResponse
+  console.log('fal_webhook_received', {
+    artifactId,
+    status: body.status,
+    requestId: body.request_id,
+  })
 
   // Find the artifact
-  const existing = await db.select().from(artifacts).where(eq(artifacts.id, artifactId)).limit(1);
+  const existing = await db.select().from(artifacts).where(eq(artifacts.id, artifactId)).limit(1)
 
   if (existing.length === 0) {
-    console.error("Artifact not found", { artifactId });
-    return c.json({ error: "Artifact not found" }, 404);
+    console.error('Artifact not found', { artifactId })
+    return c.json({ error: 'Artifact not found' }, 404)
   }
 
-  if (body.status === "ERROR") {
-    // Handle error case
+  if (body.status === 'ERROR') {
     await db
       .update(artifacts)
       .set({
-        status: "failed",
-        errorCode: "FAL_ERROR",
+        status: 'failed',
+        errorCode: 'FAL_ERROR',
         errorMessage: body.error,
         completedAt: new Date(),
+        falOutput: body.payload as Record<string, unknown>,
       })
-      .where(eq(artifacts.id, artifactId));
+      .where(eq(artifacts.id, artifactId))
 
-    console.table({ event: "artifact_failed", artifactId, error: body.error });
-    return c.json({ ok: true });
+    console.log('artifact_failed', { artifactId, error: body.error })
+    return c.json({ ok: true })
   }
 
-  // Handle success case
-  const payload = body.payload;
+  const payload = body.payload as Record<string, unknown>
 
-  // Get the first image from the response (different endpoints use different keys)
-  const image = payload.image ?? payload.images?.[0];
+  // Try to find a file URL in the payload
+  const file = findFileInPayload(payload)
 
-  if (!image?.url) {
+  if (file) {
+    const fileResponse = await fetch(file.url)
+
+    if (!fileResponse.ok) {
+      await db
+        .update(artifacts)
+        .set({
+          status: 'failed',
+          errorCode: 'FETCH_FAILED',
+          errorMessage: `Failed to fetch file: ${fileResponse.status}`,
+          completedAt: new Date(),
+          falOutput: payload,
+        })
+        .where(eq(artifacts.id, artifactId))
+
+      console.error('Failed to fetch file from fal CDN', {
+        artifactId,
+        url: file.url,
+        status: fileResponse.status,
+      })
+      return c.json({ ok: true })
+    }
+
+    const fileBuffer = await fileResponse.arrayBuffer()
+    const contentType = file.content_type ?? 'application/octet-stream'
+
+    const r2Key = `artifacts/${artifactId}`
+    await env.ARTIFACTS_BUCKET.put(r2Key, fileBuffer, {
+      httpMetadata: { contentType },
+    })
+
     await db
       .update(artifacts)
       .set({
-        status: "failed",
-        errorCode: "NO_IMAGE",
-        errorMessage: "No image in response payload",
+        status: 'ready',
+        outputUrl: `r2://${r2Key}`,
+        contentType,
         completedAt: new Date(),
-        falMetrics: payload.timings ? { timings: payload.timings, seed: payload.seed } : undefined,
+        falOutput: payload,
       })
-      .where(eq(artifacts.id, artifactId));
+      .where(eq(artifacts.id, artifactId))
 
-    console.error("No image in response", { artifactId, payload });
-    return c.json({ ok: true });
+    console.log('artifact_ready', { artifactId, contentType, r2Key })
+    return c.json({ ok: true })
   }
 
-  // Fetch the image from fal CDN
-  const imageResponse = await fetch(image.url);
+  // Try to find text output
+  const text = findTextInPayload(payload)
 
-  if (!imageResponse.ok) {
+  if (text) {
+    const r2Key = `artifacts/${artifactId}`
+    const textBuffer = new TextEncoder().encode(text)
+    await env.ARTIFACTS_BUCKET.put(r2Key, textBuffer, {
+      httpMetadata: { contentType: 'text/plain; charset=utf-8' },
+    })
+
     await db
       .update(artifacts)
       .set({
-        status: "failed",
-        errorCode: "FETCH_FAILED",
-        errorMessage: `Failed to fetch image: ${imageResponse.status}`,
+        status: 'ready',
+        outputUrl: `r2://${r2Key}`,
+        contentType: 'text/plain; charset=utf-8',
         completedAt: new Date(),
+        falOutput: payload,
       })
-      .where(eq(artifacts.id, artifactId));
+      .where(eq(artifacts.id, artifactId))
 
-    console.error("Failed to fetch image from fal CDN", { artifactId, url: image.url, status: imageResponse.status });
-    return c.json({ ok: true });
+    console.log('artifact_ready', { artifactId, contentType: 'text/plain', r2Key })
+    return c.json({ ok: true })
   }
 
-  const imageBuffer = await imageResponse.arrayBuffer();
-  const contentType = image.content_type ?? imageResponse.headers.get("content-type") ?? "image/png";
-
-  // Upload to R2
-  const r2Key = `artifacts/${artifactId}`;
-  await env.ARTIFACTS_BUCKET.put(r2Key, imageBuffer, {
-    httpMetadata: { contentType },
-  });
-
-  // Generate the public URL (assuming public R2 bucket or custom domain)
-  // For now, we'll store the R2 key and the outputUrl can be configured later
-  const outputUrl = `r2://${r2Key}`;
-
-  // Update artifact to ready
+  // Unknown output format - store payload for debugging
   await db
     .update(artifacts)
     .set({
-      status: "ready",
-      outputUrl,
-      contentType,
+      status: 'failed',
+      errorCode: 'UNKNOWN_OUTPUT',
+      errorMessage: 'Could not find file or text output in payload',
       completedAt: new Date(),
-      falMetrics: { timings: payload.timings, seed: payload.seed, width: image.width, height: image.height },
+      falOutput: payload,
     })
-    .where(eq(artifacts.id, artifactId));
+    .where(eq(artifacts.id, artifactId))
 
-  console.table({ event: "artifact_ready", artifactId, contentType, r2Key });
-  return c.json({ ok: true });
-});
+  console.error('Unknown output format', { artifactId, payloadKeys: Object.keys(payload) })
+  return c.json({ ok: true })
+})
