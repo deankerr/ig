@@ -9,7 +9,9 @@ Always read @VISION.md for a high level understanding of our project.
 
 ## Status
 
-- This project is the early, experimental stage. There is no production depployment.
+- This project is the early, experimental stage. There is no production deployment. No data or outputs need to be preserved.
+- Now is the time to make breaking changes - not after we've deployed to production. Never consider backwards compatibility.
+- There is a live development deployment which should be use for any demonstrations, as we can't receive webhooks locally.
 
 ## Commands
 

@@ -11,7 +11,8 @@
       "Bash(bunx shadcn@latest add dialog:*)",
       "Bash(bun run check:*)",
       "WebFetch(domain:www.better-t-stack.dev)",
-      "WebFetch(domain:alchemy.run)"
+      "WebFetch(domain:alchemy.run)",
+      "Bash(grep:*)"
     ]
   }
 }

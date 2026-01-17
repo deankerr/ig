@@ -8,149 +8,164 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as PlaygroundRouteImport } from "./routes/playground";
-import { Route as LoginRouteImport } from "./routes/login";
-import { Route as ArtifactsRouteImport } from "./routes/artifacts";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as ArtifactsIndexRouteImport } from "./routes/artifacts.index";
-import { Route as ArtifactsIdRouteImport } from "./routes/artifacts.$id";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as PlaygroundRouteImport } from './routes/playground'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ArtifactsRouteImport } from './routes/artifacts'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as ArtifactsIndexRouteImport } from './routes/artifacts.index'
+import { Route as ArtifactsIdRouteImport } from './routes/artifacts.$id'
 
 const PlaygroundRoute = PlaygroundRouteImport.update({
-  id: "/playground",
-  path: "/playground",
+  id: '/playground',
+  path: '/playground',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const LoginRoute = LoginRouteImport.update({
-  id: "/login",
-  path: "/login",
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ArtifactsRoute = ArtifactsRouteImport.update({
-  id: "/artifacts",
-  path: "/artifacts",
+  id: '/artifacts',
+  path: '/artifacts',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ArtifactsIndexRoute = ArtifactsIndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => ArtifactsRoute,
-} as any);
+} as any)
 const ArtifactsIdRoute = ArtifactsIdRouteImport.update({
-  id: "/$id",
-  path: "/$id",
+  id: '/$id',
+  path: '/$id',
   getParentRoute: () => ArtifactsRoute,
-} as any);
+} as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/artifacts": typeof ArtifactsRouteWithChildren;
-  "/login": typeof LoginRoute;
-  "/playground": typeof PlaygroundRoute;
-  "/artifacts/$id": typeof ArtifactsIdRoute;
-  "/artifacts/": typeof ArtifactsIndexRoute;
+  '/': typeof IndexRoute
+  '/artifacts': typeof ArtifactsRouteWithChildren
+  '/login': typeof LoginRoute
+  '/playground': typeof PlaygroundRoute
+  '/artifacts/$id': typeof ArtifactsIdRoute
+  '/artifacts/': typeof ArtifactsIndexRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/login": typeof LoginRoute;
-  "/playground": typeof PlaygroundRoute;
-  "/artifacts/$id": typeof ArtifactsIdRoute;
-  "/artifacts": typeof ArtifactsIndexRoute;
+  '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/playground': typeof PlaygroundRoute
+  '/artifacts/$id': typeof ArtifactsIdRoute
+  '/artifacts': typeof ArtifactsIndexRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/artifacts": typeof ArtifactsRouteWithChildren;
-  "/login": typeof LoginRoute;
-  "/playground": typeof PlaygroundRoute;
-  "/artifacts/$id": typeof ArtifactsIdRoute;
-  "/artifacts/": typeof ArtifactsIndexRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/artifacts': typeof ArtifactsRouteWithChildren
+  '/login': typeof LoginRoute
+  '/playground': typeof PlaygroundRoute
+  '/artifacts/$id': typeof ArtifactsIdRoute
+  '/artifacts/': typeof ArtifactsIndexRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/artifacts" | "/login" | "/playground" | "/artifacts/$id" | "/artifacts/";
-  fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/login" | "/playground" | "/artifacts/$id" | "/artifacts";
-  id: "__root__" | "/" | "/artifacts" | "/login" | "/playground" | "/artifacts/$id" | "/artifacts/";
-  fileRoutesById: FileRoutesById;
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/artifacts'
+    | '/login'
+    | '/playground'
+    | '/artifacts/$id'
+    | '/artifacts/'
+  fileRoutesByTo: FileRoutesByTo
+  to: '/' | '/login' | '/playground' | '/artifacts/$id' | '/artifacts'
+  id:
+    | '__root__'
+    | '/'
+    | '/artifacts'
+    | '/login'
+    | '/playground'
+    | '/artifacts/$id'
+    | '/artifacts/'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  ArtifactsRoute: typeof ArtifactsRouteWithChildren;
-  LoginRoute: typeof LoginRoute;
-  PlaygroundRoute: typeof PlaygroundRoute;
+  IndexRoute: typeof IndexRoute
+  ArtifactsRoute: typeof ArtifactsRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  PlaygroundRoute: typeof PlaygroundRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/playground": {
-      id: "/playground";
-      path: "/playground";
-      fullPath: "/playground";
-      preLoaderRoute: typeof PlaygroundRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/login": {
-      id: "/login";
-      path: "/login";
-      fullPath: "/login";
-      preLoaderRoute: typeof LoginRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/artifacts": {
-      id: "/artifacts";
-      path: "/artifacts";
-      fullPath: "/artifacts";
-      preLoaderRoute: typeof ArtifactsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/artifacts/": {
-      id: "/artifacts/";
-      path: "/";
-      fullPath: "/artifacts/";
-      preLoaderRoute: typeof ArtifactsIndexRouteImport;
-      parentRoute: typeof ArtifactsRoute;
-    };
-    "/artifacts/$id": {
-      id: "/artifacts/$id";
-      path: "/$id";
-      fullPath: "/artifacts/$id";
-      preLoaderRoute: typeof ArtifactsIdRouteImport;
-      parentRoute: typeof ArtifactsRoute;
-    };
+    '/playground': {
+      id: '/playground'
+      path: '/playground'
+      fullPath: '/playground'
+      preLoaderRoute: typeof PlaygroundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/artifacts': {
+      id: '/artifacts'
+      path: '/artifacts'
+      fullPath: '/artifacts'
+      preLoaderRoute: typeof ArtifactsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/artifacts/': {
+      id: '/artifacts/'
+      path: '/'
+      fullPath: '/artifacts/'
+      preLoaderRoute: typeof ArtifactsIndexRouteImport
+      parentRoute: typeof ArtifactsRoute
+    }
+    '/artifacts/$id': {
+      id: '/artifacts/$id'
+      path: '/$id'
+      fullPath: '/artifacts/$id'
+      preLoaderRoute: typeof ArtifactsIdRouteImport
+      parentRoute: typeof ArtifactsRoute
+    }
   }
 }
 
 interface ArtifactsRouteChildren {
-  ArtifactsIdRoute: typeof ArtifactsIdRoute;
-  ArtifactsIndexRoute: typeof ArtifactsIndexRoute;
+  ArtifactsIdRoute: typeof ArtifactsIdRoute
+  ArtifactsIndexRoute: typeof ArtifactsIndexRoute
 }
 
 const ArtifactsRouteChildren: ArtifactsRouteChildren = {
   ArtifactsIdRoute: ArtifactsIdRoute,
   ArtifactsIndexRoute: ArtifactsIndexRoute,
-};
+}
 
-const ArtifactsRouteWithChildren = ArtifactsRoute._addFileChildren(ArtifactsRouteChildren);
+const ArtifactsRouteWithChildren = ArtifactsRoute._addFileChildren(
+  ArtifactsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArtifactsRoute: ArtifactsRouteWithChildren,
   LoginRoute: LoginRoute,
   PlaygroundRoute: PlaygroundRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()

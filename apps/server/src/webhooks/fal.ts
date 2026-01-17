@@ -5,6 +5,8 @@ import { env } from "@ig/env/server";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 
+import { verifyFalWebhook } from "./verify";
+
 type FalFile = {
   url: string;
   content_type?: string;
@@ -48,6 +50,16 @@ function findTextInPayload(payload: Record<string, unknown>): string | null {
 export const falWebhook = new Hono();
 
 falWebhook.post("/", async (c) => {
+  // Get raw body for signature verification
+  const rawBody = await c.req.arrayBuffer();
+
+  // Verify webhook signature
+  const verification = await verifyFalWebhook(c.req.raw.headers, rawBody);
+  if (!verification.valid) {
+    console.error("webhook_verification_failed", { error: verification.error });
+    return c.json({ error: "Invalid webhook signature" }, 401);
+  }
+
   const artifactId = c.req.query("artifact_id");
 
   if (!artifactId) {
@@ -55,7 +67,8 @@ falWebhook.post("/", async (c) => {
     return c.json({ error: "Missing artifact_id" }, 400);
   }
 
-  const body = (await c.req.json()) as WebHookResponse;
+  // Parse body from the raw bytes we already have
+  const body = JSON.parse(new TextDecoder().decode(rawBody)) as WebHookResponse;
   console.log("fal_webhook_received", {
     artifactId,
     status: body.status,
