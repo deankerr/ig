@@ -1,3 +1,12 @@
 {
-  "extends": "@ig/config/tsconfig.base.json"
+  "extends": "@ig/config/tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node", "@cloudflare/workers-types"]
+  },
+  "include": ["src/**/*.ts", "env.d.ts"]
 }

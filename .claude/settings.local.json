@@ -9,7 +9,9 @@
       "WebFetch(domain:orpc.unnoq.com)",
       "WebFetch(domain:orpc.dev)",
       "Bash(bunx shadcn@latest add dialog:*)",
-      "Bash(bun run check:*)"
+      "Bash(bun run check:*)",
+      "WebFetch(domain:www.better-t-stack.dev)",
+      "WebFetch(domain:alchemy.run)"
     ]
   }
 }

@@ -8,9 +8,7 @@
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server"
   },
   "dependencies": {
-    "@ai-sdk/devtools": "^0.0.2",
-    "@ai-sdk/google": "^3.0.1",
-    "@fal-ai/client": "^1.8.3",
+    "@fal-ai/client": "catalog:",
     "@ig/api": "workspace:*",
     "@ig/auth": "workspace:*",
     "@ig/db": "workspace:*",
@@ -18,11 +16,10 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
-    "ai": "catalog:",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
-    "drizzle-orm": "^0.45.1",
-    "hono": "^4.8.2",
+    "drizzle-orm": "catalog:",
+    "hono": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -1,4 +1,3 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createContext } from "@ig/api/context";
 import { appRouter } from "@ig/api/routers/index";
 import { auth } from "@ig/auth";
@@ -10,7 +9,6 @@ import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
-import { streamText, convertToModelMessages } from "ai";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -98,7 +96,7 @@ app.use("/*", async (c, next) => {
   }
 
   const apiResult = await apiHandler.handle(c.req.raw, {
-    prefix: "/api-reference",
+    prefix: "/api",
     context: context,
   });
 
@@ -107,20 +105,6 @@ app.use("/*", async (c, next) => {
   }
 
   await next();
-});
-
-app.post("/ai", async (c) => {
-  const body = await c.req.json();
-  const uiMessages = body.messages || [];
-  const google = createGoogleGenerativeAI({
-    apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
-  });
-  const result = streamText({
-    model: google("gemini-2.5-flash"),
-    messages: await convertToModelMessages(uiMessages),
-  });
-
-  return result.toUIMessageStreamResponse();
 });
 
 app.get("/", (c) => {

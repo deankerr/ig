@@ -7,6 +7,10 @@ Always read @VISION.md for a high level understanding of our project.
 - `apps/server/` is the main backend service.
 - `apps/web/` will become our admin console UI, which should be purely developer focused, utilising the server's APIs for artifact/job obervability and management, and can also have a basic generation playground.
 
+## Status
+
+- This project is the early, experimental stage. There is no production depployment.
+
 ## Commands
 
 ```bash

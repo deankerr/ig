@@ -91,7 +91,7 @@
     "typescript/prefer-as-const": "warn",
     "typescript/require-array-sort-compare": "warn",
     "typescript/restrict-template-expressions": "warn",
-    "typescript/triple-slash-reference": "warn",
+    "typescript/triple-slash-reference": "off",
     "typescript/unbound-method": "warn",
     "unicorn/no-await-in-promise-methods": "warn",
     "unicorn/no-empty-file": "warn",

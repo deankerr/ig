@@ -16,8 +16,10 @@
       "@orpc/openapi": "^1.12.2",
       "@orpc/zod": "^1.12.2",
       "better-auth": "^1.4.9",
-      "ai": "^6.0.3",
       "alchemy": "^0.82.1",
+      "hono": "^4.8.2",
+      "drizzle-orm": "^0.45.1",
+      "@fal-ai/client": "^1.8.3",
       "@libsql/client": "0.15.15",
       "libsql": "0.5.22",
       "@orpc/client": "^1.12.2"
