@@ -16,11 +16,13 @@ Always read @VISION.md for a high level understanding of our project.
 ## Development Environment
 
 **We use the remote Cloudflare deployment as our primary dev environment**, not local Miniflare. This is because:
+
 - Webhooks require a publicly accessible URL (fal.ai needs to call us back)
 - The local web app is configured to point at the remote server during local development
 - Local Miniflare is available but rarely used
 
 **Finding deployed URLs:**
+
 ```bash
 # Quick way - read from env files
 grep VITE_SERVER_URL apps/web/.env | cut -d= -f2
@@ -30,6 +32,7 @@ cd packages/infra && bun alchemy run | grep -E "Web|Server"
 ```
 
 **To interact with the deployed server directly:**
+
 ```bash
 # Get current server URL
 SERVER_URL=$(grep VITE_SERVER_URL apps/web/.env | cut -d= -f2)

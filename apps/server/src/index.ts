@@ -14,7 +14,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
-import { falWebhook } from "./webhooks/fal";
+import { falWebhook } from "./fal";
 
 const app = new Hono();
 
