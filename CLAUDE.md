@@ -117,12 +117,66 @@ Key concepts:
 - State stored locally in `.alchemy/` (can be git-ignored or committed)
 - `bun run dev` in infra starts local Miniflare with D1 + Workers
 
+## API Reference
+
+The server exposes oRPC endpoints at `/rpc/*` and OpenAPI-compatible REST at `/api/*`.
+
+**Authentication:** Mutations require `x-api-key` header. Queries are public.
+
+### Generations (oRPC: `/rpc/generations/*`)
+
+| Procedure | Auth | Description |
+|-----------|------|-------------|
+| `create` | API key | Submit generation to fal.ai queue |
+| `list` | Public | Paginated list with filters (status, endpoint, tags, cursor) |
+| `get` | Public | Get single generation by ID |
+| `updateTags` | API key | Add/remove tags on a generation |
+| `delete` | API key | Delete generation from D1 and R2 |
+| `regenerate` | API key | Clone a generation with same input |
+| `listTags` | Public | Get all unique tags |
+
+**Create input:**
+```typescript
+{ endpoint: string, input: Record<string, unknown>, tags?: string[] }
+```
+
+**List query params:**
+```typescript
+{ status?: "pending" | "ready" | "failed", endpoint?: string, tags?: string[], limit?: number, cursor?: string }
+```
+
+### Direct HTTP Endpoints
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/` | GET | Health check, returns "OK" |
+| `/generations/:id/file.:ext` | GET | Serve generation output file. Extension must match content type (e.g., `.png` for `image/png`). Returns 400 if mismatch. |
+| `/webhooks/fal` | POST | fal.ai webhook receiver (Ed25519 signature verified) |
+| `/api/auth/*` | GET/POST | Better-Auth endpoints |
+
+**Supported file extensions:** png, jpg, webp, gif, mp4, webm, mp3, wav, ogg, txt
+
+### Example Usage
+
+```bash
+# Create a generation (requires API key)
+curl -X POST $SERVER_URL/rpc/generations/create \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $API_KEY" \
+  -d '{"endpoint":"fal-ai/flux/schnell","input":{"prompt":"a cat"}}'
+
+# List generations
+curl "$SERVER_URL/rpc/generations/list?limit=10&status=ready"
+
+# Get file with extension (for embedding in IRC, etc.)
+curl "$SERVER_URL/generations/{id}/file.png"
+```
+
 ## Stack
 
 - **Frontend**: React 19, TanStack Router/Query/Form, Tailwind 4, shadcn/ui, next-themes
 - **Backend**: Hono, oRPC (type-safe RPC with OpenAPI)
 - **Database**: SQLite via Turso/LibSQL, Drizzle ORM
 - **Auth**: Better-Auth with Drizzle adapter
-- **AI**: Google Generative AI SDK, Vercel AI SDK (streaming)
 - **Infra**: Alchemy (TypeScript IaC for Cloudflare D1, Workers, Vite)
 - **Tooling**: Turborepo, Oxlint, Oxfmt, Lefthook (pre-commit hooks)

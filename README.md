@@ -1,86 +1,84 @@
 # ig
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, Hono, ORPC, and more.
+A microservice for generative AI inference, artifact storage, and retrieval. The shared backend for AI-powered apps.
 
-## Features
+## What It Does
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Router** - File-based routing with full type safety
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **shadcn/ui** - Reusable UI components
-- **Hono** - Lightweight, performant server framework
-- **oRPC** - End-to-end type-safe APIs with OpenAPI integration
-- **workers** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **SQLite/Turso** - Database engine
-- **Authentication** - Better-Auth
-- **Oxlint** - Oxlint + Oxfmt (linting & formatting)
-- **Turborepo** - Optimized monorepo build system
+- **Inference orchestration** via fal.ai - text-to-image, image-to-image, image-to-video, vision models
+- **Artifact storage** - outputs in R2, inputs and metadata in D1
+- **Full provenance** - every artifact retains input parameters, endpoint, timing, metrics
+- **Flexible tagging** - consumers define their own organization schemes
+- **Unified API** - same interface regardless of endpoint or modality
 
-## Getting Started
+See [VISION.md](VISION.md) for design philosophy and scope boundaries.
 
-First, install the dependencies:
+## Quick Start
 
 ```bash
 bun install
+bun run dev        # Start full stack via Alchemy
 ```
 
-## Database Setup
+- Web UI: http://localhost:3001
+- API: http://localhost:3000
 
-This project uses SQLite with Drizzle ORM.
+## API
 
-1. Start the local SQLite database (optional):
-   D1 local development and migrations are handled automatically by Alchemy during dev and deploy.
-
-2. Update your `.env` file in the `apps/server` directory with the appropriate connection details if needed.
-
-3. Apply the schema to your database:
+Submit a generation request, get an artifact back. The service handles async complexity via fal.ai webhooks.
 
 ```bash
-bun run db:push
+# Create a generation
+curl -X POST $SERVER_URL/rpc/generations/create \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $API_KEY" \
+  -d '{"endpoint":"fal-ai/flux/schnell","input":{"prompt":"a cat"}}'
+
+# List generations
+curl "$SERVER_URL/rpc/generations/list?status=ready"
+
+# Get output file (extension required for embedding in IRC clients, etc.)
+curl "$SERVER_URL/generations/{id}/file.png"
 ```
 
-Then, run the development server:
+**Endpoints:**
+- `POST /rpc/generations/create` - Submit to fal.ai queue (API key required)
+- `GET /rpc/generations/list` - Paginated list with filters
+- `GET /rpc/generations/get` - Get single generation
+- `POST /rpc/generations/updateTags` - Modify tags (API key required)
+- `POST /rpc/generations/delete` - Delete from D1 and R2 (API key required)
+- `POST /rpc/generations/regenerate` - Clone with same input (API key required)
+- `GET /generations/:id/file.:ext` - Serve output file
+
+## Commands
 
 ```bash
-bun run dev
+bun run dev           # Start full stack (server:3000, web:3001)
+bun run build         # Build all packages
+bun run check         # Lint + format (oxlint + oxfmt)
+bun run check-types   # TypeScript type checking
+bun run db:push       # Push Drizzle schema to D1
+bun run deploy        # Deploy to Cloudflare
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
-The API is running at [http://localhost:3000](http://localhost:3000).
+## Stack
 
-## Deployment (Cloudflare via Alchemy)
-
-- Dev: bun run dev
-- Deploy: bun run deploy
-- Destroy: bun run destroy
-
-For more details, see the guide on [Deploying to Cloudflare with Alchemy](https://www.better-t-stack.dev/docs/guides/cloudflare-alchemy).
-
-## Git Hooks and Formatting
-
-- Format and lint fix: `bun run check`
+- **Runtime**: Cloudflare Workers + D1 + R2
+- **API**: Hono + oRPC (type-safe RPC with OpenAPI)
+- **Database**: Drizzle ORM with SQLite
+- **AI Provider**: fal.ai (queue-based async with webhooks)
+- **Frontend**: React 19 + TanStack Router + Vite
+- **Infra**: Alchemy (TypeScript IaC)
 
 ## Project Structure
 
 ```
-ig/
-├── apps/
-│   ├── web/         # Frontend application (React + TanStack Router)
-│   └── server/      # Backend API (Hono, ORPC)
-├── packages/
-│   ├── api/         # API layer / business logic
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
+apps/
+  server/     → Hono API on Cloudflare Workers
+  web/        → Admin console UI (React + TanStack Router)
+packages/
+  api/        → oRPC procedures and business logic
+  auth/       → Better-Auth configuration
+  db/         → Drizzle schema and migrations
+  env/        → Environment validation (t3-oss/env)
+  infra/      → Alchemy infrastructure-as-code
 ```
-
-## Available Scripts
-
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run dev:server`: Start only the server
-- `bun run check-types`: Check TypeScript types across all apps
-- `bun run db:push`: Push schema changes to database
-- `bun run db:studio`: Open database studio UI
-- `bun run check`: Run Oxlint and Oxfmt
