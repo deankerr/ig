@@ -38,6 +38,7 @@ export const server = await Worker("server", {
     BETTER_AUTH_URL: alchemy.env.BETTER_AUTH_URL!,
     FAL_KEY: alchemy.secret.env.FAL_KEY!,
     WEBHOOK_URL: alchemy.env.WEBHOOK_URL!,
+    API_KEY: alchemy.secret.env.API_KEY!,
   },
   dev: {
     port: 3000,

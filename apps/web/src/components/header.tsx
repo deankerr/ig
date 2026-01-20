@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
+import { ApiKeySettings } from "./api-key-settings";
 import { ModeToggle } from "./mode-toggle";
 import UserMenu from "./user-menu";
 
@@ -23,6 +24,7 @@ export default function Header() {
           })}
         </nav>
         <div className="flex items-center gap-2">
+          <ApiKeySettings />
           <ModeToggle />
           <UserMenu />
         </div>

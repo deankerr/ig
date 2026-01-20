@@ -4,7 +4,7 @@ import { generations } from "@ig/db/schema";
 import { and, desc, eq, lt } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 
-import { publicProcedure } from "../index";
+import { apiKeyProcedure, publicProcedure } from "../index";
 import {
   createGenerationInputSchema,
   deleteGenerationInputSchema,
@@ -15,7 +15,7 @@ import {
 } from "../schemas/generations";
 
 export const generationsRouter = {
-  create: publicProcedure.input(createGenerationInputSchema).handler(async ({ input, context }) => {
+  create: apiKeyProcedure.input(createGenerationInputSchema).handler(async ({ input, context }) => {
     const id = uuidv7();
 
     // Insert generation with pending status
@@ -104,7 +104,7 @@ export const generationsRouter = {
     return result[0];
   }),
 
-  updateTags: publicProcedure.input(updateTagsInputSchema).handler(async ({ input }) => {
+  updateTags: apiKeyProcedure.input(updateTagsInputSchema).handler(async ({ input }) => {
     const existing = await db
       .select({ tags: generations.tags })
       .from(generations)
@@ -127,7 +127,7 @@ export const generationsRouter = {
     return { id: input.id, tags: newTags };
   }),
 
-  delete: publicProcedure.input(deleteGenerationInputSchema).handler(async ({ input, context }) => {
+  delete: apiKeyProcedure.input(deleteGenerationInputSchema).handler(async ({ input, context }) => {
     const existing = await db
       .select()
       .from(generations)
@@ -166,7 +166,7 @@ export const generationsRouter = {
     return { tags: [...tagSet].sort() };
   }),
 
-  regenerate: publicProcedure
+  regenerate: apiKeyProcedure
     .input(regenerateGenerationInputSchema)
     .handler(async ({ input, context }) => {
       const existing = await db
