@@ -54,16 +54,16 @@ function PlaygroundPage() {
         throw new Error("Invalid JSON input");
       }
 
-      return client.artifacts.create({
+      return client.generations.create({
         endpoint,
         input: parsedInput,
         tags,
       });
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["artifacts"] });
-      toast.success("Artifact created");
-      navigate({ to: "/artifacts/$id", params: { id: data.id } });
+      queryClient.invalidateQueries({ queryKey: ["generations"] });
+      toast.success("Generation created");
+      navigate({ to: "/generations/$id", params: { id: data.id } });
     },
     onError: (error) => {
       if (error.message === "Invalid JSON input") {

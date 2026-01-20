@@ -12,7 +12,7 @@ const db = await D1Database("database", {
   migrationsDir: "../../packages/db/src/migrations",
 });
 
-const artifactsBucket = await R2Bucket("artifacts");
+const generationsBucket = await R2Bucket("generations");
 
 export const web = await Vite("web", {
   cwd: "../../apps/web",
@@ -32,7 +32,7 @@ export const server = await Worker("server", {
   },
   bindings: {
     DB: db,
-    ARTIFACTS_BUCKET: artifactsBucket,
+    GENERATIONS_BUCKET: generationsBucket,
     CORS_ORIGIN: alchemy.env.CORS_ORIGIN!,
     BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
     BETTER_AUTH_URL: alchemy.env.BETTER_AUTH_URL!,

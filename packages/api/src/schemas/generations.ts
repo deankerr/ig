@@ -1,13 +1,13 @@
 import { z } from "zod";
 
-export const createArtifactInputSchema = z.object({
+export const createGenerationInputSchema = z.object({
   endpoint: z.string().min(1),
   input: z.record(z.string(), z.unknown()),
   tags: z.array(z.string()).optional().default([]),
 });
 
-export const listArtifactsQuerySchema = z.object({
-  status: z.enum(["creating", "ready", "failed"]).optional(),
+export const listGenerationsQuerySchema = z.object({
+  status: z.enum(["pending", "ready", "failed"]).optional(),
   endpoint: z.string().optional(),
   tags: z.array(z.string()).optional(),
   limit: z.number().int().min(1).max(100).optional().default(20),
@@ -20,15 +20,15 @@ export const updateTagsInputSchema = z.object({
   remove: z.array(z.string()).optional().default([]),
 });
 
-export const getArtifactInputSchema = z.object({
+export const getGenerationInputSchema = z.object({
   id: z.string().min(1),
 });
 
-export const deleteArtifactInputSchema = z.object({
+export const deleteGenerationInputSchema = z.object({
   id: z.string().min(1),
 });
 
-export const retryArtifactInputSchema = z.object({
+export const regenerateGenerationInputSchema = z.object({
   id: z.string().min(1),
   tags: z.array(z.string()).optional(),
 });

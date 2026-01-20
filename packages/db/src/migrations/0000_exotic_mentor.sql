@@ -50,4 +50,23 @@ CREATE TABLE `verification` (
 	`updated_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `verification_identifier_idx` ON `verification` (`identifier`);
+CREATE INDEX `verification_identifier_idx` ON `verification` (`identifier`);--> statement-breakpoint
+CREATE TABLE `generations` (
+	`id` text PRIMARY KEY NOT NULL,
+	`status` text NOT NULL,
+	`provider` text DEFAULT 'fal' NOT NULL,
+	`endpoint` text NOT NULL,
+	`input` text NOT NULL,
+	`tags` text DEFAULT '[]' NOT NULL,
+	`content_type` text,
+	`error_code` text,
+	`error_message` text,
+	`provider_request_id` text,
+	`provider_metadata` text,
+	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
+	`completed_at` integer
+);
+--> statement-breakpoint
+CREATE INDEX `idx_generations_created` ON `generations` (`created_at`);--> statement-breakpoint
+CREATE INDEX `idx_generations_status_created` ON `generations` (`status`,`created_at`);--> statement-breakpoint
+CREATE INDEX `idx_generations_provider_request_id` ON `generations` (`provider_request_id`);

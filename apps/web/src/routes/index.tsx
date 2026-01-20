@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { StatusBadge } from "@/components/artifacts/status-badge";
+import { StatusBadge } from "@/components/generations/status-badge";
 import { TimeAgo } from "@/components/time-ago";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -22,26 +22,26 @@ function StatusDashboard() {
   const healthCheck = useQuery(orpc.healthCheck.queryOptions());
 
   const recentQuery = useQuery({
-    queryKey: ["artifacts", "recent"],
-    queryFn: () => client.artifacts.list({ limit: 5 }),
+    queryKey: ["generations", "recent"],
+    queryFn: () => client.generations.list({ limit: 5 }),
   });
 
-  const creatingQuery = useQuery({
-    queryKey: ["artifacts", "creating"],
-    queryFn: () => client.artifacts.list({ status: "creating", limit: 100 }),
+  const pendingQuery = useQuery({
+    queryKey: ["generations", "pending"],
+    queryFn: () => client.generations.list({ status: "pending", limit: 100 }),
   });
 
   const failedQuery = useQuery({
-    queryKey: ["artifacts", "failed"],
-    queryFn: () => client.artifacts.list({ status: "failed", limit: 100 }),
+    queryKey: ["generations", "failed"],
+    queryFn: () => client.generations.list({ status: "failed", limit: 100 }),
   });
 
   const tagsQuery = useQuery({
-    queryKey: ["artifacts", "tags"],
-    queryFn: () => client.artifacts.listTags(),
+    queryKey: ["generations", "tags"],
+    queryFn: () => client.generations.listTags(),
   });
 
-  const creatingCount = creatingQuery.data?.items.length ?? 0;
+  const pendingCount = pendingQuery.data?.items.length ?? 0;
   const failedCount = failedQuery.data?.items.length ?? 0;
   const tagCount = tagsQuery.data?.tags.length ?? 0;
 
@@ -74,10 +74,10 @@ function StatusDashboard() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Creating</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-lg font-semibold">{creatingCount}</p>
+            <p className="text-lg font-semibold">{pendingCount}</p>
           </CardContent>
         </Card>
 
@@ -104,10 +104,10 @@ function StatusDashboard() {
 
       <div className="mb-6 flex gap-4">
         <Link
-          to="/artifacts"
+          to="/generations"
           className="inline-flex h-8 items-center justify-center rounded-none border border-border bg-background px-3 text-xs font-medium transition-colors hover:bg-muted"
         >
-          View All Artifacts
+          View All Generations
         </Link>
         <Link
           to="/playground"
@@ -119,7 +119,7 @@ function StatusDashboard() {
 
       <div className="rounded border">
         <div className="border-b px-4 py-2">
-          <h2 className="text-sm font-medium">Recent Artifacts</h2>
+          <h2 className="text-sm font-medium">Recent Generations</h2>
         </div>
         <Table>
           <TableHeader>
@@ -141,28 +141,28 @@ function StatusDashboard() {
             {recentQuery.data?.items.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} className="text-center text-muted-foreground">
-                  No artifacts yet
+                  No generations yet
                 </TableCell>
               </TableRow>
             )}
-            {recentQuery.data?.items.map((artifact) => (
-              <TableRow key={artifact.id}>
+            {recentQuery.data?.items.map((generation) => (
+              <TableRow key={generation.id}>
                 <TableCell className="font-mono text-sm">
                   <Link
-                    to="/artifacts/$id"
-                    params={{ id: artifact.id }}
+                    to="/generations/$id"
+                    params={{ id: generation.id }}
                     className="hover:underline"
                   >
-                    {artifact.id.slice(0, 8)}...{artifact.id.slice(-4)}
+                    {generation.id.slice(0, 8)}...{generation.id.slice(-4)}
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge status={artifact.status} />
+                  <StatusBadge status={generation.status} />
                 </TableCell>
-                <TableCell className="font-mono text-sm">{artifact.endpoint}</TableCell>
+                <TableCell className="font-mono text-sm">{generation.endpoint}</TableCell>
                 <TableCell>
                   <TimeAgo
-                    date={new Date(artifact.createdAt)}
+                    date={new Date(generation.createdAt)}
                     className="text-sm text-muted-foreground"
                   />
                 </TableCell>

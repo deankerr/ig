@@ -2,7 +2,7 @@ import { createContext } from "@ig/api/context";
 import { appRouter } from "@ig/api/routers/index";
 import { auth } from "@ig/auth";
 import { db } from "@ig/db";
-import { artifacts } from "@ig/db/schema";
+import { generations } from "@ig/db/schema";
 import { env } from "@ig/env/server";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
@@ -31,22 +31,22 @@ app.use(
 
 app.route("/webhooks/fal", falWebhook);
 
-app.get("/artifacts/:id/file", async (c) => {
+app.get("/generations/:id/file", async (c) => {
   const id = c.req.param("id");
 
-  const result = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1);
-  const artifact = result[0];
+  const result = await db.select().from(generations).where(eq(generations.id, id)).limit(1);
+  const generation = result[0];
 
-  if (!artifact) {
-    return c.json({ error: "Artifact not found" }, 404);
+  if (!generation) {
+    return c.json({ error: "Generation not found" }, 404);
   }
 
-  if (artifact.status !== "ready") {
-    return c.json({ error: "Artifact not ready", status: artifact.status }, 400);
+  if (generation.status !== "ready") {
+    return c.json({ error: "Generation not ready", status: generation.status }, 400);
   }
 
-  const r2Key = `artifacts/${id}`;
-  const object = await env.ARTIFACTS_BUCKET.get(r2Key);
+  const r2Key = `generations/${id}`;
+  const object = await env.GENERATIONS_BUCKET.get(r2Key);
 
   if (!object) {
     return c.json({ error: "File not found in storage" }, 404);
@@ -54,7 +54,7 @@ app.get("/artifacts/:id/file", async (c) => {
 
   return new Response(object.body, {
     headers: {
-      "Content-Type": artifact.contentType ?? "application/octet-stream",
+      "Content-Type": generation.contentType ?? "application/octet-stream",
       "Cache-Control": "public, max-age=31536000, immutable",
     },
   });

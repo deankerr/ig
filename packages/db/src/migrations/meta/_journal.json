@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1768565347495,
-      "tag": "0000_abnormal_lyja",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1768572203275,
-      "tag": "0001_fat_mojo",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1768580000000,
-      "tag": "0002_rename_fal_output",
+      "when": 1768643212179,
+      "tag": "0000_exotic_mentor",
       "breakpoints": true
     }
   ]

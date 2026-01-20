@@ -1,11 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-type ArtifactStatus = "creating" | "ready" | "failed";
+type GenerationStatus = "pending" | "ready" | "failed";
 
 const statusConfig = {
-  creating: {
-    label: "Creating",
+  pending: {
+    label: "Pending",
     className: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
   },
   ready: {
@@ -18,7 +18,7 @@ const statusConfig = {
   },
 } as const;
 
-export function StatusBadge({ status }: { status: ArtifactStatus }) {
+export function StatusBadge({ status }: { status: GenerationStatus }) {
   const config = statusConfig[status];
   return (
     <Badge variant="outline" className={cn("border-transparent", config.className)}>

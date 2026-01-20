@@ -13,6 +13,32 @@ Always read @VISION.md for a high level understanding of our project.
 - Now is the time to make breaking changes - not after we've deployed to production. Never consider backwards compatibility.
 - There is a live development deployment which should be use for any demonstrations, as we can't receive webhooks locally.
 
+## Development Environment
+
+**We use the remote Cloudflare deployment as our primary dev environment**, not local Miniflare. This is because:
+- Webhooks require a publicly accessible URL (fal.ai needs to call us back)
+- The local web app is configured to point at the remote server during local development
+- Local Miniflare is available but rarely used
+
+**Finding deployed URLs:**
+```bash
+# Quick way - read from env files
+grep VITE_SERVER_URL apps/web/.env | cut -d= -f2
+
+# Or query Alchemy deployment state
+cd packages/infra && bun alchemy run | grep -E "Web|Server"
+```
+
+**To interact with the deployed server directly:**
+```bash
+# Get current server URL
+SERVER_URL=$(grep VITE_SERVER_URL apps/web/.env | cut -d= -f2)
+
+# Example API calls
+curl $SERVER_URL/
+curl -X POST $SERVER_URL/api/healthCheck
+```
+
 ## Commands
 
 ```bash

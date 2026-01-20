@@ -7,7 +7,9 @@
       "WebFetch(domain:orpc.unnoq.com)",
       "WebFetch(domain:orpc.dev)",
       "WebFetch(domain:www.better-t-stack.dev)",
-      "WebFetch(domain:alchemy.run)"
+      "WebFetch(domain:alchemy.run)",
+      "WebFetch(domain:www.alchemy.run)",
+      "Bash(bun alchemy:*)"
     ]
   }
 }

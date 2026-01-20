@@ -3,7 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { MoreHorizontal, RefreshCw, Trash2 } from "lucide-react";
 
-import { StatusBadge } from "@/components/artifacts/status-badge";
+import { StatusBadge } from "@/components/generations/status-badge";
 import { TimeAgo } from "@/components/time-ago";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,26 +38,26 @@ import {
 } from "@/components/ui/table";
 import { client, queryClient } from "@/utils/orpc";
 
-export const Route = createFileRoute("/artifacts/")({
-  component: ArtifactsPage,
+export const Route = createFileRoute("/generations/")({
+  component: GenerationsPage,
 });
 
-function ArtifactsPage() {
+function GenerationsPage() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const tagsQuery = useQuery({
-    queryKey: ["artifacts", "tags"],
-    queryFn: () => client.artifacts.listTags(),
+    queryKey: ["generations", "tags"],
+    queryFn: () => client.generations.listTags(),
   });
 
-  const artifactsQuery = useInfiniteQuery({
-    queryKey: ["artifacts", "list", { status: statusFilter }],
+  const generationsQuery = useInfiniteQuery({
+    queryKey: ["generations", "list", { status: statusFilter }],
     queryFn: async ({ pageParam }) => {
-      return client.artifacts.list({
+      return client.generations.list({
         status:
-          statusFilter === "all" ? undefined : (statusFilter as "creating" | "ready" | "failed"),
+          statusFilter === "all" ? undefined : (statusFilter as "pending" | "ready" | "failed"),
         limit: 20,
         cursor: pageParam,
       });
@@ -67,22 +67,22 @@ function ArtifactsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => client.artifacts.delete({ id }),
+    mutationFn: (id: string) => client.generations.delete({ id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["artifacts"] });
+      queryClient.invalidateQueries({ queryKey: ["generations"] });
       setDeleteTarget(null);
     },
   });
 
-  const retryMutation = useMutation({
-    mutationFn: (id: string) => client.artifacts.retry({ id }),
+  const regenerateMutation = useMutation({
+    mutationFn: (id: string) => client.generations.regenerate({ id }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["artifacts"] });
-      navigate({ to: "/artifacts/$id", params: { id: data.id } });
+      queryClient.invalidateQueries({ queryKey: ["generations"] });
+      navigate({ to: "/generations/$id", params: { id: data.id } });
     },
   });
 
-  const allArtifacts = artifactsQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const allGenerations = generationsQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   const handleStatusChange = (value: string | null) => {
     if (value) setStatusFilter(value);
@@ -91,7 +91,7 @@ function ArtifactsPage() {
   return (
     <div className="container mx-auto max-w-6xl px-4 py-4">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Artifacts</h1>
+        <h1 className="text-xl font-semibold">Generations</h1>
         <div className="flex items-center gap-2">
           <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[140px]">
@@ -99,7 +99,7 @@ function ArtifactsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
-              <SelectItem value="creating">Creating</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="ready">Ready</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
             </SelectContent>
@@ -131,31 +131,31 @@ function ArtifactsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {allArtifacts.length === 0 && !artifactsQuery.isLoading && (
+            {allGenerations.length === 0 && !generationsQuery.isLoading && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  No artifacts found
+                  No generations found
                 </TableCell>
               </TableRow>
             )}
-            {allArtifacts.map((artifact) => (
-              <TableRow key={artifact.id}>
+            {allGenerations.map((generation) => (
+              <TableRow key={generation.id}>
                 <TableCell className="font-mono text-sm">
                   <Link
-                    to="/artifacts/$id"
-                    params={{ id: artifact.id }}
+                    to="/generations/$id"
+                    params={{ id: generation.id }}
                     className="hover:underline"
                   >
-                    {artifact.id.slice(0, 8)}...{artifact.id.slice(-4)}
+                    {generation.id.slice(0, 8)}...{generation.id.slice(-4)}
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge status={artifact.status} />
+                  <StatusBadge status={generation.status} />
                 </TableCell>
-                <TableCell className="font-mono text-sm">{artifact.endpoint}</TableCell>
+                <TableCell className="font-mono text-sm">{generation.endpoint}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
-                    {artifact.tags.map((tag) => (
+                    {generation.tags.map((tag) => (
                       <Badge key={tag} variant="secondary" className="text-xs">
                         {tag}
                       </Badge>
@@ -164,7 +164,7 @@ function ArtifactsPage() {
                 </TableCell>
                 <TableCell>
                   <TimeAgo
-                    date={new Date(artifact.createdAt)}
+                    date={new Date(generation.createdAt)}
                     className="text-sm text-muted-foreground"
                   />
                 </TableCell>
@@ -178,22 +178,22 @@ function ArtifactsPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
                         onClick={() =>
-                          navigate({ to: "/artifacts/$id", params: { id: artifact.id } })
+                          navigate({ to: "/generations/$id", params: { id: generation.id } })
                         }
                       >
                         View Details
                       </DropdownMenuItem>
-                      {artifact.status === "failed" && (
+                      {generation.status === "failed" && (
                         <DropdownMenuItem
-                          onClick={() => retryMutation.mutate(artifact.id)}
-                          disabled={retryMutation.isPending}
+                          onClick={() => regenerateMutation.mutate(generation.id)}
+                          disabled={regenerateMutation.isPending}
                         >
                           <RefreshCw className="mr-2 h-4 w-4" />
-                          Retry
+                          Regenerate
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
-                        onClick={() => setDeleteTarget(artifact.id)}
+                        onClick={() => setDeleteTarget(generation.id)}
                         variant="destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -208,14 +208,14 @@ function ArtifactsPage() {
         </Table>
       </div>
 
-      {artifactsQuery.hasNextPage && (
+      {generationsQuery.hasNextPage && (
         <div className="mt-4 flex justify-center">
           <Button
             variant="outline"
-            onClick={() => artifactsQuery.fetchNextPage()}
-            disabled={artifactsQuery.isFetchingNextPage}
+            onClick={() => generationsQuery.fetchNextPage()}
+            disabled={generationsQuery.isFetchingNextPage}
           >
-            {artifactsQuery.isFetchingNextPage ? "Loading..." : "Load More"}
+            {generationsQuery.isFetchingNextPage ? "Loading..." : "Load More"}
           </Button>
         </div>
       )}
@@ -223,9 +223,9 @@ function ArtifactsPage() {
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Artifact</DialogTitle>
+            <DialogTitle>Delete Generation</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this artifact? This action cannot be undone.
+              Are you sure you want to delete this generation? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PlaygroundRouteImport } from './routes/playground'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as ArtifactsRouteImport } from './routes/artifacts'
+import { Route as GenerationsRouteImport } from './routes/generations'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ArtifactsIndexRouteImport } from './routes/artifacts.index'
-import { Route as ArtifactsIdRouteImport } from './routes/artifacts.$id'
+import { Route as GenerationsIndexRouteImport } from './routes/generations.index'
+import { Route as GenerationsIdRouteImport } from './routes/generations.$id'
 
 const PlaygroundRoute = PlaygroundRouteImport.update({
   id: '/playground',
@@ -26,9 +26,9 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ArtifactsRoute = ArtifactsRouteImport.update({
-  id: '/artifacts',
-  path: '/artifacts',
+const GenerationsRoute = GenerationsRouteImport.update({
+  id: '/generations',
+  path: '/generations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -36,65 +36,65 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ArtifactsIndexRoute = ArtifactsIndexRouteImport.update({
+const GenerationsIndexRoute = GenerationsIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => ArtifactsRoute,
+  getParentRoute: () => GenerationsRoute,
 } as any)
-const ArtifactsIdRoute = ArtifactsIdRouteImport.update({
+const GenerationsIdRoute = GenerationsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
-  getParentRoute: () => ArtifactsRoute,
+  getParentRoute: () => GenerationsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/artifacts': typeof ArtifactsRouteWithChildren
+  '/generations': typeof GenerationsRouteWithChildren
   '/login': typeof LoginRoute
   '/playground': typeof PlaygroundRoute
-  '/artifacts/$id': typeof ArtifactsIdRoute
-  '/artifacts/': typeof ArtifactsIndexRoute
+  '/generations/$id': typeof GenerationsIdRoute
+  '/generations/': typeof GenerationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/playground': typeof PlaygroundRoute
-  '/artifacts/$id': typeof ArtifactsIdRoute
-  '/artifacts': typeof ArtifactsIndexRoute
+  '/generations/$id': typeof GenerationsIdRoute
+  '/generations': typeof GenerationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/artifacts': typeof ArtifactsRouteWithChildren
+  '/generations': typeof GenerationsRouteWithChildren
   '/login': typeof LoginRoute
   '/playground': typeof PlaygroundRoute
-  '/artifacts/$id': typeof ArtifactsIdRoute
-  '/artifacts/': typeof ArtifactsIndexRoute
+  '/generations/$id': typeof GenerationsIdRoute
+  '/generations/': typeof GenerationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/artifacts'
+    | '/generations'
     | '/login'
     | '/playground'
-    | '/artifacts/$id'
-    | '/artifacts/'
+    | '/generations/$id'
+    | '/generations/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/playground' | '/artifacts/$id' | '/artifacts'
+  to: '/' | '/login' | '/playground' | '/generations/$id' | '/generations'
   id:
     | '__root__'
     | '/'
-    | '/artifacts'
+    | '/generations'
     | '/login'
     | '/playground'
-    | '/artifacts/$id'
-    | '/artifacts/'
+    | '/generations/$id'
+    | '/generations/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ArtifactsRoute: typeof ArtifactsRouteWithChildren
+  GenerationsRoute: typeof GenerationsRouteWithChildren
   LoginRoute: typeof LoginRoute
   PlaygroundRoute: typeof PlaygroundRoute
 }
@@ -115,11 +115,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/artifacts': {
-      id: '/artifacts'
-      path: '/artifacts'
-      fullPath: '/artifacts'
-      preLoaderRoute: typeof ArtifactsRouteImport
+    '/generations': {
+      id: '/generations'
+      path: '/generations'
+      fullPath: '/generations'
+      preLoaderRoute: typeof GenerationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -129,40 +129,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/artifacts/': {
-      id: '/artifacts/'
+    '/generations/': {
+      id: '/generations/'
       path: '/'
-      fullPath: '/artifacts/'
-      preLoaderRoute: typeof ArtifactsIndexRouteImport
-      parentRoute: typeof ArtifactsRoute
+      fullPath: '/generations/'
+      preLoaderRoute: typeof GenerationsIndexRouteImport
+      parentRoute: typeof GenerationsRoute
     }
-    '/artifacts/$id': {
-      id: '/artifacts/$id'
+    '/generations/$id': {
+      id: '/generations/$id'
       path: '/$id'
-      fullPath: '/artifacts/$id'
-      preLoaderRoute: typeof ArtifactsIdRouteImport
-      parentRoute: typeof ArtifactsRoute
+      fullPath: '/generations/$id'
+      preLoaderRoute: typeof GenerationsIdRouteImport
+      parentRoute: typeof GenerationsRoute
     }
   }
 }
 
-interface ArtifactsRouteChildren {
-  ArtifactsIdRoute: typeof ArtifactsIdRoute
-  ArtifactsIndexRoute: typeof ArtifactsIndexRoute
+interface GenerationsRouteChildren {
+  GenerationsIdRoute: typeof GenerationsIdRoute
+  GenerationsIndexRoute: typeof GenerationsIndexRoute
 }
 
-const ArtifactsRouteChildren: ArtifactsRouteChildren = {
-  ArtifactsIdRoute: ArtifactsIdRoute,
-  ArtifactsIndexRoute: ArtifactsIndexRoute,
+const GenerationsRouteChildren: GenerationsRouteChildren = {
+  GenerationsIdRoute: GenerationsIdRoute,
+  GenerationsIndexRoute: GenerationsIndexRoute,
 }
 
-const ArtifactsRouteWithChildren = ArtifactsRoute._addFileChildren(
-  ArtifactsRouteChildren,
+const GenerationsRouteWithChildren = GenerationsRoute._addFileChildren(
+  GenerationsRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ArtifactsRoute: ArtifactsRouteWithChildren,
+  GenerationsRoute: GenerationsRouteWithChildren,
   LoginRoute: LoginRoute,
   PlaygroundRoute: PlaygroundRoute,
 }
