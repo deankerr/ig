@@ -145,6 +145,23 @@ The server exposes two API styles:
 | `/generations/:id/file*` | GET    | Serve generation output file. Any extension accepted (e.g., `.png`, `.jpg`). |
 | `/webhooks/fal`          | POST   | fal.ai webhook receiver (Ed25519 signature verified)                         |
 
+### Image Transforms
+
+The `/generations/:id/file*` endpoint supports on-the-fly image transformation via query params. Uses Cloudflare Images binding.
+
+| Param | Description |
+|-------|-------------|
+| `w` | Max width in pixels |
+| `h` | Max height in pixels |
+| `f` | Output format: `png`, `jpeg`, `gif`, `webp`, `avif` |
+| `q` | Quality 1-100 |
+
+**Format negotiation:** If `f=avif` but client doesn't support it (checked via `Accept` header), falls back to webp, then original format.
+
+**Supported input formats:** `image/png`, `image/jpeg`, `image/gif`, `image/webp`
+
+**Non-images:** Videos/audio served as-is (no transform attempted).
+
 ### Example Usage
 
 ```bash
@@ -161,6 +178,15 @@ curl -X POST $SERVER_URL/api/generations/get \
 
 # Get file with extension (for embedding in IRC, etc.)
 curl "$SERVER_URL/generations/{id}/file.png"
+
+# Get resized thumbnail
+curl "$SERVER_URL/generations/{id}/file.png?w=200"
+
+# Get webp version
+curl -H "Accept: image/webp,*/*" "$SERVER_URL/generations/{id}/file.png?f=webp"
+
+# Combined: resize + format + quality
+curl -H "Accept: image/webp,*/*" "$SERVER_URL/generations/{id}/file.png?w=400&f=webp&q=80"
 ```
 
 ## Stack

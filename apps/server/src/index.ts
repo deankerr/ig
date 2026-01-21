@@ -1,20 +1,18 @@
 import { createContext } from "@ig/api/context"
 import { appRouter } from "@ig/api/routers/index"
 import { auth } from "@ig/auth"
-import { db } from "@ig/db"
-import { generations } from "@ig/db/schema"
 import { env } from "@ig/env/server"
 import { OpenAPIHandler } from "@orpc/openapi/fetch"
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins"
 import { onError } from "@orpc/server"
 import { RPCHandler } from "@orpc/server/fetch"
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4"
-import { eq } from "drizzle-orm"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { logger } from "hono/logger"
 
 import { falWebhook } from "./fal"
+import { fileRoutes } from "./routes/file"
 
 const app = new Hono()
 
@@ -30,35 +28,7 @@ app.use(
 )
 
 app.route("/webhooks/fal", falWebhook)
-
-app.get("/generations/:id/file*", async (c) => {
-  const id = c.req.param("id")
-
-  const result = await db.select().from(generations).where(eq(generations.id, id)).limit(1)
-  const generation = result[0]
-
-  if (!generation) {
-    return c.json({ error: "Generation not found" }, 404)
-  }
-
-  if (generation.status !== "ready") {
-    return c.json({ error: "Generation not ready", status: generation.status }, 400)
-  }
-
-  const r2Key = `generations/${id}`
-  const object = await env.GENERATIONS_BUCKET.get(r2Key)
-
-  if (!object) {
-    return c.json({ error: "File not found in storage" }, 404)
-  }
-
-  return new Response(object.body, {
-    headers: {
-      "Content-Type": generation.contentType ?? "application/octet-stream",
-      "Cache-Control": "public, max-age=31536000, immutable",
-    },
-  })
-})
+app.route("/", fileRoutes)
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))
 

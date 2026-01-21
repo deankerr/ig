@@ -1,5 +1,5 @@
 import alchemy from "alchemy"
-import { D1Database, R2Bucket, Vite, Worker } from "alchemy/cloudflare"
+import { D1Database, Images, R2Bucket, Vite, Worker } from "alchemy/cloudflare"
 import { CloudflareStateStore } from "alchemy/state"
 import { config } from "dotenv"
 
@@ -33,6 +33,8 @@ const generationsBucket = await R2Bucket("generations", {
   adopt: true, // Adopt existing ig-generations-dev
 })
 
+const images = Images()
+
 export const web = await Vite("web", {
   adopt: true, // Adopt existing ig-web-dev
   cwd: "../../apps/web",
@@ -54,6 +56,7 @@ export const server = await Worker("server", {
   bindings: {
     DB: db,
     GENERATIONS_BUCKET: generationsBucket,
+    IMAGES: images,
     CORS_ORIGIN: webUrl,
     BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
     BETTER_AUTH_URL: serverUrl,
