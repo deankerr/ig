@@ -26,28 +26,34 @@ bun run dev        # Start full stack via Alchemy
 
 Submit a generation request, get an artifact back. The service handles async complexity via fal.ai webhooks.
 
+Two API styles available:
+- **REST API** (`/api/*`) - OpenAPI-compatible, recommended for external use
+- **RPC** (`/rpc/*`) - oRPC endpoints, used by the web UI
+
 ```bash
 # Create a generation
-curl -X POST $SERVER_URL/rpc/generations/create \
+curl -X POST $SERVER_URL/api/generations/create \
   -H "Content-Type: application/json" \
   -H "x-api-key: $API_KEY" \
   -d '{"endpoint":"fal-ai/flux/schnell","input":{"prompt":"a cat"}}'
 
-# List generations
-curl "$SERVER_URL/rpc/generations/list?status=ready"
+# Get generation status
+curl -X POST $SERVER_URL/api/generations/get \
+  -H "Content-Type: application/json" \
+  -d '{"id":"<generation-id>"}'
 
-# Get output file (extension required for embedding in IRC clients, etc.)
+# Get output file (any extension works, for embedding in IRC clients, etc.)
 curl "$SERVER_URL/generations/{id}/file.png"
 ```
 
-**Endpoints:**
-- `POST /rpc/generations/create` - Submit to fal.ai queue (API key required)
-- `GET /rpc/generations/list` - Paginated list with filters
-- `GET /rpc/generations/get` - Get single generation
-- `POST /rpc/generations/updateTags` - Modify tags (API key required)
-- `POST /rpc/generations/delete` - Delete from D1 and R2 (API key required)
-- `POST /rpc/generations/regenerate` - Clone with same input (API key required)
-- `GET /generations/:id/file.:ext` - Serve output file
+**Endpoints** (all POST with JSON body):
+- `/api/generations/create` - Submit to fal.ai queue (API key required)
+- `/api/generations/list` - Paginated list with filters
+- `/api/generations/get` - Get single generation by ID
+- `/api/generations/updateTags` - Modify tags (API key required)
+- `/api/generations/delete` - Delete from D1 and R2 (API key required)
+- `/api/generations/regenerate` - Clone with same input (API key required)
+- `GET /generations/:id/file*` - Serve output file (any extension accepted)
 
 ## Commands
 

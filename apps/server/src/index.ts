@@ -31,28 +31,8 @@ app.use(
 
 app.route("/webhooks/fal", falWebhook);
 
-const contentTypeToExt: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-  "image/gif": "gif",
-  "video/mp4": "mp4",
-  "video/webm": "webm",
-  "audio/mpeg": "mp3",
-  "audio/wav": "wav",
-  "audio/ogg": "ogg",
-  "text/plain": "txt",
-};
-
-function getExtensionForContentType(contentType: string | null): string | undefined {
-  if (!contentType) return undefined;
-  const baseType = contentType.split(";")[0]?.trim();
-  return baseType ? contentTypeToExt[baseType] : undefined;
-}
-
-app.get("/generations/:id/file.:ext", async (c) => {
+app.get("/generations/:id/file*", async (c) => {
   const id = c.req.param("id");
-  const ext = c.req.param("ext");
 
   const result = await db.select().from(generations).where(eq(generations.id, id)).limit(1);
   const generation = result[0];
@@ -63,14 +43,6 @@ app.get("/generations/:id/file.:ext", async (c) => {
 
   if (generation.status !== "ready") {
     return c.json({ error: "Generation not ready", status: generation.status }, 400);
-  }
-
-  const expectedExt = getExtensionForContentType(generation.contentType);
-  if (expectedExt && ext !== expectedExt) {
-    return c.json(
-      { error: "Extension mismatch", expected: expectedExt, provided: ext },
-      400,
-    );
   }
 
   const r2Key = `generations/${id}`;

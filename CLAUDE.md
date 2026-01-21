@@ -119,11 +119,13 @@ Key concepts:
 
 ## API Reference
 
-The server exposes oRPC endpoints at `/rpc/*` and OpenAPI-compatible REST at `/api/*`.
+The server exposes two API styles:
+- **REST API** (`/api/*`) - OpenAPI-compatible, recommended for scripts and external clients
+- **RPC** (`/rpc/*`) - oRPC endpoints, used by the web UI
 
 **Authentication:** Mutations require `x-api-key` header. Queries are public.
 
-### Generations (oRPC: `/rpc/generations/*`)
+### Generations (`/api/generations/*` or `/rpc/generations/*`)
 
 | Procedure | Auth | Description |
 |-----------|------|-------------|
@@ -140,7 +142,7 @@ The server exposes oRPC endpoints at `/rpc/*` and OpenAPI-compatible REST at `/a
 { endpoint: string, input: Record<string, unknown>, tags?: string[] }
 ```
 
-**List query params:**
+**List input:**
 ```typescript
 { status?: "pending" | "ready" | "failed", endpoint?: string, tags?: string[], limit?: number, cursor?: string }
 ```
@@ -150,23 +152,22 @@ The server exposes oRPC endpoints at `/rpc/*` and OpenAPI-compatible REST at `/a
 | Route | Method | Description |
 |-------|--------|-------------|
 | `/` | GET | Health check, returns "OK" |
-| `/generations/:id/file.:ext` | GET | Serve generation output file. Extension must match content type (e.g., `.png` for `image/png`). Returns 400 if mismatch. |
+| `/generations/:id/file*` | GET | Serve generation output file. Any extension accepted (e.g., `.png`, `.jpg`). |
 | `/webhooks/fal` | POST | fal.ai webhook receiver (Ed25519 signature verified) |
-| `/api/auth/*` | GET/POST | Better-Auth endpoints |
-
-**Supported file extensions:** png, jpg, webp, gif, mp4, webm, mp3, wav, ogg, txt
 
 ### Example Usage
 
 ```bash
 # Create a generation (requires API key)
-curl -X POST $SERVER_URL/rpc/generations/create \
+curl -X POST $SERVER_URL/api/generations/create \
   -H "Content-Type: application/json" \
   -H "x-api-key: $API_KEY" \
   -d '{"endpoint":"fal-ai/flux/schnell","input":{"prompt":"a cat"}}'
 
-# List generations
-curl "$SERVER_URL/rpc/generations/list?limit=10&status=ready"
+# Get generation status (REST API uses POST with JSON body)
+curl -X POST $SERVER_URL/api/generations/get \
+  -H "Content-Type: application/json" \
+  -d '{"id":"<generation-id>"}'
 
 # Get file with extension (for embedding in IRC, etc.)
 curl "$SERVER_URL/generations/{id}/file.png"
