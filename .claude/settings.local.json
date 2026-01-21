@@ -9,7 +9,8 @@
       "WebFetch(domain:www.better-t-stack.dev)",
       "WebFetch(domain:alchemy.run)",
       "WebFetch(domain:www.alchemy.run)",
-      "Bash(bun alchemy:*)"
+      "Bash(bun alchemy:*)",
+      "Bash(openssl rand:*)"
     ]
   }
 }

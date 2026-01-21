@@ -64,10 +64,10 @@ Turborepo monorepo with Bun. Two apps, five packages:
 apps/web/       → React 19 + TanStack Router + Vite (port 3001)
 apps/server/    → Hono + oRPC on Cloudflare Workers (port 3000)
 packages/api/   → oRPC procedures and routers (business logic)
-packages/auth/  → Better-Auth config with Drizzle adapter
-packages/db/    → Drizzle ORM schema (SQLite/Turso)
-packages/env/   → t3-oss/env validation (separate web.ts and server.ts)
-packages/infra/ → Alchemy infrastructure-as-code
+packages/auth/  → Better-Auth config (not currently used, placeholder for future)
+packages/db/    → Drizzle ORM schema (SQLite/D1)
+packages/env/   → Type-safe env validation and Cloudflare binding types
+packages/infra/ → Alchemy infrastructure-as-code (see notes/alchemy.md)
 ```
 
 ## Key Patterns
@@ -81,18 +81,12 @@ packages/infra/ → Alchemy infrastructure-as-code
 **Frontend Routing** (`apps/web/src/routes/`):
 
 - TanStack Router file-based routing (auto-generates `routeTree.gen.ts`)
-- Protected routes use `beforeLoad` to check session and redirect
 - Root route (`__root.tsx`) provides orpc client and queryClient context
 
 **Data Fetching** (`apps/web/src/utils/orpc.ts`):
 
 - oRPC client with React Query integration
-- Credentials included in requests, errors surfaced via Sonner toasts
-
-**Authentication**:
-
-- Server: `packages/auth/src/index.ts` (Better-Auth with email/password)
-- Client: `apps/web/src/lib/auth-client.ts` (createAuthClient)
+- Errors surfaced via Sonner toasts
 
 **Database** (`packages/db/src/schema/`):
 
@@ -100,22 +94,14 @@ packages/infra/ → Alchemy infrastructure-as-code
 - Migrations in `packages/db/src/migrations/`
 
 **Infrastructure** (`packages/infra/alchemy.run.ts`):
-Alchemy is TypeScript-native infrastructure-as-code. Resources are async functions that run in any JS environment - no DSL, no YAML, no separate state backend.
 
-```typescript
-const app = await alchemy("ig");
-const db = await D1Database("database", { migrationsDir: "..." });
-const server = await Worker("server", { bindings: { DB: db, ... } });
-await app.finalize();  // cleans up orphaned resources
-```
+Alchemy is TypeScript-native infrastructure-as-code. See `notes/alchemy.md` for detailed documentation.
 
-Key concepts:
-
-- `alchemy.env.VAR` for regular env vars, `alchemy.secret.env.VAR` for secrets
-- Resources are memoized - same call returns same resource
-- `app.finalize()` handles deletion of resources no longer in code
-- State stored locally in `.alchemy/` (can be git-ignored or committed)
-- `bun run dev` in infra starts local Miniflare with D1 + Workers
+Key points:
+- Resources defined as async functions (D1Database, R2Bucket, Worker, Vite)
+- State stored remotely in CloudflareStateStore (survives local file deletion)
+- URLs derived from stage name - no per-environment .env files needed
+- `bun run deploy` deploys all resources to Cloudflare
 
 ## API Reference
 
@@ -123,7 +109,7 @@ The server exposes two API styles:
 - **REST API** (`/api/*`) - OpenAPI-compatible, recommended for scripts and external clients
 - **RPC** (`/rpc/*`) - oRPC endpoints, used by the web UI
 
-**Authentication:** Mutations require `x-api-key` header. Queries are public.
+**Authentication:** Mutations require `x-api-key` header (value from `API_KEY` env var). Queries are public.
 
 ### Generations (`/api/generations/*` or `/rpc/generations/*`)
 
@@ -177,7 +163,8 @@ curl "$SERVER_URL/generations/{id}/file.png"
 
 - **Frontend**: React 19, TanStack Router/Query/Form, Tailwind 4, shadcn/ui, next-themes
 - **Backend**: Hono, oRPC (type-safe RPC with OpenAPI)
-- **Database**: SQLite via Turso/LibSQL, Drizzle ORM
-- **Auth**: Better-Auth with Drizzle adapter
-- **Infra**: Alchemy (TypeScript IaC for Cloudflare D1, Workers, Vite)
+- **Database**: SQLite via D1, Drizzle ORM
+- **Storage**: Cloudflare R2
+- **AI Provider**: fal.ai (queue-based async with webhooks)
+- **Infra**: Alchemy (TypeScript IaC for Cloudflare)
 - **Tooling**: Turborepo, Oxlint, Oxfmt, Lefthook (pre-commit hooks)

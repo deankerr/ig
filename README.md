@@ -22,6 +22,29 @@ bun run dev        # Start full stack via Alchemy
 - Web UI: http://localhost:3001
 - API: http://localhost:3000
 
+## Environment Variables
+
+Create the following `.env` files before deploying:
+
+**`packages/infra/.env`** (Alchemy configuration):
+```bash
+ALCHEMY_PASSWORD=<generate with: openssl rand -base64 32>
+ALCHEMY_STATE_TOKEN=<generate with: openssl rand -base64 32>
+CF_WORKERS_SUBDOMAIN=<your-cloudflare-workers-subdomain>  # e.g., "my-account"
+```
+
+**`apps/server/.env`** (secrets):
+```bash
+BETTER_AUTH_SECRET=<generate with: openssl rand -base64 32>
+FAL_KEY=<your fal.ai API key>
+API_KEY=<generate with: openssl rand -base64 32>
+```
+
+**`apps/web/.env`** (local development):
+```bash
+VITE_SERVER_URL=https://ig-server-dev.<your-subdomain>.workers.dev
+```
+
 ## API
 
 Submit a generation request, get an artifact back. The service handles async complexity via fal.ai webhooks.
@@ -73,7 +96,7 @@ bun run deploy        # Deploy to Cloudflare
 - **Database**: Drizzle ORM with SQLite
 - **AI Provider**: fal.ai (queue-based async with webhooks)
 - **Frontend**: React 19 + TanStack Router + Vite
-- **Infra**: Alchemy (TypeScript IaC)
+- **Infra**: Alchemy (TypeScript IaC) - see [notes/alchemy.md](notes/alchemy.md)
 
 ## Project Structure
 
@@ -83,8 +106,8 @@ apps/
   web/        → Admin console UI (React + TanStack Router)
 packages/
   api/        → oRPC procedures and business logic
-  auth/       → Better-Auth configuration
+  auth/       → Better-Auth configuration (placeholder, not currently used)
   db/         → Drizzle schema and migrations
-  env/        → Environment validation (t3-oss/env)
+  env/        → Environment validation and Cloudflare binding types
   infra/      → Alchemy infrastructure-as-code
 ```
