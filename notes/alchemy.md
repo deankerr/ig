@@ -28,6 +28,7 @@ Resources are **memoized** - calling the same resource twice returns the same in
 ### Naming Convention
 
 Resources are named `{app}-{resource}-{stage}`:
+
 - App name: `"ig"` (from `alchemy("ig")`)
 - Resource name: First parameter to resource function
 - Stage: From `ALCHEMY_STAGE` env var or defaults
@@ -52,6 +53,7 @@ await app.finalize();
 ## Stages (Multi-Environment)
 
 Stages isolate deployments. Each stage has:
+
 - Separate Cloudflare resources (`ig-server-dev` vs `ig-server-prod`)
 - Separate state (local or remote)
 - Same secrets (from `.env`)
@@ -78,25 +80,27 @@ const app = await alchemy("ig", {
 ```
 
 Deploy commands:
+
 - `bun run deploy` → stage `dev`
 - `ALCHEMY_STAGE=prod bun run deploy` → stage `prod`
 
 ## State Management
 
 Alchemy tracks what resources exist in **state**. State contains:
+
 - Resource IDs and configuration
 - Encrypted secrets
 - Deployment metadata
 
 ### State Storage Options
 
-| Store | Location | Use Case |
-|-------|----------|----------|
-| `FileSystemStateStore` | Local `.alchemy/` dir | Default, simple projects |
+| Store                  | Location                | Use Case                               |
+| ---------------------- | ----------------------- | -------------------------------------- |
+| `FileSystemStateStore` | Local `.alchemy/` dir   | Default, simple projects               |
 | `CloudflareStateStore` | Worker + Durable Object | **Recommended** - survives local wipes |
-| `D1StateStore` | D1 database | Alternative remote storage |
-| `R2RestStateStore` | R2 bucket | Object storage preference |
-| `SQLiteStateStore` | Local SQLite file | Queryable local state |
+| `D1StateStore`         | D1 database             | Alternative remote storage             |
+| `R2RestStateStore`     | R2 bucket               | Object storage preference              |
+| `SQLiteStateStore`     | Local SQLite file       | Queryable local state                  |
 
 ### CloudflareStateStore (What We Use)
 
@@ -112,10 +116,12 @@ const app = await alchemy("ig", {
 ```
 
 **Requirements:**
+
 - `ALCHEMY_STATE_TOKEN` env var (generate with `openssl rand -base64 32`)
 - Same token for all deployments on your Cloudflare account
 
 **Benefits:**
+
 - State persists even if local files are deleted
 - Works with CI/CD (no local state to manage)
 - Separate state per stage
@@ -147,11 +153,13 @@ config({ path: "../../apps/server/.env" }); // Secrets
 ### Two Types of Bindings
 
 **Public values** - visible in logs and state:
+
 ```typescript
 CORS_ORIGIN: alchemy.env.CORS_ORIGIN!,
 ```
 
 **Secrets** - encrypted in state with AES-256-GCM:
+
 ```typescript
 API_KEY: alchemy.secret.env.API_KEY!,
 ```
@@ -249,6 +257,7 @@ const web = await Vite("web", {
 Types flow from `alchemy.run.ts` to your Worker code:
 
 **packages/env/env.d.ts:**
+
 ```typescript
 import { type server } from "@ig/infra/alchemy.run";
 
@@ -262,6 +271,7 @@ declare module "cloudflare:workers" {
 ```
 
 **In your Worker:**
+
 ```typescript
 import { env } from "cloudflare:workers";
 

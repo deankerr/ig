@@ -1,21 +1,21 @@
-import type { Context as HonoContext } from "hono";
+import type { Context as HonoContext } from "hono"
 
-import { auth } from "@ig/auth";
-import { env } from "@ig/env/server";
+import { auth } from "@ig/auth"
+import { env } from "@ig/env/server"
 
 export type CreateContextOptions = {
-  context: HonoContext;
-};
+  context: HonoContext
+}
 
 export async function createContext({ context }: CreateContextOptions) {
   const session = await auth.api.getSession({
     headers: context.req.raw.headers,
-  });
+  })
   return {
     session,
     env,
     headers: context.req.raw.headers,
-  };
+  }
 }
 
-export type Context = Awaited<ReturnType<typeof createContext>>;
+export type Context = Awaited<ReturnType<typeof createContext>>

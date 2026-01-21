@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm"
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core"
 
 export const generations = sqliteTable(
   "generations",
@@ -25,7 +25,7 @@ export const generations = sqliteTable(
     index("idx_generations_status_created").on(table.status, table.createdAt),
     index("idx_generations_provider_request_id").on(table.providerRequestId),
   ],
-);
+)
 
-export type Generation = typeof generations.$inferSelect;
-export type NewGeneration = typeof generations.$inferInsert;
+export type Generation = typeof generations.$inferSelect
+export type NewGeneration = typeof generations.$inferInsert

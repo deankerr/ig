@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { MoreHorizontal, RefreshCw, Trash2 } from "lucide-react";
+import { useState } from "react"
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { MoreHorizontal, RefreshCw, Trash2 } from "lucide-react"
 
-import { StatusBadge } from "@/components/generations/status-badge";
-import { TimeAgo } from "@/components/time-ago";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/generations/status-badge"
+import { TimeAgo } from "@/components/time-ago"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -14,20 +14,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -35,22 +35,22 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { client, queryClient } from "@/utils/orpc";
+} from "@/components/ui/table"
+import { client, queryClient } from "@/utils/orpc"
 
 export const Route = createFileRoute("/generations/")({
   component: GenerationsPage,
-});
+})
 
 function GenerationsPage() {
-  const navigate = useNavigate();
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const navigate = useNavigate()
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   const tagsQuery = useQuery({
     queryKey: ["generations", "tags"],
     queryFn: () => client.generations.listTags(),
-  });
+  })
 
   const generationsQuery = useInfiniteQuery({
     queryKey: ["generations", "list", { status: statusFilter }],
@@ -60,33 +60,33 @@ function GenerationsPage() {
           statusFilter === "all" ? undefined : (statusFilter as "pending" | "ready" | "failed"),
         limit: 20,
         cursor: pageParam,
-      });
+      })
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
-  });
+  })
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => client.generations.delete({ id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["generations"] });
-      setDeleteTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["generations"] })
+      setDeleteTarget(null)
     },
-  });
+  })
 
   const regenerateMutation = useMutation({
     mutationFn: (id: string) => client.generations.regenerate({ id }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["generations"] });
-      navigate({ to: "/generations/$id", params: { id: data.id } });
+      queryClient.invalidateQueries({ queryKey: ["generations"] })
+      navigate({ to: "/generations/$id", params: { id: data.id } })
     },
-  });
+  })
 
-  const allGenerations = generationsQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const allGenerations = generationsQuery.data?.pages.flatMap((page) => page.items) ?? []
 
   const handleStatusChange = (value: string | null) => {
-    if (value) setStatusFilter(value);
-  };
+    if (value) setStatusFilter(value)
+  }
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-4">
@@ -243,5 +243,5 @@ function GenerationsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

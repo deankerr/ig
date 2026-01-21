@@ -1,30 +1,30 @@
-import { ORPCError, os } from "@orpc/server";
+import { ORPCError, os } from "@orpc/server"
 
-import type { Context } from "./context";
+import type { Context } from "./context"
 
-export const o = os.$context<Context>();
+export const o = os.$context<Context>()
 
-export const publicProcedure = o;
+export const publicProcedure = o
 
 const requireAuth = o.middleware(async ({ context, next }) => {
   if (!context.session?.user) {
-    throw new ORPCError("UNAUTHORIZED");
+    throw new ORPCError("UNAUTHORIZED")
   }
   return next({
     context: {
       session: context.session,
     },
-  });
-});
+  })
+})
 
-export const protectedProcedure = publicProcedure.use(requireAuth);
+export const protectedProcedure = publicProcedure.use(requireAuth)
 
 const requireApiKey = o.middleware(async ({ context, next }) => {
-  const apiKey = context.headers.get("x-api-key");
+  const apiKey = context.headers.get("x-api-key")
   if (!apiKey || apiKey !== context.env.API_KEY) {
-    throw new ORPCError("UNAUTHORIZED", { message: "Invalid or missing API key" });
+    throw new ORPCError("UNAUTHORIZED", { message: "Invalid or missing API key" })
   }
-  return next({});
-});
+  return next({})
+})
 
-export const apiKeyProcedure = publicProcedure.use(requireApiKey);
+export const apiKeyProcedure = publicProcedure.use(requireApiKey)

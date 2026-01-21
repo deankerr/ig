@@ -98,6 +98,7 @@ packages/infra/ → Alchemy infrastructure-as-code (see notes/alchemy.md)
 Alchemy is TypeScript-native infrastructure-as-code. See `notes/alchemy.md` for detailed documentation.
 
 Key points:
+
 - Resources defined as async functions (D1Database, R2Bucket, Worker, Vite)
 - State stored remotely in CloudflareStateStore (survives local file deletion)
 - URLs derived from stage name - no per-environment .env files needed
@@ -106,6 +107,7 @@ Key points:
 ## API Reference
 
 The server exposes two API styles:
+
 - **REST API** (`/api/*`) - OpenAPI-compatible, recommended for scripts and external clients
 - **RPC** (`/rpc/*`) - oRPC endpoints, used by the web UI
 
@@ -113,33 +115,35 @@ The server exposes two API styles:
 
 ### Generations (`/api/generations/*` or `/rpc/generations/*`)
 
-| Procedure | Auth | Description |
-|-----------|------|-------------|
-| `create` | API key | Submit generation to fal.ai queue |
-| `list` | Public | Paginated list with filters (status, endpoint, tags, cursor) |
-| `get` | Public | Get single generation by ID |
-| `updateTags` | API key | Add/remove tags on a generation |
-| `delete` | API key | Delete generation from D1 and R2 |
-| `regenerate` | API key | Clone a generation with same input |
-| `listTags` | Public | Get all unique tags |
+| Procedure    | Auth    | Description                                                  |
+| ------------ | ------- | ------------------------------------------------------------ |
+| `create`     | API key | Submit generation to fal.ai queue                            |
+| `list`       | Public  | Paginated list with filters (status, endpoint, tags, cursor) |
+| `get`        | Public  | Get single generation by ID                                  |
+| `updateTags` | API key | Add/remove tags on a generation                              |
+| `delete`     | API key | Delete generation from D1 and R2                             |
+| `regenerate` | API key | Clone a generation with same input                           |
+| `listTags`   | Public  | Get all unique tags                                          |
 
 **Create input:**
+
 ```typescript
 { endpoint: string, input: Record<string, unknown>, tags?: string[] }
 ```
 
 **List input:**
+
 ```typescript
 { status?: "pending" | "ready" | "failed", endpoint?: string, tags?: string[], limit?: number, cursor?: string }
 ```
 
 ### Direct HTTP Endpoints
 
-| Route | Method | Description |
-|-------|--------|-------------|
-| `/` | GET | Health check, returns "OK" |
-| `/generations/:id/file*` | GET | Serve generation output file. Any extension accepted (e.g., `.png`, `.jpg`). |
-| `/webhooks/fal` | POST | fal.ai webhook receiver (Ed25519 signature verified) |
+| Route                    | Method | Description                                                                  |
+| ------------------------ | ------ | ---------------------------------------------------------------------------- |
+| `/`                      | GET    | Health check, returns "OK"                                                   |
+| `/generations/:id/file*` | GET    | Serve generation output file. Any extension accepted (e.g., `.png`, `.jpg`). |
+| `/webhooks/fal`          | POST   | fal.ai webhook receiver (Ed25519 signature verified)                         |
 
 ### Example Usage
 

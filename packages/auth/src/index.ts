@@ -1,8 +1,8 @@
-import { db } from "@ig/db";
-import * as schema from "@ig/db/schema/auth";
-import { env } from "@ig/env/server";
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { db } from "@ig/db"
+import * as schema from "@ig/db/schema/auth"
+import { env } from "@ig/env/server"
+import { betterAuth } from "better-auth"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -36,4 +36,4 @@ export const auth = betterAuth({
     //   domain: "<your-workers-subdomain>",
     // },
   },
-});
+})

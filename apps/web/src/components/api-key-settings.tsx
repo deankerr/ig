@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { KeyRound } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from "react"
+import { KeyRound } from "lucide-react"
+import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -11,32 +11,32 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { clearApiKey, getApiKey, setApiKey } from "@/utils/orpc";
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { clearApiKey, getApiKey, setApiKey } from "@/utils/orpc"
 
 export function ApiKeySettings() {
-  const [open, setOpen] = useState(false);
-  const [key, setKey] = useState("");
-  const hasKey = !!getApiKey();
+  const [open, setOpen] = useState(false)
+  const [key, setKey] = useState("")
+  const hasKey = !!getApiKey()
 
   function handleSave() {
     if (!key.trim()) {
-      toast.error("API key cannot be empty");
-      return;
+      toast.error("API key cannot be empty")
+      return
     }
-    setApiKey(key.trim());
-    setKey("");
-    setOpen(false);
-    toast.success("API key saved");
+    setApiKey(key.trim())
+    setKey("")
+    setOpen(false)
+    toast.success("API key saved")
   }
 
   function handleClear() {
-    clearApiKey();
-    setKey("");
-    setOpen(false);
-    toast.success("API key cleared");
+    clearApiKey()
+    setKey("")
+    setOpen(false)
+    toast.success("API key cleared")
   }
 
   return (
@@ -74,5 +74,5 @@ export function ApiKeySettings() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

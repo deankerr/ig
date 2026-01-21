@@ -1,26 +1,26 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Plus, Send, X } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from "react"
+import { useMutation } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { Plus, Send, X } from "lucide-react"
+import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { client, queryClient } from "@/utils/orpc";
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { client, queryClient } from "@/utils/orpc"
 
 export const Route = createFileRoute("/playground")({
   component: PlaygroundPage,
-});
+})
 
 const COMMON_ENDPOINTS = [
   "fal-ai/flux/schnell",
@@ -30,69 +30,69 @@ const COMMON_ENDPOINTS = [
   "fal-ai/stable-diffusion-v3-medium",
   "fal-ai/kling-video/v1/standard/image-to-video",
   "fal-ai/minimax/video-01",
-] as const;
+] as const
 
 const DEFAULT_INPUT = `{
   "prompt": ""
-}`;
+}`
 
 function PlaygroundPage() {
-  const navigate = useNavigate();
-  const [endpoint, setEndpoint] = useState("fal-ai/flux/schnell");
-  const [inputJson, setInputJson] = useState(DEFAULT_INPUT);
-  const [tags, setTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState("");
-  const [jsonError, setJsonError] = useState<string | null>(null);
+  const navigate = useNavigate()
+  const [endpoint, setEndpoint] = useState("fal-ai/flux/schnell")
+  const [inputJson, setInputJson] = useState(DEFAULT_INPUT)
+  const [tags, setTags] = useState<string[]>([])
+  const [newTag, setNewTag] = useState("")
+  const [jsonError, setJsonError] = useState<string | null>(null)
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      let parsedInput: Record<string, unknown>;
+      let parsedInput: Record<string, unknown>
       try {
-        parsedInput = JSON.parse(inputJson);
-        setJsonError(null);
+        parsedInput = JSON.parse(inputJson)
+        setJsonError(null)
       } catch {
-        throw new Error("Invalid JSON input");
+        throw new Error("Invalid JSON input")
       }
 
       return client.generations.create({
         endpoint,
         input: parsedInput,
         tags,
-      });
+      })
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["generations"] });
-      toast.success("Generation created");
-      navigate({ to: "/generations/$id", params: { id: data.id } });
+      queryClient.invalidateQueries({ queryKey: ["generations"] })
+      toast.success("Generation created")
+      navigate({ to: "/generations/$id", params: { id: data.id } })
     },
     onError: (error) => {
       if (error.message === "Invalid JSON input") {
-        setJsonError("Invalid JSON format");
+        setJsonError("Invalid JSON format")
       }
     },
-  });
+  })
 
   const handleAddTag = () => {
-    const trimmed = newTag.trim();
+    const trimmed = newTag.trim()
     if (trimmed && !tags.includes(trimmed)) {
-      setTags([...tags, trimmed]);
-      setNewTag("");
+      setTags([...tags, trimmed])
+      setNewTag("")
     }
-  };
+  }
 
   const handleRemoveTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag));
-  };
+    setTags(tags.filter((t) => t !== tag))
+  }
 
   const handleJsonChange = (value: string) => {
-    setInputJson(value);
+    setInputJson(value)
     try {
-      JSON.parse(value);
-      setJsonError(null);
+      JSON.parse(value)
+      setJsonError(null)
     } catch {
-      setJsonError("Invalid JSON");
+      setJsonError("Invalid JSON")
     }
-  };
+  }
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-4">
@@ -111,7 +111,7 @@ function PlaygroundPage() {
             />
             <Select
               onValueChange={(value: string | null) => {
-                if (value) setEndpoint(value);
+                if (value) setEndpoint(value)
               }}
             >
               <SelectTrigger className="w-[200px]">
@@ -192,5 +192,5 @@ function PlaygroundPage() {
         </Button>
       </div>
     </div>
-  );
+  )
 }

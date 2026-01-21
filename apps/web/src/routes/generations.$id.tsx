@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Download, ExternalLink, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { useState } from "react"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { ArrowLeft, Download, ExternalLink, Plus, RefreshCw, Trash2, X } from "lucide-react"
 
-import { JsonViewer } from "@/components/generations/json-viewer";
-import { StatusBadge } from "@/components/generations/status-badge";
-import { TimeAgo } from "@/components/time-ago";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { JsonViewer } from "@/components/generations/json-viewer"
+import { StatusBadge } from "@/components/generations/status-badge"
+import { TimeAgo } from "@/components/time-ago"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -15,61 +15,61 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { client, queryClient } from "@/utils/orpc";
-import { env } from "@ig/env/web";
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { client, queryClient } from "@/utils/orpc"
+import { env } from "@ig/env/web"
 
 export const Route = createFileRoute("/generations/$id")({
   component: GenerationDetailPage,
-});
+})
 
 function GenerationDetailPage() {
-  const { id } = Route.useParams();
-  const navigate = useNavigate();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [newTag, setNewTag] = useState("");
+  const { id } = Route.useParams()
+  const navigate = useNavigate()
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [newTag, setNewTag] = useState("")
 
   const generationQuery = useQuery({
     queryKey: ["generations", "get", { id }],
     queryFn: () => client.generations.get({ id }),
     refetchInterval: (query) => (query.state.data?.status === "pending" ? 2000 : false),
-  });
+  })
 
   const deleteMutation = useMutation({
     mutationFn: () => client.generations.delete({ id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["generations"] });
-      navigate({ to: "/generations" });
+      queryClient.invalidateQueries({ queryKey: ["generations"] })
+      navigate({ to: "/generations" })
     },
-  });
+  })
 
   const regenerateMutation = useMutation({
     mutationFn: () => client.generations.regenerate({ id }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["generations"] });
-      navigate({ to: "/generations/$id", params: { id: data.id } });
+      queryClient.invalidateQueries({ queryKey: ["generations"] })
+      navigate({ to: "/generations/$id", params: { id: data.id } })
     },
-  });
+  })
 
   const updateTagsMutation = useMutation({
     mutationFn: (args: { add?: string[]; remove?: string[] }) =>
       client.generations.updateTags({ id, ...args }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["generations", "get", { id }] });
+      queryClient.invalidateQueries({ queryKey: ["generations", "get", { id }] })
     },
-  });
+  })
 
-  const generation = generationQuery.data;
+  const generation = generationQuery.data
 
   if (generationQuery.isLoading) {
     return (
       <div className="container mx-auto max-w-4xl px-4 py-4">
         <p className="text-muted-foreground">Loading...</p>
       </div>
-    );
+    )
   }
 
   if (!generation) {
@@ -80,24 +80,24 @@ function GenerationDetailPage() {
           ← Back to generations
         </Link>
       </div>
-    );
+    )
   }
 
-  const fileUrl = `${env.VITE_SERVER_URL}/generations/${id}/file`;
-  const isImage = generation.contentType?.startsWith("image/");
-  const isVideo = generation.contentType?.startsWith("video/");
-  const isAudio = generation.contentType?.startsWith("audio/");
+  const fileUrl = `${env.VITE_SERVER_URL}/generations/${id}/file`
+  const isImage = generation.contentType?.startsWith("image/")
+  const isVideo = generation.contentType?.startsWith("video/")
+  const isAudio = generation.contentType?.startsWith("audio/")
 
   const handleAddTag = () => {
     if (newTag.trim() && !generation.tags.includes(newTag.trim())) {
-      updateTagsMutation.mutate({ add: [newTag.trim()] });
-      setNewTag("");
+      updateTagsMutation.mutate({ add: [newTag.trim()] })
+      setNewTag("")
     }
-  };
+  }
 
   const handleRemoveTag = (tag: string) => {
-    updateTagsMutation.mutate({ remove: [tag] });
-  };
+    updateTagsMutation.mutate({ remove: [tag] })
+  }
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-4">
@@ -297,5 +297,5 @@ function GenerationDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

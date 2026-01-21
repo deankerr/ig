@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query"
+import { createFileRoute, Link } from "@tanstack/react-router"
 
-import { StatusBadge } from "@/components/generations/status-badge";
-import { TimeAgo } from "@/components/time-ago";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/generations/status-badge"
+import { TimeAgo } from "@/components/time-ago"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -11,39 +11,39 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { client, orpc } from "@/utils/orpc";
+} from "@/components/ui/table"
+import { client, orpc } from "@/utils/orpc"
 
 export const Route = createFileRoute("/")({
   component: StatusDashboard,
-});
+})
 
 function StatusDashboard() {
-  const healthCheck = useQuery(orpc.healthCheck.queryOptions());
+  const healthCheck = useQuery(orpc.healthCheck.queryOptions())
 
   const recentQuery = useQuery({
     queryKey: ["generations", "recent"],
     queryFn: () => client.generations.list({ limit: 5 }),
-  });
+  })
 
   const pendingQuery = useQuery({
     queryKey: ["generations", "pending"],
     queryFn: () => client.generations.list({ status: "pending", limit: 100 }),
-  });
+  })
 
   const failedQuery = useQuery({
     queryKey: ["generations", "failed"],
     queryFn: () => client.generations.list({ status: "failed", limit: 100 }),
-  });
+  })
 
   const tagsQuery = useQuery({
     queryKey: ["generations", "tags"],
     queryFn: () => client.generations.listTags(),
-  });
+  })
 
-  const pendingCount = pendingQuery.data?.items.length ?? 0;
-  const failedCount = failedQuery.data?.items.length ?? 0;
-  const tagCount = tagsQuery.data?.tags.length ?? 0;
+  const pendingCount = pendingQuery.data?.items.length ?? 0
+  const failedCount = failedQuery.data?.items.length ?? 0
+  const tagCount = tagsQuery.data?.tags.length ?? 0
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-4">
@@ -172,5 +172,5 @@ function StatusDashboard() {
         </Table>
       </div>
     </div>
-  );
+  )
 }

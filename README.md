@@ -27,6 +27,7 @@ bun run dev        # Start full stack via Alchemy
 Create the following `.env` files before deploying:
 
 **`packages/infra/.env`** (Alchemy configuration):
+
 ```bash
 ALCHEMY_PASSWORD=<generate with: openssl rand -base64 32>
 ALCHEMY_STATE_TOKEN=<generate with: openssl rand -base64 32>
@@ -34,6 +35,7 @@ CF_WORKERS_SUBDOMAIN=<your-cloudflare-workers-subdomain>  # e.g., "my-account"
 ```
 
 **`apps/server/.env`** (secrets):
+
 ```bash
 BETTER_AUTH_SECRET=<generate with: openssl rand -base64 32>
 FAL_KEY=<your fal.ai API key>
@@ -41,6 +43,7 @@ API_KEY=<generate with: openssl rand -base64 32>
 ```
 
 **`apps/web/.env`** (local development):
+
 ```bash
 VITE_SERVER_URL=https://ig-server-dev.<your-subdomain>.workers.dev
 ```
@@ -50,6 +53,7 @@ VITE_SERVER_URL=https://ig-server-dev.<your-subdomain>.workers.dev
 Submit a generation request, get an artifact back. The service handles async complexity via fal.ai webhooks.
 
 Two API styles available:
+
 - **REST API** (`/api/*`) - OpenAPI-compatible, recommended for external use
 - **RPC** (`/rpc/*`) - oRPC endpoints, used by the web UI
 
@@ -70,6 +74,7 @@ curl "$SERVER_URL/generations/{id}/file.png"
 ```
 
 **Endpoints** (all POST with JSON body):
+
 - `/api/generations/create` - Submit to fal.ai queue (API key required)
 - `/api/generations/list` - Paginated list with filters
 - `/api/generations/get` - Get single generation by ID

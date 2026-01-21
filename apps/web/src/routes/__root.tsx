@@ -1,19 +1,19 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query"
 
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
+import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router"
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
 
-import Header from "@/components/header";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
-import { orpc } from "@/utils/orpc";
+import Header from "@/components/header"
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/sonner"
+import { orpc } from "@/utils/orpc"
 
-import "../index.css";
+import "../index.css"
 
 export interface RouterAppContext {
-  orpc: typeof orpc;
-  queryClient: QueryClient;
+  orpc: typeof orpc
+  queryClient: QueryClient
 }
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
@@ -35,7 +35,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
       },
     ],
   }),
-});
+})
 
 function RootComponent() {
   return (
@@ -56,5 +56,5 @@ function RootComponent() {
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
     </>
-  );
+  )
 }

@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router"
 
 import {
   DropdownMenu,
@@ -8,18 +8,18 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { authClient } from "@/lib/auth-client";
+} from "@/components/ui/dropdown-menu"
+import { authClient } from "@/lib/auth-client"
 
-import { Button } from "./ui/button";
-import { Skeleton } from "./ui/skeleton";
+import { Button } from "./ui/button"
+import { Skeleton } from "./ui/skeleton"
 
 export default function UserMenu() {
-  const navigate = useNavigate();
-  const { data: session, isPending } = authClient.useSession();
+  const navigate = useNavigate()
+  const { data: session, isPending } = authClient.useSession()
 
   if (isPending) {
-    return <Skeleton className="h-9 w-24" />;
+    return <Skeleton className="h-9 w-24" />
   }
 
   if (!session) {
@@ -27,7 +27,7 @@ export default function UserMenu() {
       <Link to="/login">
         <Button variant="outline">Sign In</Button>
       </Link>
-    );
+    )
   }
 
   return (
@@ -48,10 +48,10 @@ export default function UserMenu() {
                   onSuccess: () => {
                     navigate({
                       to: "/",
-                    });
+                    })
                   },
                 },
-              });
+              })
             }}
           >
             Sign Out
@@ -59,5 +59,5 @@ export default function UserMenu() {
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

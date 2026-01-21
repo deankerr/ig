@@ -1,15 +1,15 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router"
 
-import { ApiKeySettings } from "./api-key-settings";
-import { ModeToggle } from "./mode-toggle";
-import UserMenu from "./user-menu";
+import { ApiKeySettings } from "./api-key-settings"
+import { ModeToggle } from "./mode-toggle"
+import UserMenu from "./user-menu"
 
 export default function Header() {
   const links = [
     { to: "/", label: "Status" },
     { to: "/generations", label: "Generations" },
     { to: "/playground", label: "Playground" },
-  ] as const;
+  ] as const
 
   return (
     <div>
@@ -20,7 +20,7 @@ export default function Header() {
               <Link key={to} to={to}>
                 {label}
               </Link>
-            );
+            )
           })}
         </nav>
         <div className="flex items-center gap-2">
@@ -31,5 +31,5 @@ export default function Header() {
       </div>
       <hr />
     </div>
-  );
+  )
 }
