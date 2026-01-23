@@ -5,7 +5,6 @@ import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
 
 import Header from "@/components/header"
-import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { orpc } from "@/utils/orpc"
 
@@ -21,11 +20,11 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({
     meta: [
       {
-        title: "ig",
+        title: "ig-console",
       },
       {
         name: "description",
-        content: "ig is a web application",
+        content: "Developer console for ig generative AI infrastructure",
       },
     ],
     links: [
@@ -41,18 +40,18 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        disableTransitionOnChange
-        storageKey="vite-ui-theme"
-      >
-        <div className="grid grid-rows-[auto_1fr] h-svh">
-          <Header />
+      <div className="flex min-h-svh flex-col bg-background text-foreground">
+        <Header />
+        <main className="flex-1">
           <Outlet />
-        </div>
-        <Toaster richColors />
-      </ThemeProvider>
+        </main>
+      </div>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          className: "font-mono text-sm border-border bg-card",
+        }}
+      />
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
     </>

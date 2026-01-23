@@ -1,12 +1,22 @@
 import { useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { ArrowLeft, Download, ExternalLink, Plus, RefreshCw, Trash2, X } from "lucide-react"
+import {
+  ArrowLeft,
+  Download,
+  ExternalLink,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Copy,
+  Check,
+} from "lucide-react"
+import { toast } from "sonner"
 
 import { JsonViewer } from "@/components/generations/json-viewer"
-import { StatusBadge } from "@/components/generations/status-badge"
+import { Tag } from "@/components/tag"
 import { TimeAgo } from "@/components/time-ago"
-import { Badge } from "@/components/ui/badge"
+import { UUID } from "@/components/uuid"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -17,8 +27,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { client, queryClient } from "@/utils/orpc"
 import { env } from "@ig/env/web"
 
@@ -31,6 +39,7 @@ function GenerationDetailPage() {
   const navigate = useNavigate()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [newTag, setNewTag] = useState("")
+  const [copiedUrl, setCopiedUrl] = useState(false)
 
   const generationQuery = useQuery({
     queryKey: ["generations", "get", { id }],
@@ -44,6 +53,9 @@ function GenerationDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["generations"] })
       navigate({ to: "/generations" })
     },
+    onError: (error) => {
+      toast.error(error.message || "Failed to delete generation")
+    },
   })
 
   const regenerateMutation = useMutation({
@@ -51,6 +63,9 @@ function GenerationDetailPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["generations"] })
       navigate({ to: "/generations/$id", params: { id: data.id } })
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to regenerate")
     },
   })
 
@@ -60,24 +75,27 @@ function GenerationDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["generations", "get", { id }] })
     },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update tags")
+    },
   })
 
   const generation = generationQuery.data
 
   if (generationQuery.isLoading) {
     return (
-      <div className="container mx-auto max-w-4xl px-4 py-4">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="p-4">
+        <p className="text-muted-foreground text-sm">loading...</p>
       </div>
     )
   }
 
   if (!generation) {
     return (
-      <div className="container mx-auto max-w-4xl px-4 py-4">
-        <p className="text-muted-foreground">Generation not found</p>
-        <Link to="/generations" className="text-sm hover:underline">
-          ← Back to generations
+      <div className="p-4">
+        <p className="text-muted-foreground text-sm mb-2">generation not found</p>
+        <Link to="/generations" className="text-xs text-primary hover:underline">
+          ← back to generations
         </Link>
       </div>
     )
@@ -87,211 +105,289 @@ function GenerationDetailPage() {
   const isImage = generation.contentType?.startsWith("image/")
   const isVideo = generation.contentType?.startsWith("video/")
   const isAudio = generation.contentType?.startsWith("audio/")
+  const prompt = typeof generation.input.prompt === "string" ? generation.input.prompt : null
 
-  const handleAddTag = () => {
+  function handleAddTag() {
+    if (!generation) return
     if (newTag.trim() && !generation.tags.includes(newTag.trim())) {
       updateTagsMutation.mutate({ add: [newTag.trim()] })
       setNewTag("")
     }
   }
 
-  const handleRemoveTag = (tag: string) => {
+  function handleRemoveTag(tag: string) {
     updateTagsMutation.mutate({ remove: [tag] })
   }
 
-  return (
-    <div className="container mx-auto max-w-4xl px-4 py-4">
-      <div className="mb-4">
-        <Link
-          to="/generations"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back to generations
-        </Link>
-      </div>
+  async function copyFileUrl() {
+    await navigator.clipboard.writeText(fileUrl)
+    setCopiedUrl(true)
+    setTimeout(() => setCopiedUrl(false), 1500)
+  }
 
-      <div className="mb-4 flex items-start justify-between">
-        <div>
-          <h1 className="font-mono text-lg">{generation.id}</h1>
-          <div className="mt-1 flex items-center gap-2">
-            <StatusBadge status={generation.status} />
-            <span className="text-sm text-muted-foreground">
-              Created <TimeAgo date={new Date(generation.createdAt)} />
-            </span>
-            {generation.completedAt && (
-              <span className="text-sm text-muted-foreground">
-                · Completed in{" "}
-                {(
-                  (new Date(generation.completedAt).getTime() -
-                    new Date(generation.createdAt).getTime()) /
-                  1000
-                ).toFixed(1)}
-                s
-              </span>
+  const completionTime = generation.completedAt
+    ? (
+        (new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()) /
+        1000
+      ).toFixed(1)
+    : null
+
+  return (
+    <div className="flex h-full">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="border-b border-border px-4 py-3 flex items-center justify-between bg-card/50">
+          <Link
+            to="/generations"
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>back</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            {generation.status === "failed" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => regenerateMutation.mutate()}
+                disabled={regenerateMutation.isPending}
+                className="h-7 text-xs"
+              >
+                <RefreshCw className="mr-1.5 h-3 w-3" />
+                regenerate
+              </Button>
             )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {generation.status === "failed" && (
             <Button
               variant="outline"
               size="sm"
-              onClick={() => regenerateMutation.mutate()}
-              disabled={regenerateMutation.isPending}
+              onClick={() => setShowDeleteDialog(true)}
+              className="h-7 text-xs text-destructive hover:text-destructive"
             >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Regenerate
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(true)}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
-        </div>
-      </div>
-
-      <Separator className="my-4" />
-
-      <div className="mb-4">
-        <div className="mb-2 flex items-center gap-2">
-          <span className="text-sm font-medium">Tags</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {generation.tags.map((tag) => (
-            <Badge key={tag} variant="secondary" className="gap-1">
-              {tag}
-              <button onClick={() => handleRemoveTag(tag)} className="ml-1 rounded hover:bg-muted">
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-          <div className="flex items-center gap-1">
-            <Input
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
-              placeholder="Add tag"
-              className="h-7 w-24 text-sm"
-            />
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={handleAddTag}>
-              <Plus className="h-4 w-4" />
+              <Trash2 className="mr-1.5 h-3 w-3" />
+              delete
             </Button>
           </div>
         </div>
-      </div>
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="input">Input</TabsTrigger>
-          <TabsTrigger value="output">Output</TabsTrigger>
-          <TabsTrigger value="raw">Raw</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="mt-4">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Endpoint</span>
-                <p className="font-mono">{generation.endpoint}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Provider Request ID</span>
-                <p className="font-mono">{generation.providerRequestId ?? "—"}</p>
-              </div>
-              {generation.contentType && (
-                <div>
-                  <span className="text-muted-foreground">Content Type</span>
-                  <p className="font-mono">{generation.contentType}</p>
-                </div>
-              )}
-              {generation.errorCode && (
-                <div>
-                  <span className="text-muted-foreground">Error Code</span>
-                  <p className="font-mono text-destructive">{generation.errorCode}</p>
-                </div>
-              )}
-            </div>
-
-            {generation.errorMessage && (
-              <div className="rounded border border-destructive/50 bg-destructive/10 p-3">
-                <p className="text-sm text-destructive">{generation.errorMessage}</p>
-              </div>
-            )}
-
-            {generation.status === "ready" && (
-              <div className="space-y-2">
-                {isImage && (
+        {/* Media preview */}
+        <div className="flex-1 overflow-auto">
+          {generation.status === "ready" && (
+            <div className="p-4">
+              {isImage && (
+                <div className="flex flex-col items-center gap-4">
                   <img
                     src={fileUrl}
-                    alt="Generated content"
-                    className="max-h-[500px] rounded border object-contain"
+                    alt=""
+                    className="max-w-full max-h-[70vh] object-contain border border-border"
                   />
-                )}
-                {isVideo && (
-                  <video src={fileUrl} controls className="max-h-[500px] rounded border" />
-                )}
-                {isAudio && <audio src={fileUrl} controls className="w-full" />}
-                <div className="flex gap-2">
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-none border border-border bg-background px-2.5 text-xs font-medium transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Open
-                  </a>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border hover:bg-muted transition-colors"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      open
+                    </a>
+                    <a
+                      href={fileUrl}
+                      download
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border hover:bg-muted transition-colors"
+                    >
+                      <Download className="h-3 w-3" />
+                      download
+                    </a>
+                    <button
+                      onClick={copyFileUrl}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border hover:bg-muted transition-colors"
+                    >
+                      {copiedUrl ? (
+                        <>
+                          <Check className="h-3 w-3 text-status-ready" />
+                          <span className="text-status-ready">copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3" />
+                          copy url
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {isVideo && (
+                <video
+                  src={fileUrl}
+                  controls
+                  className="max-w-full max-h-[70vh] mx-auto border border-border"
+                />
+              )}
+              {isAudio && <audio src={fileUrl} controls className="w-full max-w-lg mx-auto" />}
+              {!isImage && !isVideo && !isAudio && generation.contentType && (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  <p>content type: {generation.contentType}</p>
                   <a
                     href={fileUrl}
                     download
-                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-none border border-border bg-background px-2.5 text-xs font-medium transition-colors hover:bg-muted hover:text-foreground"
+                    className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 text-xs border border-border hover:bg-muted transition-colors"
                   >
-                    <Download className="h-4 w-4" />
-                    Download
+                    <Download className="h-3 w-3" />
+                    download file
                   </a>
                 </div>
+              )}
+            </div>
+          )}
+
+          {generation.status === "pending" && (
+            <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-pending opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-status-pending" />
+                </span>
+                processing...
+              </div>
+            </div>
+          )}
+
+          {generation.status === "failed" && (
+            <div className="p-4">
+              <div className="border border-destructive/50 bg-destructive/10 p-4">
+                <p className="text-sm text-destructive font-medium mb-1">
+                  {generation.errorCode ?? "Error"}
+                </p>
+                <p className="text-xs text-destructive/80">{generation.errorMessage}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <div className="w-80 border-l border-border bg-card flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-auto">
+          {/* ID */}
+          <div className="border-b border-border p-4">
+            <span className="text-xs text-muted-foreground">id</span>
+            <div className="mt-1">
+              <UUID value={generation.id} />
+            </div>
+          </div>
+
+          {/* Prompt section */}
+          {prompt && (
+            <div className="border-b border-border p-4">
+              <h3 className="text-xs text-muted-foreground mb-2">prompt</h3>
+              <p className="text-sm leading-relaxed">{prompt}</p>
+            </div>
+          )}
+
+          {/* Metadata */}
+          <div className="border-b border-border p-4 space-y-3">
+            <div>
+              <span className="text-xs text-muted-foreground">endpoint</span>
+              <p className="text-sm">{generation.endpoint}</p>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground">created</span>
+              <p className="text-sm">
+                <TimeAgo date={new Date(generation.createdAt)} />
+                {completionTime && (
+                  <span className="text-muted-foreground ml-2">({completionTime}s)</span>
+                )}
+              </p>
+            </div>
+            {generation.contentType && (
+              <div>
+                <span className="text-xs text-muted-foreground">content type</span>
+                <p className="text-sm">{generation.contentType}</p>
+              </div>
+            )}
+            {generation.providerRequestId && (
+              <div>
+                <span className="text-xs text-muted-foreground">provider request id</span>
+                <p className="text-xs font-mono break-all">{generation.providerRequestId}</p>
               </div>
             )}
           </div>
-        </TabsContent>
 
-        <TabsContent value="input" className="mt-4">
-          <JsonViewer data={generation.input} maxHeight="500px" />
-        </TabsContent>
+          {/* Tags */}
+          <div className="border-b border-border p-4">
+            <h3 className="text-xs text-muted-foreground mb-2">tags</h3>
+            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+              {generation.tags.map((tag) => (
+                <Tag key={tag} onRemove={() => handleRemoveTag(tag)}>
+                  {tag}
+                </Tag>
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              <Input
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+                placeholder="add tag"
+                className="h-7 text-xs flex-1"
+              />
+              <button onClick={handleAddTag} className="p-1.5 hover:bg-muted transition-colors">
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
 
-        <TabsContent value="output" className="mt-4">
-          {generation.providerMetadata ? (
-            <JsonViewer data={generation.providerMetadata} maxHeight="500px" />
-          ) : (
-            <p className="text-muted-foreground">No output data available</p>
-          )}
-        </TabsContent>
+          {/* JSON sections */}
+          <div className="p-4 space-y-4">
+            <JsonViewer
+              data={generation.input}
+              label="input"
+              collapsible
+              defaultCollapsed={!!prompt}
+              maxHeight="300px"
+            />
+            {generation.providerMetadata && (
+              <JsonViewer
+                data={generation.providerMetadata}
+                label="provider metadata"
+                collapsible
+                defaultCollapsed
+                maxHeight="300px"
+              />
+            )}
+            <JsonViewer
+              data={generation}
+              label="raw"
+              collapsible
+              defaultCollapsed
+              maxHeight="400px"
+            />
+          </div>
+        </div>
+      </div>
 
-        <TabsContent value="raw" className="mt-4">
-          <JsonViewer data={generation} maxHeight="600px" />
-        </TabsContent>
-      </Tabs>
-
+      {/* Delete dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete Generation</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this generation? This action cannot be undone.
+            <DialogTitle className="font-mono text-base">delete generation</DialogTitle>
+            <DialogDescription className="text-xs">
+              This will permanently delete the generation and its output file.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Cancel
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(false)}>
+              cancel
             </Button>
             <Button
               variant="destructive"
+              size="sm"
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? "deleting..." : "delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

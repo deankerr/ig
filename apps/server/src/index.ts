@@ -1,18 +1,16 @@
 import { createContext } from "@ig/api/context"
 import { appRouter } from "@ig/api/routers/index"
 import { auth } from "@ig/auth"
-import { env } from "@ig/env/server"
 import { OpenAPIHandler } from "@orpc/openapi/fetch"
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins"
 import { onError } from "@orpc/server"
 import { RPCHandler } from "@orpc/server/fetch"
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4"
 import { Hono } from "hono"
-import { cors } from "hono/cors"
 import { logger } from "hono/logger"
-
 import { falWebhook } from "./fal"
 import { fileRoutes } from "./routes/file"
+import { cors } from "hono/cors"
 
 const app = new Hono()
 
@@ -20,10 +18,9 @@ app.use(logger())
 app.use(
   "/*",
   cors({
-    origin: env.CORS_ORIGIN,
+    origin: "*",
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "x-api-key"],
-    credentials: true,
   }),
 )
 

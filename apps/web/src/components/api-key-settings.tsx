@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { KeyRound } from "lucide-react"
+import { Key } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -13,8 +13,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { clearApiKey, getApiKey, setApiKey } from "@/utils/orpc"
+import { cn } from "@/lib/utils"
 
 export function ApiKeySettings() {
   const [open, setOpen] = useState(false)
@@ -41,36 +41,47 @@ export function ApiKeySettings() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="ghost" size="icon" />}>
-        <KeyRound className={hasKey ? "text-green-500" : "text-muted-foreground"} />
-      </DialogTrigger>
-      <DialogContent>
+      <DialogTrigger
+        render={
+          <button
+            className={cn(
+              "p-1.5 transition-colors",
+              hasKey
+                ? "text-status-ready hover:text-status-ready/80"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title={hasKey ? "API key set" : "No API key"}
+          >
+            <Key className="h-3.5 w-3.5" />
+          </button>
+        }
+      />
+      <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>API Key</DialogTitle>
-          <DialogDescription>
-            Enter your API key to enable mutations (create, delete, etc).
+          <DialogTitle className="font-mono text-base">api key</DialogTitle>
+          <DialogDescription className="text-xs">
+            Required for mutations (create, delete, regenerate).
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="api-key">API Key</Label>
-            <Input
-              id="api-key"
-              type="password"
-              placeholder={hasKey ? "••••••••" : "Enter API key"}
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
-            />
-          </div>
+        <div className="py-4">
+          <Input
+            type="password"
+            placeholder={hasKey ? "••••••••" : "paste api key"}
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSave()}
+            className="font-mono text-sm"
+          />
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2">
           {hasKey && (
-            <Button variant="outline" onClick={handleClear}>
-              Clear
+            <Button variant="outline" size="sm" onClick={handleClear}>
+              clear
             </Button>
           )}
-          <Button onClick={handleSave}>Save</Button>
+          <Button size="sm" onClick={handleSave}>
+            save
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

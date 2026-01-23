@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PlaygroundRouteImport } from './routes/playground'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as GenerationsRouteImport } from './routes/generations'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GenerationsIndexRouteImport } from './routes/generations.index'
@@ -19,11 +18,6 @@ import { Route as GenerationsIdRouteImport } from './routes/generations.$id'
 const PlaygroundRoute = PlaygroundRouteImport.update({
   id: '/playground',
   path: '/playground',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GenerationsRoute = GenerationsRouteImport.update({
@@ -50,14 +44,12 @@ const GenerationsIdRoute = GenerationsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/generations': typeof GenerationsRouteWithChildren
-  '/login': typeof LoginRoute
   '/playground': typeof PlaygroundRoute
   '/generations/$id': typeof GenerationsIdRoute
   '/generations/': typeof GenerationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
   '/playground': typeof PlaygroundRoute
   '/generations/$id': typeof GenerationsIdRoute
   '/generations': typeof GenerationsIndexRoute
@@ -66,7 +58,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/generations': typeof GenerationsRouteWithChildren
-  '/login': typeof LoginRoute
   '/playground': typeof PlaygroundRoute
   '/generations/$id': typeof GenerationsIdRoute
   '/generations/': typeof GenerationsIndexRoute
@@ -76,17 +67,15 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/generations'
-    | '/login'
     | '/playground'
     | '/generations/$id'
     | '/generations/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/playground' | '/generations/$id' | '/generations'
+  to: '/' | '/playground' | '/generations/$id' | '/generations'
   id:
     | '__root__'
     | '/'
     | '/generations'
-    | '/login'
     | '/playground'
     | '/generations/$id'
     | '/generations/'
@@ -95,7 +84,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GenerationsRoute: typeof GenerationsRouteWithChildren
-  LoginRoute: typeof LoginRoute
   PlaygroundRoute: typeof PlaygroundRoute
 }
 
@@ -106,13 +94,6 @@ declare module '@tanstack/react-router' {
       path: '/playground'
       fullPath: '/playground'
       preLoaderRoute: typeof PlaygroundRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/generations': {
@@ -163,7 +144,6 @@ const GenerationsRouteWithChildren = GenerationsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GenerationsRoute: GenerationsRouteWithChildren,
-  LoginRoute: LoginRoute,
   PlaygroundRoute: PlaygroundRoute,
 }
 export const routeTree = rootRouteImport

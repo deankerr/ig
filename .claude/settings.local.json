@@ -11,7 +11,9 @@
       "WebFetch(domain:www.alchemy.run)",
       "Bash(bun alchemy:*)",
       "Bash(openssl rand:*)",
-      "WebFetch(domain:developers.cloudflare.com)"
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:unpic.pics)",
+      "Skill(frontend-design)"
     ]
   }
 }

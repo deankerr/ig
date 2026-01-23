@@ -1,28 +1,37 @@
-import { Badge } from "@/components/ui/badge"
+import { Circle } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 
 type GenerationStatus = "pending" | "ready" | "failed"
 
 const statusConfig = {
   pending: {
-    label: "Pending",
-    className: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+    label: "pending",
+    colorClass: "text-status-pending",
   },
   ready: {
-    label: "Ready",
-    className: "bg-green-500/10 text-green-600 dark:text-green-400",
+    label: "ready",
+    colorClass: "text-status-ready",
   },
   failed: {
-    label: "Failed",
-    className: "bg-red-500/10 text-red-600 dark:text-red-400",
+    label: "failed",
+    colorClass: "text-status-failed",
   },
 } as const
 
-export function StatusBadge({ status }: { status: GenerationStatus }) {
+export function StatusBadge({
+  status,
+  showLabel = true,
+}: {
+  status: GenerationStatus
+  showLabel?: boolean
+}) {
   const config = statusConfig[status]
+
   return (
-    <Badge variant="outline" className={cn("border-transparent", config.className)}>
-      {config.label}
-    </Badge>
+    <span className={cn("inline-flex items-center gap-1.5 text-xs", config.colorClass)}>
+      <Circle className={cn("h-2 w-2 fill-current", status === "pending" && "animate-pulse")} />
+      {showLabel && <span>{config.label}</span>}
+    </span>
   )
 }

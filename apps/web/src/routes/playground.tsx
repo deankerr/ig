@@ -1,35 +1,35 @@
 import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Plus, Send, X } from "lucide-react"
+import { Plus, Send, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge"
+import { Tag } from "@/components/tag"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { client, queryClient } from "@/utils/orpc"
 
 export const Route = createFileRoute("/playground")({
   component: PlaygroundPage,
 })
 
-const COMMON_ENDPOINTS = [
-  "fal-ai/flux/schnell",
-  "fal-ai/flux/dev",
-  "fal-ai/flux-pro/v1.1",
-  "fal-ai/recraft-v3",
-  "fal-ai/stable-diffusion-v3-medium",
-  "fal-ai/kling-video/v1/standard/image-to-video",
-  "fal-ai/minimax/video-01",
+const ENDPOINTS = [
+  { id: "fal-ai/flux/schnell", label: "flux/schnell", description: "Fast text-to-image" },
+  { id: "fal-ai/flux/dev", label: "flux/dev", description: "Development model" },
+  { id: "fal-ai/flux-pro/v1.1", label: "flux-pro/v1.1", description: "Production quality" },
+  { id: "fal-ai/recraft-v3", label: "recraft-v3", description: "Style-focused generation" },
+  {
+    id: "fal-ai/kling-video/v1/standard/image-to-video",
+    label: "kling-video",
+    description: "Image to video",
+  },
+  { id: "fal-ai/minimax/video-01", label: "minimax/video-01", description: "Video generation" },
 ] as const
 
 const DEFAULT_INPUT = `{
@@ -62,17 +62,19 @@ function PlaygroundPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["generations"] })
-      toast.success("Generation created")
+      toast.success("Generation submitted")
       navigate({ to: "/generations/$id", params: { id: data.id } })
     },
     onError: (error) => {
       if (error.message === "Invalid JSON input") {
         setJsonError("Invalid JSON format")
+      } else {
+        toast.error(error.message || "Failed to submit generation")
       }
     },
   })
 
-  const handleAddTag = () => {
+  function handleAddTag() {
     const trimmed = newTag.trim()
     if (trimmed && !tags.includes(trimmed)) {
       setTags([...tags, trimmed])
@@ -80,11 +82,11 @@ function PlaygroundPage() {
     }
   }
 
-  const handleRemoveTag = (tag: string) => {
+  function handleRemoveTag(tag: string) {
     setTags(tags.filter((t) => t !== tag))
   }
 
-  const handleJsonChange = (value: string) => {
+  function handleJsonChange(value: string) {
     setInputJson(value)
     try {
       JSON.parse(value)
@@ -94,102 +96,143 @@ function PlaygroundPage() {
     }
   }
 
+  const selectedEndpoint = ENDPOINTS.find((e) => e.id === endpoint)
+
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-4">
-      <h1 className="mb-6 text-xl font-semibold">Playground</h1>
-
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="endpoint">Endpoint</Label>
-          <div className="flex gap-2">
-            <Input
-              id="endpoint"
-              value={endpoint}
-              onChange={(e) => setEndpoint(e.target.value)}
-              placeholder="fal-ai/flux/schnell"
-              className="flex-1 font-mono"
-            />
-            <Select
-              onValueChange={(value: string | null) => {
-                if (value) setEndpoint(value)
-              }}
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Presets" />
-              </SelectTrigger>
-              <SelectContent>
-                {COMMON_ENDPOINTS.map((ep) => (
-                  <SelectItem key={ep} value={ep}>
-                    {ep.replace("fal-ai/", "")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div className="flex h-full">
+      {/* Main editor */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="border-b border-border px-4 py-3 flex items-center justify-between bg-card/50">
+          <div className="flex items-center gap-4">
+            <h1 className="text-sm font-medium">playground</h1>
           </div>
+          <Button
+            size="sm"
+            onClick={() => createMutation.mutate()}
+            disabled={createMutation.isPending || !!jsonError || !endpoint.trim()}
+            className="h-7 text-xs"
+          >
+            {createMutation.isPending ? (
+              "submitting..."
+            ) : (
+              <>
+                <Send className="mr-1.5 h-3 w-3" />
+                submit
+              </>
+            )}
+          </Button>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="input">Input (JSON)</Label>
-          <Textarea
-            id="input"
-            value={inputJson}
-            onChange={(e) => handleJsonChange(e.target.value)}
-            placeholder='{"prompt": "a cat wearing a hat"}'
-            className="min-h-[200px] font-mono text-sm"
-          />
-          {jsonError && <p className="text-sm text-destructive">{jsonError}</p>}
-        </div>
-
-        <div className="space-y-2">
-          <Label>Tags</Label>
-          <div className="flex flex-wrap items-center gap-2">
-            {tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="gap-1">
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTag(tag)}
-                  className="ml-1 rounded hover:bg-muted"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-            <div className="flex items-center gap-1">
+        {/* Editor area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Endpoint selector */}
+          <div className="border-b border-border p-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground w-16">endpoint</span>
               <Input
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
-                placeholder="Add tag"
-                className="h-8 w-28 text-sm"
+                value={endpoint}
+                onChange={(e) => setEndpoint(e.target.value)}
+                placeholder="fal-ai/..."
+                className="flex-1 font-mono text-sm h-8"
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={handleAddTag}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <button className="flex items-center gap-1 px-2 py-1.5 text-xs border border-border hover:bg-muted transition-colors">
+                      presets
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="w-64">
+                  {ENDPOINTS.map((ep) => (
+                    <DropdownMenuItem
+                      key={ep.id}
+                      onClick={() => setEndpoint(ep.id)}
+                      className="flex flex-col items-start gap-0.5"
+                    >
+                      <span className="font-mono text-xs">{ep.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{ep.description}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {/* JSON input */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
+              <span className="text-xs text-muted-foreground">input.json</span>
+              {jsonError && <span className="text-xs text-destructive">{jsonError}</span>}
+            </div>
+            <div className="flex-1 overflow-auto">
+              <textarea
+                value={inputJson}
+                onChange={(e) => handleJsonChange(e.target.value)}
+                className="w-full h-full min-h-[400px] p-4 bg-transparent text-sm font-mono leading-relaxed resize-none focus:outline-none"
+                placeholder='{"prompt": "..."}'
+                spellCheck={false}
+              />
             </div>
           </div>
         </div>
+      </div>
 
-        <Button
-          onClick={() => createMutation.mutate()}
-          disabled={createMutation.isPending || !!jsonError || !endpoint.trim()}
-          className="w-full"
-        >
-          {createMutation.isPending ? (
-            "Creating..."
-          ) : (
-            <>
-              <Send className="mr-2 h-4 w-4" />
-              Submit
-            </>
+      {/* Sidebar */}
+      <div className="w-64 border-l border-border bg-card flex flex-col">
+        <div className="p-4 border-b border-border">
+          <h3 className="text-xs text-muted-foreground mb-3">tags</h3>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {tags.map((tag) => (
+              <Tag key={tag} onRemove={() => handleRemoveTag(tag)}>
+                {tag}
+              </Tag>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <Input
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  handleAddTag()
+                }
+              }}
+              placeholder="add tag"
+              className="h-7 text-xs flex-1"
+            />
+            <button onClick={handleAddTag} className="p-1.5 hover:bg-muted transition-colors">
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+
+        {/* Quick info */}
+        <div className="p-4 space-y-3">
+          <div>
+            <span className="text-xs text-muted-foreground">selected</span>
+            <p className="text-sm font-mono truncate">{selectedEndpoint?.label ?? endpoint}</p>
+          </div>
+          {selectedEndpoint && (
+            <div>
+              <span className="text-xs text-muted-foreground">description</span>
+              <p className="text-xs text-muted-foreground">{selectedEndpoint.description}</p>
+            </div>
           )}
-        </Button>
+        </div>
+
+        {/* Tips */}
+        <div className="mt-auto p-4 border-t border-border">
+          <h4 className="text-xs text-muted-foreground mb-2">tips</h4>
+          <ul className="text-[10px] text-muted-foreground space-y-1">
+            <li>• Most endpoints accept a "prompt" field</li>
+            <li>• Add tags to organize generations</li>
+            <li>• Results appear in the generations list</li>
+          </ul>
+        </div>
       </div>
     </div>
   )

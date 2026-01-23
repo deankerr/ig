@@ -5,7 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Always read @VISION.md for a high level understanding of our project.
 
 - `apps/server/` is the main backend service.
-- `apps/web/` will become our admin console UI, which should be purely developer focused, utilising the server's APIs for artifact/job obervability and management, and can also have a basic generation playground.
+- `apps/web/` ig-console
+  - Developer focused admin UI for generation/artifact management and observability
+  - Simple but flexible
 
 ## Status
 
@@ -149,12 +151,12 @@ The server exposes two API styles:
 
 The `/generations/:id/file*` endpoint supports on-the-fly image transformation via query params. Uses Cloudflare Images binding.
 
-| Param | Description |
-|-------|-------------|
-| `w` | Max width in pixels |
-| `h` | Max height in pixels |
-| `f` | Output format: `png`, `jpeg`, `gif`, `webp`, `avif` |
-| `q` | Quality 1-100 |
+| Param | Description                                         |
+| ----- | --------------------------------------------------- |
+| `w`   | Max width in pixels                                 |
+| `h`   | Max height in pixels                                |
+| `f`   | Output format: `png`, `jpeg`, `gif`, `webp`, `avif` |
+| `q`   | Quality 1-100                                       |
 
 **Format negotiation:** If `f=avif` but client doesn't support it (checked via `Accept` header), falls back to webp, then original format.
 
