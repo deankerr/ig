@@ -59,12 +59,7 @@ export function Thumbnail({
   // Pending state with animated scanlines
   if (status === "pending") {
     return (
-      <div
-        className={cn(
-          "flex items-center justify-center bg-muted scanlines-pending",
-          className,
-        )}
-      >
+      <div className={cn("flex items-center justify-center bg-muted scanlines-pending", className)}>
         <span className="text-xs text-status-pending animate-pulse">...</span>
       </div>
     )
@@ -73,12 +68,7 @@ export function Thumbnail({
   // Failed state with red scanlines
   if (status === "failed") {
     return (
-      <div
-        className={cn(
-          "flex items-center justify-center bg-muted scanlines-failed",
-          className,
-        )}
-      >
+      <div className={cn("flex items-center justify-center bg-muted scanlines-failed", className)}>
         <span className="text-xs text-status-failed">err</span>
       </div>
     )

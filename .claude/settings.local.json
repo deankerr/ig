@@ -13,7 +13,10 @@
       "Bash(openssl rand:*)",
       "WebFetch(domain:developers.cloudflare.com)",
       "WebFetch(domain:unpic.pics)",
-      "Skill(frontend-design)"
+      "Skill(frontend-design)",
+      "WebFetch(domain:docs.fal.ai)",
+      "Bash(source ~/.zshrc)",
+      "Bash(bun run:*)"
     ]
   }
 }

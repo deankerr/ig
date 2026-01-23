@@ -8,6 +8,20 @@
       "when": 1768643212179,
       "tag": "0000_exotic_mentor",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1769139436899,
+      "tag": "0001_high_ulik",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1769149632751,
+      "tag": "0002_heavy_harry_osborn",
+      "breakpoints": true
     }
   ]
 }

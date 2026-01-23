@@ -44,6 +44,16 @@ curl $SERVER_URL/
 curl -X POST $SERVER_URL/api/healthCheck
 ```
 
+## Working Guidelines
+
+**Stop after 3 failed attempts on critical operations.** For operations like schema migrations, deployments, or anything requiring interactive input - if you've tried 3 times without success, stop and report the issue to me. Don't keep retrying with variations. Explain what's blocking you so I can intervene.
+
+**Verify external API schemas before implementing.** Before writing code that integrates with external APIs, make a test request to verify the actual response structure. Never rely on memory or earlier research - APIs change and memories are unreliable.
+
+**Alert immediately on deployment errors.** When you encounter deployment errors (5xx) that you cannot diagnose, immediately alert me rather than guessing at fixes. You do not have reliable access to Cloudflare Worker logs - ask me to check the dashboard.
+
+**Don't debug silently.** When debugging hits a wall - especially with infrastructure or logs you can't access - report the blocker immediately. Don't silently iterate through approaches.
+
 ## Commands
 
 ```bash
@@ -104,6 +114,8 @@ Key points:
 - State stored remotely in CloudflareStateStore (survives local file deletion)
 - URLs derived from stage name - no per-environment .env files needed
 - `bun run deploy` deploys all resources to Cloudflare
+
+Alchemy makes creating and destroying any kind of Cloudflare resource as simple as writing a few lines of code. Use them!
 
 ## API Reference
 
