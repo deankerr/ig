@@ -66,19 +66,6 @@ Stages isolate deployments. Each stage has:
 4. System username (`$USER`)
 5. Default: `"dev"`
 
-### Our Configuration
-
-```typescript
-const stage = process.env.ALCHEMY_STAGE ?? "dev";
-
-const app = await alchemy("ig", {
-  stage,
-  stateStore: (scope) => new CloudflareStateStore(scope, {
-    scriptName: `ig-alchemy-state-${stage}`,
-  }),
-});
-```
-
 Deploy commands:
 
 - `bun run deploy` → stage `dev`

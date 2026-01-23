@@ -1,6 +1,5 @@
 import type { Context as HonoContext } from "hono"
 
-import { auth } from "@ig/auth"
 import { env } from "@ig/env/server"
 
 export type CreateContextOptions = {
@@ -8,11 +7,7 @@ export type CreateContextOptions = {
 }
 
 export async function createContext({ context }: CreateContextOptions) {
-  const session = await auth.api.getSession({
-    headers: context.req.raw.headers,
-  })
   return {
-    session,
     env,
     headers: context.req.raw.headers,
   }

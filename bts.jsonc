@@ -12,7 +12,7 @@
   "frontend": ["tanstack-router"],
   "addons": ["lefthook", "oxlint", "turborepo"],
   "examples": ["ai"],
-  "auth": "better-auth",
+  "auth": "none",
   "payments": "none",
   "packageManager": "bun",
   "dbSetup": "d1",

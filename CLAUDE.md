@@ -60,13 +60,12 @@ bun run deploy        # Deploy to Cloudflare via Alchemy
 
 ## Architecture
 
-Turborepo monorepo with Bun. Two apps, five packages:
+Turborepo monorepo with Bun. Two apps, four packages:
 
 ```
 apps/web/       → React 19 + TanStack Router + Vite (port 3001)
 apps/server/    → Hono + oRPC on Cloudflare Workers (port 3000)
 packages/api/   → oRPC procedures and routers (business logic)
-packages/auth/  → Better-Auth config (not currently used, placeholder for future)
 packages/db/    → Drizzle ORM schema (SQLite/D1)
 packages/env/   → Type-safe env validation and Cloudflare binding types
 packages/infra/ → Alchemy infrastructure-as-code (see notes/alchemy.md)
@@ -76,7 +75,7 @@ packages/infra/ → Alchemy infrastructure-as-code (see notes/alchemy.md)
 
 **API Layer** (`packages/api/src/index.ts`):
 
-- oRPC procedures with `publicProcedure` and `protectedProcedure`
+- oRPC procedures with `publicProcedure` and `apiKeyProcedure`
 - Context created from Hono context in `packages/api/src/context.ts`
 - Router assembled in `packages/api/src/routers/index.ts`
 

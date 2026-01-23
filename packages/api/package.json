@@ -12,7 +12,6 @@
   "scripts": {},
   "dependencies": {
     "@fal-ai/client": "catalog:",
-    "@ig/auth": "workspace:*",
     "@ig/db": "workspace:*",
     "@ig/env": "workspace:*",
     "@orpc/client": "catalog:",
