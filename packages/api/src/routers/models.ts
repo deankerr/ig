@@ -1,10 +1,9 @@
 import { db } from "@ig/db"
 import { models } from "@ig/db/schema"
 import { asc, eq, like, or, sql } from "drizzle-orm"
-
 import { apiKeyProcedure, publicProcedure } from "../index"
 import { getModelInputSchema, listModelsInputSchema } from "../schemas/models"
-import { syncModels } from "../services/fal-models"
+import { getSyncStatus, startModelSync } from "../services/model-sync"
 
 export const modelsRouter = {
   list: publicProcedure.input(listModelsInputSchema).handler(async ({ input }) => {
@@ -78,8 +77,17 @@ export const modelsRouter = {
     return { categories: results.map((r) => r.category) }
   }),
 
-  refresh: apiKeyProcedure.handler(async ({ context }) => {
-    const result = await syncModels(context.env.FAL_KEY)
+  // Start a new sync - fast operation that enqueues pricing fetches
+  startSync: apiKeyProcedure.handler(async ({ context }) => {
+    const result = await startModelSync({
+      falKey: context.env.FAL_KEY,
+      queue: context.env.MODEL_SYNC_QUEUE,
+    })
     return result
+  }),
+
+  // Get current sync status
+  getSyncStatus: publicProcedure.handler(async () => {
+    return getSyncStatus()
   }),
 }

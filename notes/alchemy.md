@@ -322,7 +322,7 @@ packages/infra/
 ├── .env              # ALCHEMY_PASSWORD, ALCHEMY_STATE_TOKEN, CF_WORKERS_SUBDOMAIN
 └── .alchemy/         # Local state cache (can be deleted if using remote state)
 
-apps/server/.env      # BETTER_AUTH_SECRET, FAL_KEY, API_KEY (secrets only)
+apps/server/.env      # FAL_KEY, API_KEY (secrets only)
 apps/web/.env         # VITE_SERVER_URL (for local Vite dev)
 ```
 

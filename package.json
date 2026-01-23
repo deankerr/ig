@@ -40,6 +40,7 @@
   "dependencies": {
     "@ig/env": "workspace:*",
     "dotenv": "catalog:",
+    "up-fetch": "^2.5.1",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 import alchemy from "alchemy"
-import { D1Database, Images, R2Bucket, Vite, Worker } from "alchemy/cloudflare"
+import { D1Database, Images, Queue, R2Bucket, Vite, Worker } from "alchemy/cloudflare"
 import { CloudflareStateStore } from "alchemy/state"
 import { config } from "dotenv"
 
@@ -25,18 +25,20 @@ const app = await alchemy("ig", {
 })
 
 const db = await D1Database("database", {
-  adopt: true, // Adopt existing ig-database-dev
   migrationsDir: "../../packages/db/src/migrations",
 })
 
-const generationsBucket = await R2Bucket("generations", {
-  adopt: true, // Adopt existing ig-generations-dev
-})
+const generationsBucket = await R2Bucket("generations", {})
 
 const images = Images()
 
+const modelSyncQueue = await Queue("model-sync", {
+  settings: {
+    deliveryDelay: 5, // avoid fal rate limits
+  },
+})
+
 export const web = await Vite("web", {
-  adopt: true, // Adopt existing ig-web-dev
   cwd: "../../apps/web",
   assets: "dist",
   bindings: {
@@ -45,7 +47,6 @@ export const web = await Vite("web", {
 })
 
 export const server = await Worker("server", {
-  adopt: true, // Adopt existing ig-server-dev
   cwd: "../../apps/server",
   entrypoint: "src/index.ts",
   compatibility: "node",
@@ -58,12 +59,23 @@ export const server = await Worker("server", {
     GENERATIONS_BUCKET: generationsBucket,
     IMAGES: images,
     CORS_ORIGIN: webUrl,
-    BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
-    BETTER_AUTH_URL: serverUrl,
     FAL_KEY: alchemy.secret.env.FAL_KEY!,
     WEBHOOK_URL: `${serverUrl}/webhooks/fal`,
     API_KEY: alchemy.secret.env.API_KEY!,
+    MODEL_SYNC_QUEUE: modelSyncQueue,
   },
+  crons: ["0 4 * * *"],
+  eventSources: [
+    {
+      queue: modelSyncQueue,
+      settings: {
+        batchSize: 1,
+        maxConcurrency: 1,
+        maxRetries: 3,
+        retryDelay: 60,
+      },
+    },
+  ],
   dev: {
     port: 3000,
   },
