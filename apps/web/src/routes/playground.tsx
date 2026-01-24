@@ -103,139 +103,141 @@ function PlaygroundPage() {
     <div className="h-full">
       <SidebarLayout
         sidebarWidth="w-64"
-      main={
-        <>
-          <PageHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h1 className="text-sm font-medium">playground</h1>
+        main={
+          <>
+            <PageHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <h1 className="text-sm font-medium">playground</h1>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => createMutation.mutate()}
+                  disabled={createMutation.isPending || !!jsonError || !endpoint.trim()}
+                  className="h-7 text-xs"
+                >
+                  {createMutation.isPending ? (
+                    "submitting..."
+                  ) : (
+                    <>
+                      <Send className="mr-1.5 h-3 w-3" />
+                      submit
+                    </>
+                  )}
+                </Button>
               </div>
-              <Button
-                size="sm"
-                onClick={() => createMutation.mutate()}
-                disabled={createMutation.isPending || !!jsonError || !endpoint.trim()}
-                className="h-7 text-xs"
-              >
-                {createMutation.isPending ? (
-                  "submitting..."
-                ) : (
-                  <>
-                    <Send className="mr-1.5 h-3 w-3" />
-                    submit
-                  </>
-                )}
-              </Button>
-            </div>
-          </PageHeader>
+            </PageHeader>
 
-          <PageContent className="p-0 flex-1 flex flex-col">
-            {/* Endpoint selector */}
-            <div className="border-b border-border p-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground w-16">endpoint</span>
-                <Input
-                  value={endpoint}
-                  onChange={(e) => setEndpoint(e.target.value)}
-                  placeholder="fal-ai/..."
-                  className="flex-1 font-mono text-sm h-8"
-                />
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <button className="flex items-center gap-1 px-2 py-1.5 text-xs border border-border hover:bg-muted transition-colors">
-                        presets
-                        <ChevronDown className="h-3 w-3" />
-                      </button>
-                    }
+            <PageContent className="p-0 flex-1 flex flex-col">
+              {/* Endpoint selector */}
+              <div className="border-b border-border p-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground w-16">endpoint</span>
+                  <Input
+                    value={endpoint}
+                    onChange={(e) => setEndpoint(e.target.value)}
+                    placeholder="fal-ai/..."
+                    className="flex-1 font-mono text-sm h-8"
                   />
-                  <DropdownMenuContent align="end" className="w-64">
-                    {ENDPOINTS.map((ep) => (
-                      <DropdownMenuItem
-                        key={ep.id}
-                        onClick={() => setEndpoint(ep.id)}
-                        className="flex flex-col items-start gap-0.5"
-                      >
-                        <span className="font-mono text-xs">{ep.label}</span>
-                        <span className="text-[10px] text-muted-foreground">{ep.description}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <button className="flex items-center gap-1 px-2 py-1.5 text-xs border border-border hover:bg-muted transition-colors">
+                          presets
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      }
+                    />
+                    <DropdownMenuContent align="end" className="w-64">
+                      {ENDPOINTS.map((ep) => (
+                        <DropdownMenuItem
+                          key={ep.id}
+                          onClick={() => setEndpoint(ep.id)}
+                          className="flex flex-col items-start gap-0.5"
+                        >
+                          <span className="font-mono text-xs">{ep.label}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {ep.description}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
+              {/* JSON input */}
+              <div className="flex-1 flex flex-col min-h-[400px]">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
+                  <span className="text-xs text-muted-foreground">input.json</span>
+                  {jsonError && <span className="text-xs text-destructive">{jsonError}</span>}
+                </div>
+                <textarea
+                  value={inputJson}
+                  onChange={(e) => handleJsonChange(e.target.value)}
+                  className="flex-1 w-full p-4 bg-transparent text-sm font-mono leading-relaxed resize-none focus:outline-none"
+                  placeholder='{"prompt": "..."}'
+                  spellCheck={false}
+                />
+              </div>
+            </PageContent>
+          </>
+        }
+        sidebar={
+          <div className="flex flex-col h-full">
+            <div className="p-4 border-b border-border">
+              <h3 className="text-xs text-muted-foreground mb-3">tags</h3>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {tags.map((tag) => (
+                  <Tag key={tag} onRemove={() => handleRemoveTag(tag)}>
+                    {tag}
+                  </Tag>
+                ))}
+              </div>
+              <div className="flex items-center gap-1">
+                <Input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      handleAddTag()
+                    }
+                  }}
+                  placeholder="add tag"
+                  className="h-7 text-xs flex-1"
+                />
+                <button onClick={handleAddTag} className="p-1.5 hover:bg-muted transition-colors">
+                  <Plus className="h-3 w-3" />
+                </button>
               </div>
             </div>
 
-            {/* JSON input */}
-            <div className="flex-1 flex flex-col min-h-[400px]">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
-                <span className="text-xs text-muted-foreground">input.json</span>
-                {jsonError && <span className="text-xs text-destructive">{jsonError}</span>}
-              </div>
-              <textarea
-                value={inputJson}
-                onChange={(e) => handleJsonChange(e.target.value)}
-                className="flex-1 w-full p-4 bg-transparent text-sm font-mono leading-relaxed resize-none focus:outline-none"
-                placeholder='{"prompt": "..."}'
-                spellCheck={false}
-              />
-            </div>
-          </PageContent>
-        </>
-      }
-      sidebar={
-        <div className="flex flex-col h-full">
-          <div className="p-4 border-b border-border">
-            <h3 className="text-xs text-muted-foreground mb-3">tags</h3>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {tags.map((tag) => (
-                <Tag key={tag} onRemove={() => handleRemoveTag(tag)}>
-                  {tag}
-                </Tag>
-              ))}
-            </div>
-            <div className="flex items-center gap-1">
-              <Input
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    handleAddTag()
-                  }
-                }}
-                placeholder="add tag"
-                className="h-7 text-xs flex-1"
-              />
-              <button onClick={handleAddTag} className="p-1.5 hover:bg-muted transition-colors">
-                <Plus className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
-
-          {/* Quick info */}
-          <div className="p-4 space-y-3">
-            <div>
-              <span className="text-xs text-muted-foreground">selected</span>
-              <p className="text-sm font-mono truncate">{selectedEndpoint?.label ?? endpoint}</p>
-            </div>
-            {selectedEndpoint && (
+            {/* Quick info */}
+            <div className="p-4 space-y-3">
               <div>
-                <span className="text-xs text-muted-foreground">description</span>
-                <p className="text-xs text-muted-foreground">{selectedEndpoint.description}</p>
+                <span className="text-xs text-muted-foreground">selected</span>
+                <p className="text-sm font-mono truncate">{selectedEndpoint?.label ?? endpoint}</p>
               </div>
-            )}
-          </div>
+              {selectedEndpoint && (
+                <div>
+                  <span className="text-xs text-muted-foreground">description</span>
+                  <p className="text-xs text-muted-foreground">{selectedEndpoint.description}</p>
+                </div>
+              )}
+            </div>
 
-          {/* Tips */}
-          <div className="mt-auto p-4 border-t border-border">
-            <h4 className="text-xs text-muted-foreground mb-2">tips</h4>
-            <ul className="text-[10px] text-muted-foreground space-y-1">
-              <li>• Most endpoints accept a "prompt" field</li>
-              <li>• Add tags to organize generations</li>
-              <li>• Results appear in the generations list</li>
-            </ul>
+            {/* Tips */}
+            <div className="mt-auto p-4 border-t border-border">
+              <h4 className="text-xs text-muted-foreground mb-2">tips</h4>
+              <ul className="text-[10px] text-muted-foreground space-y-1">
+                <li>• Most endpoints accept a "prompt" field</li>
+                <li>• Add tags to organize generations</li>
+                <li>• Results appear in the generations list</li>
+              </ul>
+            </div>
           </div>
-        </div>
-      }
+        }
       />
     </div>
   )

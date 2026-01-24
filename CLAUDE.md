@@ -4,10 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Always read @VISION.md for a high level understanding of our project.
 
-- `apps/server/` is the main backend service.
-- `apps/web/` ig-console
-  - Developer focused admin UI for generation/artifact management and observability
-  - Simple but flexible
+- `apps/server/` core backend service
+- `apps/web/` ig-console: developer focused admin UI for generation management and observability
+
+## Workflow
+
+- Run `bun check` to type check, lint and format your work.
+- Do not deploy to the remote dev environment unless specifically asked to.
 
 ## Status
 
@@ -61,7 +64,7 @@ bun run dev           # Start full stack (server:3000, web:3001) via Alchemy
 bun run dev:web       # Start only web frontend
 bun run dev:server    # Start only API server
 bun run build         # Build all packages
-bun run check         # Lint + format (oxlint --fix && oxfmt --write)
+bun run check         # check-types + lint + format (oxlint --fix && oxfmt --write)
 bun run check-types   # TypeScript type checking across all packages
 bun run db:push       # Push Drizzle schema to database
 bun run db:generate   # Generate Drizzle migrations

@@ -17,7 +17,7 @@ export const modelsRouter = {
         search: z.string().optional(),
         limit: z.number().int().min(1).max(100).optional().default(50),
         offset: z.number().int().min(0).optional().default(0),
-      })
+      }),
     )
     .handler(async ({ input }) => {
       const conditions = []
@@ -37,7 +37,7 @@ export const modelsRouter = {
       if (input.search) {
         const searchPattern = `%${input.search}%`
         conditions.push(
-          or(like(models.displayName, searchPattern), like(models.endpointId, searchPattern))
+          or(like(models.displayName, searchPattern), like(models.endpointId, searchPattern)),
         )
       }
 

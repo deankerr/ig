@@ -159,12 +159,8 @@ function ModelsPage() {
                   <TableCell>
                     <span className="px-1.5 py-0.5 bg-muted">{model.category}</span>
                   </TableCell>
-                  <TableCell className="font-mono">
-                    {formatPrice(model.unitPrice)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {model.unit ?? "\u2014"}
-                  </TableCell>
+                  <TableCell className="font-mono">{formatPrice(model.unitPrice)}</TableCell>
+                  <TableCell className="text-muted-foreground">{model.unit ?? "\u2014"}</TableCell>
                   <TableCell className="text-muted-foreground">
                     <TimeAgo date={parseDate(model.upstreamCreatedAt)} />
                   </TableCell>

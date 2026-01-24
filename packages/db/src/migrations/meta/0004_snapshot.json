@@ -105,24 +105,17 @@
       "indexes": {
         "idx_generations_created": {
           "name": "idx_generations_created",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         },
         "idx_generations_status_created": {
           "name": "idx_generations_status_created",
-          "columns": [
-            "status",
-            "created_at"
-          ],
+          "columns": ["status", "created_at"],
           "isUnique": false
         },
         "idx_generations_provider_request_id": {
           "name": "idx_generations_provider_request_id",
-          "columns": [
-            "provider_request_id"
-          ],
+          "columns": ["provider_request_id"],
           "isUnique": false
         }
       },
@@ -302,16 +295,12 @@
       "indexes": {
         "idx_models_category": {
           "name": "idx_models_category",
-          "columns": [
-            "category"
-          ],
+          "columns": ["category"],
           "isUnique": false
         },
         "idx_models_status": {
           "name": "idx_models_status",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         }
       },

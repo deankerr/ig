@@ -91,11 +91,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
 
 function SheetBody({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div
-      data-slot="sheet-body"
-      className={cn("flex-1 overflow-auto p-4", className)}
-      {...props}
-    />
+    <div data-slot="sheet-body" className={cn("flex-1 overflow-auto p-4", className)} {...props} />
   )
 }
 

@@ -26,7 +26,7 @@ export const generationsRouter = {
         endpoint: z.string().min(1),
         input: z.record(z.string(), z.unknown()),
         tags: tagsSchema.optional().default([]),
-      })
+      }),
     )
     .handler(async ({ input, context }) => {
       const id = uuidv7()
@@ -69,7 +69,7 @@ export const generationsRouter = {
         tags: tagsSchema.optional(),
         limit: z.number().int().min(1).max(100).optional().default(20),
         cursor: z.string().optional(),
-      })
+      }),
     )
     .handler(async ({ input }) => {
       const conditions = []
@@ -89,7 +89,7 @@ export const generationsRouter = {
       if (input.tags && input.tags.length > 0) {
         for (const tag of input.tags) {
           conditions.push(
-            sql`EXISTS (SELECT 1 FROM json_each(${generations.tags}) WHERE value = ${tag})`
+            sql`EXISTS (SELECT 1 FROM json_each(${generations.tags}) WHERE value = ${tag})`,
           )
         }
       }
@@ -115,14 +115,18 @@ export const generationsRouter = {
     .route({ spec: { security: [] } })
     .input(z.object({ id: z.string().min(1) }))
     .handler(async ({ input }) => {
-    const result = await db.select().from(generations).where(eq(generations.id, input.id)).limit(1)
+      const result = await db
+        .select()
+        .from(generations)
+        .where(eq(generations.id, input.id))
+        .limit(1)
 
-    if (result.length === 0) {
-      return null
-    }
+      if (result.length === 0) {
+        return null
+      }
 
-    return result[0]
-  }),
+      return result[0]
+    }),
 
   update: apiKeyProcedure
     .input(
@@ -130,7 +134,7 @@ export const generationsRouter = {
         id: z.string().min(1),
         add: tagsSchema.optional().default([]),
         remove: tagsSchema.optional().default([]),
-      })
+      }),
     )
     .handler(async ({ input }) => {
       const existing = await db
@@ -188,7 +192,7 @@ export const generationsRouter = {
       z.object({
         id: z.string().min(1),
         tags: tagsSchema.optional(),
-      })
+      }),
     )
     .handler(async ({ input, context }) => {
       const existing = await db
