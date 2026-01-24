@@ -140,10 +140,10 @@ function GenerationsPage() {
 
                 {/* Info */}
                 <div className="p-2 space-y-1.5 border-t border-border">
-                  {/* UUID and actions */}
+                  {/* Slug/UUID and actions */}
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-muted-foreground truncate">
-                      {generation.id}
+                      {generation.slug ?? generation.id}
                     </span>
                     <DropdownMenu>
                       <DropdownMenuTrigger

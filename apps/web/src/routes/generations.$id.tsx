@@ -40,6 +40,8 @@ function GenerationDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [newTag, setNewTag] = useState("")
   const [copiedUrl, setCopiedUrl] = useState(false)
+  const [editingSlug, setEditingSlug] = useState(false)
+  const [slugInput, setSlugInput] = useState("")
 
   const generationQuery = useQuery({
     queryKey: ["generations", "get", { id }],
@@ -70,13 +72,14 @@ function GenerationDetailPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: (args: { add?: string[]; remove?: string[] }) =>
+    mutationFn: (args: { add?: string[]; remove?: string[]; slug?: string }) =>
       client.generations.update({ id, ...args }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["generations", "get", { id }] })
+      setEditingSlug(false)
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to update tags")
+      toast.error(error.message || "Failed to update")
     },
   })
 
@@ -275,6 +278,67 @@ function GenerationDetailPage() {
                 <Copyable text={generation.id} className="font-mono text-xs break-all">
                   {generation.id}
                 </Copyable>
+              </div>
+            </div>
+
+            {/* Slug */}
+            <div className="p-4">
+              <span className="text-xs text-muted-foreground">slug</span>
+              <div className="mt-1">
+                {editingSlug ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={slugInput}
+                      onChange={(e) =>
+                        setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-/]/g, ""))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          updateMutation.mutate({ slug: slugInput })
+                        } else if (e.key === "Escape") {
+                          setEditingSlug(false)
+                        }
+                      }}
+                      placeholder="custom-slug"
+                      className="h-7 text-xs font-mono flex-1"
+                      autoFocus
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => updateMutation.mutate({ slug: slugInput })}
+                      disabled={updateMutation.isPending}
+                    >
+                      {updateMutation.isPending ? "..." : "save"}
+                    </Button>
+                  </div>
+                ) : generation.slug ? (
+                  <div className="flex items-center gap-2">
+                    <Copyable text={generation.slug} className="font-mono text-xs break-all">
+                      {generation.slug}
+                    </Copyable>
+                    <button
+                      onClick={() => {
+                        setSlugInput(generation.slug?.split("-").slice(1).join("-") ?? "")
+                        setEditingSlug(true)
+                      }}
+                      className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      edit
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setSlugInput("")
+                      setEditingSlug(true)
+                    }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    + add slug
+                  </button>
+                )}
               </div>
             </div>
 

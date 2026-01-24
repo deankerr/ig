@@ -26,7 +26,7 @@ const slugSchema = z
   .trim()
   .min(1, "Slug cannot be empty")
   .max(100, "Slug cannot exceed 100 characters")
-  .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens")
+  .regex(/^[a-z0-9-/]+$/, "Slug must be lowercase alphanumeric with hyphens and slashes")
 
 export const generationsRouter = {
   create: apiKeyProcedure

@@ -43,6 +43,7 @@ function PlaygroundPage() {
   const [inputJson, setInputJson] = useState(DEFAULT_INPUT)
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
+  const [slug, setSlug] = useState("")
   const [jsonError, setJsonError] = useState<string | null>(null)
 
   const createMutation = useMutation({
@@ -59,6 +60,7 @@ function PlaygroundPage() {
         endpoint,
         input: parsedInput,
         tags,
+        slug: slug.trim() || undefined,
       })
     },
     onSuccess: (data) => {
@@ -185,6 +187,21 @@ function PlaygroundPage() {
         }
         sidebar={
           <div className="flex flex-col h-full">
+            {/* Slug */}
+            <div className="p-4 border-b border-border">
+              <h3 className="text-xs text-muted-foreground mb-2">slug</h3>
+              <Input
+                value={slug}
+                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-/]/g, ""))}
+                placeholder="optional-custom-slug"
+                className="h-7 text-xs font-mono"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1.5">
+                lowercase, numbers, hyphens, slashes
+              </p>
+            </div>
+
+            {/* Tags */}
             <div className="p-4 border-b border-border">
               <h3 className="text-xs text-muted-foreground mb-3">tags</h3>
               <div className="flex flex-wrap gap-1.5 mb-3">
