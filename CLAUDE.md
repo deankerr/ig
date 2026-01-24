@@ -66,8 +66,7 @@ bun run dev:server    # Start only API server
 bun run build         # Build all packages
 bun run check         # check-types + lint + format (oxlint --fix && oxfmt --write)
 bun run check-types   # TypeScript type checking across all packages
-bun run db:push       # Push Drizzle schema to database
-bun run db:generate   # Generate Drizzle migrations
+bun run db:generate   # Generate Drizzle migrations (applied by Alchemy on deploy)
 bun run deploy        # Deploy to Cloudflare via Alchemy
 ```
 
@@ -106,6 +105,8 @@ packages/infra/ → Alchemy infrastructure-as-code (see notes/alchemy.md)
 
 - Drizzle with SQLite core types
 - Migrations in `packages/db/src/migrations/`
+- Run `bun run db:generate` to generate migrations from schema changes
+- Migrations are applied automatically by Alchemy during `bun run deploy`
 
 **Infrastructure** (`packages/infra/alchemy.run.ts`):
 

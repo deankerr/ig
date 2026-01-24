@@ -32,7 +32,6 @@
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
-    "db:push": "turbo -F @ig/db db:push",
     "db:generate": "turbo -F @ig/db db:generate",
     "check": "bun check-types && oxlint && oxfmt --write",
     "deploy": "turbo deploy"

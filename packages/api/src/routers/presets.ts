@@ -18,6 +18,7 @@ export const presetsRouter = {
     .input(
       z.object({
         name: presetNameSchema,
+        description: z.string().max(500).optional(),
         endpoint: z.string().min(1),
         input: z.record(z.string(), z.unknown()).optional(),
         tags: z.array(z.string()).optional(),
@@ -29,6 +30,7 @@ export const presetsRouter = {
         .insert(presets)
         .values({
           name: input.name,
+          description: input.description,
           endpoint: input.endpoint,
           input: input.input,
           tags: input.tags,
@@ -38,6 +40,7 @@ export const presetsRouter = {
         .onConflictDoUpdate({
           target: presets.name,
           set: {
+            description: input.description,
             endpoint: input.endpoint,
             input: input.input,
             tags: input.tags,
