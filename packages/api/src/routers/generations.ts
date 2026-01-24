@@ -1,6 +1,6 @@
 import { fal } from "@fal-ai/client"
 import { db } from "@ig/db"
-import { generations } from "@ig/db/schema"
+import { generations, presets } from "@ig/db/schema"
 import { and, desc, eq, lt, sql } from "drizzle-orm"
 import { v7 as uuidv7 } from "uuid"
 import { z } from "zod"
@@ -8,6 +8,8 @@ import { z } from "zod"
 import { apiKeyProcedure, publicProcedure } from "../index"
 
 const MAX_TAGS = 20
+const SLUG_PREFIX_LENGTH = 7
+const PRESET_PREFIX = "ig/"
 
 const tagSchema = z
   .string()
@@ -19,6 +21,13 @@ export type Tag = z.infer<typeof tagSchema>
 
 const tagsSchema = z.array(tagSchema).max(MAX_TAGS, `Cannot exceed ${MAX_TAGS} tags`)
 
+const slugSchema = z
+  .string()
+  .trim()
+  .min(1, "Slug cannot be empty")
+  .max(100, "Slug cannot exceed 100 characters")
+  .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens")
+
 export const generationsRouter = {
   create: apiKeyProcedure
     .input(
@@ -26,24 +35,48 @@ export const generationsRouter = {
         endpoint: z.string().min(1),
         input: z.record(z.string(), z.unknown()),
         tags: tagsSchema.optional().default([]),
+        slug: slugSchema.optional(),
       }),
     )
     .handler(async ({ input, context }) => {
       const id = uuidv7()
+      const slug = input.slug ? `${id.slice(0, SLUG_PREFIX_LENGTH)}-${input.slug}` : null
+
+      // Resolve preset if endpoint starts with ig/
+      let endpoint = input.endpoint
+      let mergedInput = input.input
+      let mergedTags = input.tags
+
+      if (input.endpoint.startsWith(PRESET_PREFIX)) {
+        const preset = await db
+          .select()
+          .from(presets)
+          .where(eq(presets.name, input.endpoint))
+          .limit(1)
+
+        if (!preset[0]) {
+          throw new Error(`Preset not found: ${input.endpoint}`)
+        }
+
+        endpoint = preset[0].endpoint
+        mergedInput = { ...preset[0].input, ...input.input }
+        mergedTags = [...new Set([...(preset[0].tags ?? []), ...input.tags])]
+      }
 
       await db.insert(generations).values({
         id,
         status: "pending",
-        endpoint: input.endpoint,
-        input: input.input,
-        tags: input.tags,
+        endpoint,
+        input: mergedInput,
+        tags: mergedTags,
+        slug,
       })
 
       fal.config({ credentials: context.env.FAL_KEY })
 
       const webhookUrl = `${context.env.WEBHOOK_URL}?generation_id=${id}`
-      const result = await fal.queue.submit(input.endpoint, {
-        input: input.input,
+      const result = await fal.queue.submit(endpoint, {
+        input: mergedInput,
         webhookUrl,
       })
 
@@ -54,10 +87,12 @@ export const generationsRouter = {
 
       console.log("generation_created", {
         id,
-        endpoint: input.endpoint,
+        slug,
+        endpoint,
+        preset: input.endpoint.startsWith(PRESET_PREFIX) ? input.endpoint : undefined,
         requestId: result.request_id,
       })
-      return { id, requestId: result.request_id }
+      return { id, slug, requestId: result.request_id }
     }),
 
   list: publicProcedure
@@ -134,11 +169,12 @@ export const generationsRouter = {
         id: z.string().min(1),
         add: tagsSchema.optional().default([]),
         remove: tagsSchema.optional().default([]),
+        slug: slugSchema.optional(),
       }),
     )
     .handler(async ({ input }) => {
       const existing = await db
-        .select({ tags: generations.tags })
+        .select({ tags: generations.tags, id: generations.id })
         .from(generations)
         .where(eq(generations.id, input.id))
         .limit(1)
@@ -157,9 +193,16 @@ export const generationsRouter = {
         throw new Error(`Cannot exceed ${MAX_TAGS} tags per generation`)
       }
 
-      await db.update(generations).set({ tags: newTags }).where(eq(generations.id, input.id))
+      const slug = input.slug
+        ? `${generation.id.slice(0, SLUG_PREFIX_LENGTH)}-${input.slug}`
+        : undefined
 
-      return { id: input.id, tags: newTags }
+      await db
+        .update(generations)
+        .set({ tags: newTags, ...(slug && { slug }) })
+        .where(eq(generations.id, input.id))
+
+      return { id: input.id, tags: newTags, slug }
     }),
 
   delete: apiKeyProcedure

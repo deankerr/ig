@@ -15,6 +15,7 @@ export const generations = sqliteTable(
     errorMessage: text("error_message"),
     providerRequestId: text("provider_request_id"),
     providerMetadata: text("provider_metadata", { mode: "json" }).$type<Record<string, unknown>>(),
+    slug: text("slug").unique(),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
@@ -24,6 +25,7 @@ export const generations = sqliteTable(
     index("idx_generations_created").on(table.createdAt),
     index("idx_generations_status_created").on(table.status, table.createdAt),
     index("idx_generations_provider_request_id").on(table.providerRequestId),
+    index("idx_generations_slug").on(table.slug),
   ],
 )
 
