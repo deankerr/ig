@@ -14,6 +14,7 @@ const router = createRouter({
   Wrap: function WrapComponent({ children }: { children: React.ReactNode }) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   },
+  scrollRestoration: true,
 })
 
 declare module "@tanstack/react-router" {

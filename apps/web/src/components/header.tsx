@@ -28,6 +28,7 @@ export default function Header() {
 
   const navItems = [
     { to: "/generations", label: "generations" },
+    { to: "/models", label: "models" },
     { to: "/playground", label: "playground" },
   ] as const
 

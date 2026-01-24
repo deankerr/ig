@@ -4,10 +4,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { MoreHorizontal, RefreshCw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
+import { PageHeader, PageContent } from "@/components/layout"
 import { Tag } from "@/components/tag"
 import { Thumbnail } from "@/components/thumbnail"
 import { TimeAgo } from "@/components/time-ago"
-import { UUID } from "@/components/uuid"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -88,29 +88,29 @@ function GenerationsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header bar */}
-      <div className="border-b border-border px-4 py-3 flex items-center justify-between bg-card/50">
-        <div className="flex items-center gap-4">
-          <h1 className="text-sm font-medium">generations</h1>
-          <span className="text-xs text-muted-foreground">{allGenerations.length} loaded</span>
+      <PageHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-sm font-medium">generations</h1>
+            <span className="text-xs text-muted-foreground">{allGenerations.length} loaded</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
+              <SelectTrigger className="w-[120px] h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">all</SelectItem>
+                <SelectItem value="pending">pending</SelectItem>
+                <SelectItem value="ready">ready</SelectItem>
+                <SelectItem value="failed">failed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
-            <SelectTrigger className="w-[120px] h-7 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">all</SelectItem>
-              <SelectItem value="pending">pending</SelectItem>
-              <SelectItem value="ready">ready</SelectItem>
-              <SelectItem value="failed">failed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      </PageHeader>
 
-      {/* Grid */}
-      <div className="flex-1 overflow-auto p-4">
+      <PageContent>
         {allGenerations.length === 0 && !generationsQuery.isLoading && (
           <div className="text-center py-12 text-muted-foreground text-sm">
             no generations found
@@ -122,33 +122,36 @@ function GenerationsPage() {
             const prompt = getPrompt(generation.input)
 
             return (
-              <div
+              <Link
                 key={generation.id}
-                className="group border border-border bg-card hover:border-muted-foreground/50 transition-colors"
+                to="/generations/$id"
+                params={{ id: generation.id }}
+                className="group border border-border bg-card hover:border-muted-foreground/50 transition-colors block"
               >
                 {/* Thumbnail */}
-                <Link
-                  to="/generations/$id"
-                  params={{ id: generation.id }}
-                  className="block aspect-square overflow-hidden bg-muted"
-                >
+                <div className="aspect-square overflow-hidden bg-muted">
                   <Thumbnail
                     generationId={generation.id}
                     contentType={generation.contentType}
                     status={generation.status}
                     className="w-full h-full"
                   />
-                </Link>
+                </div>
 
                 {/* Info */}
                 <div className="p-2 space-y-1.5 border-t border-border">
                   {/* UUID and actions */}
                   <div className="flex items-center justify-between">
-                    <UUID value={generation.id} />
+                    <span className="font-mono text-xs text-muted-foreground truncate">
+                      {generation.id}
+                    </span>
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
-                          <button className="p-1 opacity-0 group-hover:opacity-100 hover:bg-muted transition-all">
+                          <button
+                            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
+                            onClick={(e) => e.preventDefault()}
+                          >
                             <MoreHorizontal className="h-3 w-3" />
                           </button>
                         }
@@ -213,7 +216,7 @@ function GenerationsPage() {
                     </div>
                   )}
                 </div>
-              </div>
+              </Link>
             )
           })}
         </div>
@@ -231,7 +234,7 @@ function GenerationsPage() {
             </Button>
           </div>
         )}
-      </div>
+      </PageContent>
 
       {/* Delete dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

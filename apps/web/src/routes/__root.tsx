@@ -40,9 +40,9 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <div className="flex min-h-svh flex-col bg-background text-foreground">
+      <div className="flex h-svh flex-col overflow-hidden bg-background text-foreground">
         <Header />
-        <main className="flex-1">
+        <main className="flex-1 overflow-hidden">
           <Outlet />
         </main>
       </div>

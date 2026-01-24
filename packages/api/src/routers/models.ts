@@ -90,4 +90,14 @@ export const modelsRouter = {
   getSyncStatus: publicProcedure.handler(async () => {
     return getSyncStatus()
   }),
+
+  // Get all models for client-side table (no pagination)
+  listAll: publicProcedure.handler(async () => {
+    const results = await db.select().from(models).orderBy(asc(models.displayName))
+
+    return {
+      items: results,
+      fetchedAt: Date.now(),
+    }
+  }),
 }
