@@ -37,7 +37,6 @@ CF_WORKERS_SUBDOMAIN=<your-cloudflare-workers-subdomain>  # e.g., "my-account"
 **`apps/server/.env`** (secrets):
 
 ```bash
-BETTER_AUTH_SECRET=<generate with: openssl rand -base64 32>
 FAL_KEY=<your fal.ai API key>
 API_KEY=<generate with: openssl rand -base64 32>
 ```
@@ -78,7 +77,7 @@ curl "$SERVER_URL/generations/{id}/file.png"
 - `/api/generations/create` - Submit to fal.ai queue (API key required)
 - `/api/generations/list` - Paginated list with filters
 - `/api/generations/get` - Get single generation by ID
-- `/api/generations/updateTags` - Modify tags (API key required)
+- `/api/generations/update` - Modify tags (API key required)
 - `/api/generations/delete` - Delete from D1 and R2 (API key required)
 - `/api/generations/regenerate` - Clone with same input (API key required)
 - `GET /generations/:id/file*` - Serve output file (any extension accepted)

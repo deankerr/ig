@@ -133,10 +133,9 @@ The server exposes two API styles:
 | `create`     | API key | Submit generation to fal.ai queue                            |
 | `list`       | Public  | Paginated list with filters (status, endpoint, tags, cursor) |
 | `get`        | Public  | Get single generation by ID                                  |
-| `updateTags` | API key | Add/remove tags on a generation                              |
+| `update`     | API key | Add/remove tags on a generation                              |
 | `delete`     | API key | Delete generation from D1 and R2                             |
 | `regenerate` | API key | Clone a generation with same input                           |
-| `listTags`   | Public  | Get all unique tags                                          |
 
 **Create input:**
 

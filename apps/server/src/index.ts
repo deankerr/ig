@@ -35,6 +35,18 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
   plugins: [
     new OpenAPIReferencePlugin({
       schemaConverters: [new ZodToJsonSchemaConverter()],
+      specGenerateOptions: {
+        components: {
+          securitySchemes: {
+            ApiKeyAuth: {
+              type: "apiKey",
+              in: "header",
+              name: "x-api-key",
+            },
+          },
+        },
+        security: [{ ApiKeyAuth: [] }],
+      },
     }),
   ],
   interceptors: [

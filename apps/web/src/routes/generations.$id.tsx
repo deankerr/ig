@@ -69,9 +69,9 @@ function GenerationDetailPage() {
     },
   })
 
-  const updateTagsMutation = useMutation({
+  const updateMutation = useMutation({
     mutationFn: (args: { add?: string[]; remove?: string[] }) =>
-      client.generations.updateTags({ id, ...args }),
+      client.generations.update({ id, ...args }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["generations", "get", { id }] })
     },
@@ -110,13 +110,13 @@ function GenerationDetailPage() {
   function handleAddTag() {
     if (!generation) return
     if (newTag.trim() && !generation.tags.includes(newTag.trim())) {
-      updateTagsMutation.mutate({ add: [newTag.trim()] })
+      updateMutation.mutate({ add: [newTag.trim()] })
       setNewTag("")
     }
   }
 
   function handleRemoveTag(tag: string) {
-    updateTagsMutation.mutate({ remove: [tag] })
+    updateMutation.mutate({ remove: [tag] })
   }
 
   async function copyFileUrl() {
