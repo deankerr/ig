@@ -9,6 +9,7 @@ config({ path: "../../apps/server/.env" })
 // Default to "dev" to match existing deployed resources (ig-*-dev)
 // Use ALCHEMY_STAGE=prod for production deployment
 const stage = process.env.ALCHEMY_STAGE ?? "dev"
+console.log("is dev", stage === "dev")
 
 // Derive URLs from stage - no need for per-environment .env files
 const cfSubdomain = process.env.CF_WORKERS_SUBDOMAIN
@@ -28,7 +29,9 @@ const db = await D1Database("database", {
   migrationsDir: "../../packages/db/src/migrations",
 })
 
-const generationsBucket = await R2Bucket("generations", {})
+const generationsBucket = await R2Bucket("generations", {
+  empty: stage === "dev",
+})
 
 const images = Images()
 

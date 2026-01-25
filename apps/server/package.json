@@ -18,19 +18,19 @@
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "catalog:",
-    "remeda": "^2.33.4",
-    "up-fetch": "^2.5.1",
-    "uuid": "^13.0.0",
+    "remeda": "catalog:",
+    "up-fetch": "catalog:",
+    "uuid": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@ig/config": "workspace:*",
     "@types/node": "catalog:",
-    "@types/uuid": "^11.0.0",
+    "@types/uuid": "catalog:",
     "alchemy": "catalog:",
-    "tsdown": "^0.16.5",
+    "tsdown": "^0.20.1",
     "typescript": "catalog:",
-    "wrangler": "^4.54.0"
+    "wrangler": "^4.60.0"
   }
 }

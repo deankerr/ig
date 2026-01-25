@@ -8,12 +8,12 @@
     "destroy": "alchemy destroy"
   },
   "dependencies": {
-    "dotenv": "^17.2.3",
-    "zod": "^4.3.5"
+    "dotenv": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@ig/config": "workspace:*",
-    "alchemy": "^0.82.2",
-    "typescript": "^5.9.3"
+    "alchemy": "catalog:",
+    "typescript": "catalog:"
   }
 }

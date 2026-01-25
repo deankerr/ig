@@ -53,7 +53,7 @@ export interface FileRoutesByFullPath {
   '/playground': typeof PlaygroundRoute
   '/generations/$id': typeof GenerationsIdRoute
   '/generations/': typeof GenerationsIndexRoute
-  '/models': typeof ModelsIndexRoute
+  '/models/': typeof ModelsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -79,7 +79,7 @@ export interface FileRouteTypes {
     | '/playground'
     | '/generations/$id'
     | '/generations/'
-    | '/models'
+    | '/models/'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/playground' | '/generations/$id' | '/generations' | '/models'
   id:
@@ -125,7 +125,7 @@ declare module '@tanstack/react-router' {
     '/models/': {
       id: '/models/'
       path: '/models'
-      fullPath: '/models'
+      fullPath: '/models/'
       preLoaderRoute: typeof ModelsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
