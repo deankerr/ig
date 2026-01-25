@@ -31,7 +31,7 @@ export function useAllModels() {
   // Flatten all pages into a single array
   const models = useMemo(() => {
     if (!query.data) return []
-    return query.data.pages.flatMap((page) => page.items)
+    return query.data.pages.flatMap((page) => page.items ?? [])
   }, [query.data])
 
   // Loading state: true if initial fetch or still fetching pages

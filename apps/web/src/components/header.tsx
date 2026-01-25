@@ -3,6 +3,7 @@ import { Link, useLocation } from "@tanstack/react-router"
 import { Circle, RefreshCw } from "lucide-react"
 
 import { ApiKeySettings } from "./api-key-settings"
+import { PulsingDot } from "./pulsing-dot"
 import { client } from "@/utils/orpc"
 import { cn } from "@/lib/utils"
 import { env } from "@ig/env/web"
@@ -103,10 +104,7 @@ export default function Header() {
               search={{ status: "pending" }}
               className="flex items-center gap-1.5 text-xs text-status-pending hover:underline"
             >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-pending opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-status-pending" />
-              </span>
+              <PulsingDot />
               <span>{pendingCount} pending</span>
             </Link>
           )}

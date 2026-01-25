@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { SidebarLayout, PageHeader, PageContent } from "@/components/layout"
+import { PulsingDot } from "@/components/pulsing-dot"
 import { Copyable } from "@/components/copyable"
 import { JsonViewer } from "@/components/generations/json-viewer"
 import { Tag } from "@/components/tag"
@@ -33,6 +34,50 @@ import { env } from "@ig/env/web"
 export const Route = createFileRoute("/generations/$id")({
   component: GenerationDetailPage,
 })
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="mt-1">{children}</div>
+    </div>
+  )
+}
+
+function ActionLink({
+  href,
+  download,
+  onClick,
+  children,
+}: {
+  href?: string
+  download?: boolean
+  onClick?: () => void
+  children: React.ReactNode
+}) {
+  const className =
+    "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border hover:bg-muted transition-colors"
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target={download ? undefined : "_blank"}
+        rel={download ? undefined : "noopener noreferrer"}
+        download={download}
+        className={className}
+      >
+        {children}
+      </a>
+    )
+  }
+
+  return (
+    <button onClick={onClick} className={className}>
+      {children}
+    </button>
+  )
+}
 
 function GenerationDetailPage() {
   const { id } = Route.useParams()
@@ -175,38 +220,28 @@ function GenerationDetailPage() {
               </div>
             </PageHeader>
 
-            <PageContent>
+            <PageContent className={isImage ? "flex flex-col" : undefined}>
               {generation.status === "ready" && (
                 <>
                   {isImage && (
-                    <div className="flex flex-col items-center gap-4">
-                      <img
-                        src={fileUrl}
-                        alt=""
-                        className="max-w-full max-h-[70vh] object-contain border border-border"
-                      />
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border hover:bg-muted transition-colors"
-                        >
+                    <>
+                      <div className="flex-1 flex items-center justify-center min-h-0">
+                        <img
+                          src={fileUrl}
+                          alt=""
+                          className="max-w-full max-h-full object-contain border border-border"
+                        />
+                      </div>
+                      <div className="flex justify-center gap-2 pt-4">
+                        <ActionLink href={fileUrl}>
                           <ExternalLink className="h-3 w-3" />
                           open
-                        </a>
-                        <a
-                          href={fileUrl}
-                          download
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border hover:bg-muted transition-colors"
-                        >
+                        </ActionLink>
+                        <ActionLink href={fileUrl} download>
                           <Download className="h-3 w-3" />
                           download
-                        </a>
-                        <button
-                          onClick={copyFileUrl}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border hover:bg-muted transition-colors"
-                        >
+                        </ActionLink>
+                        <ActionLink onClick={copyFileUrl}>
                           {copiedUrl ? (
                             <>
                               <Check className="h-3 w-3 text-status-ready" />
@@ -218,9 +253,9 @@ function GenerationDetailPage() {
                               copy url
                             </>
                           )}
-                        </button>
+                        </ActionLink>
                       </div>
-                    </div>
+                    </>
                   )}
                   {isVideo && (
                     <video
@@ -233,14 +268,12 @@ function GenerationDetailPage() {
                   {!isImage && !isVideo && !isAudio && generation.contentType && (
                     <div className="text-center py-8 text-muted-foreground text-sm">
                       <p>content type: {generation.contentType}</p>
-                      <a
-                        href={fileUrl}
-                        download
-                        className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 text-xs border border-border hover:bg-muted transition-colors"
-                      >
-                        <Download className="h-3 w-3" />
-                        download file
-                      </a>
+                      <div className="mt-4">
+                        <ActionLink href={fileUrl} download>
+                          <Download className="h-3 w-3" />
+                          download file
+                        </ActionLink>
+                      </div>
                     </div>
                   )}
                 </>
@@ -249,10 +282,7 @@ function GenerationDetailPage() {
               {generation.status === "pending" && (
                 <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-pending opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-status-pending" />
-                    </span>
+                    <PulsingDot />
                     processing...
                   </div>
                 </div>
@@ -273,18 +303,16 @@ function GenerationDetailPage() {
           <div className="divide-y divide-border">
             {/* ID */}
             <div className="p-4">
-              <span className="text-xs text-muted-foreground">id</span>
-              <div className="mt-1">
+              <Field label="id">
                 <Copyable text={generation.id} className="font-mono text-xs break-all">
                   {generation.id}
                 </Copyable>
-              </div>
+              </Field>
             </div>
 
             {/* Slug */}
             <div className="p-4">
-              <span className="text-xs text-muted-foreground">slug</span>
-              <div className="mt-1">
+              <Field label="slug">
                 {editingSlug ? (
                   <div className="flex items-center gap-1">
                     <Input
@@ -339,7 +367,7 @@ function GenerationDetailPage() {
                     + add slug
                   </button>
                 )}
-              </div>
+              </Field>
             </div>
 
             {/* Prompt section */}
@@ -354,37 +382,33 @@ function GenerationDetailPage() {
 
             {/* Metadata */}
             <div className="p-4 space-y-3">
-              <div>
-                <span className="text-xs text-muted-foreground">endpoint</span>
+              <Field label="endpoint">
                 <Copyable text={generation.endpoint} className="text-sm block">
                   {generation.endpoint}
                 </Copyable>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground">created</span>
+              </Field>
+              <Field label="created">
                 <p className="text-sm">
                   <TimeAgo date={new Date(generation.createdAt)} />
                   {completionTime && (
                     <span className="text-muted-foreground ml-2">({completionTime}s)</span>
                   )}
                 </p>
-              </div>
+              </Field>
               {generation.contentType && (
-                <div>
-                  <span className="text-xs text-muted-foreground">content type</span>
+                <Field label="content type">
                   <p className="text-sm">{generation.contentType}</p>
-                </div>
+                </Field>
               )}
               {generation.providerRequestId && (
-                <div>
-                  <span className="text-xs text-muted-foreground">provider request id</span>
+                <Field label="provider request id">
                   <Copyable
                     text={generation.providerRequestId}
                     className="text-xs font-mono break-all block"
                   >
                     {generation.providerRequestId}
                   </Copyable>
-                </div>
+                </Field>
               )}
             </div>
 

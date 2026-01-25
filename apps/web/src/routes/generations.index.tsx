@@ -1,11 +1,10 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 
 import { GenerationCard } from "@/components/generation-card"
 import { PageHeader, PageContent } from "@/components/layout"
 import { ThumbnailGrid } from "@/components/thumbnail"
-import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -23,6 +22,7 @@ type GenerationStatus = "pending" | "ready" | "failed"
 
 function GenerationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   const generationsQuery = useInfiniteQuery({
     queryKey: ["generations", "list", { status: statusFilter }],
@@ -38,7 +38,33 @@ function GenerationsPage() {
     refetchInterval: statusFilter === "pending" || statusFilter === "all" ? 5000 : false,
   })
 
-  const allGenerations = generationsQuery.data?.pages.flatMap((page) => page.items) ?? []
+  const allGenerations = generationsQuery.data?.pages.flatMap((page) => page.items ?? []) ?? []
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (
+          entry?.isIntersecting &&
+          generationsQuery.hasNextPage &&
+          !generationsQuery.isFetchingNextPage
+        ) {
+          generationsQuery.fetchNextPage()
+        }
+      },
+      { rootMargin: "200px" },
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [
+    generationsQuery.hasNextPage,
+    generationsQuery.isFetchingNextPage,
+    generationsQuery.fetchNextPage,
+  ])
 
   return (
     <div className="flex flex-col h-full">
@@ -77,17 +103,9 @@ function GenerationsPage() {
           ))}
         </ThumbnailGrid>
 
-        {generationsQuery.hasNextPage && (
-          <div className="mt-6 flex justify-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => generationsQuery.fetchNextPage()}
-              disabled={generationsQuery.isFetchingNextPage}
-            >
-              {generationsQuery.isFetchingNextPage ? "loading..." : "load more"}
-            </Button>
-          </div>
+        <div ref={sentinelRef} className="h-px" />
+        {generationsQuery.isFetchingNextPage && (
+          <div className="py-4 text-center text-xs text-muted-foreground">loading...</div>
         )}
       </PageContent>
     </div>
