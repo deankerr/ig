@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link, useLocation } from "@tanstack/react-router"
-import { Circle } from "lucide-react"
+import { Circle, RefreshCw } from "lucide-react"
 
 import { ApiKeySettings } from "./api-key-settings"
 import { client } from "@/utils/orpc"
@@ -23,8 +23,29 @@ export default function Header() {
     refetchInterval: 5000,
   })
 
+  const syncStatusQuery = useQuery({
+    queryKey: ["models", "syncStatus"],
+    queryFn: () => client.models.getSyncStatus(),
+    refetchInterval: (query) => {
+      const data = query.state.data
+      const activeStatuses = ["running", "queued", "waiting"]
+      if (
+        activeStatuses.includes(data?.standard ?? "") ||
+        activeStatuses.includes(data?.all ?? "")
+      ) {
+        return 2000
+      }
+      return 30000
+    },
+  })
+
   const isConnected = healthQuery.isSuccess
   const pendingCount = pendingQuery.data?.items.length ?? 0
+  const syncStatus = syncStatusQuery.data
+  const activeStatuses = ["running", "queued", "waiting"]
+  const isSyncing =
+    activeStatuses.includes(syncStatus?.standard ?? "") ||
+    activeStatuses.includes(syncStatus?.all ?? "")
 
   const navItems = [
     { to: "/generations", label: "generations" },
@@ -64,6 +85,17 @@ export default function Header() {
 
         {/* Right: Status indicators */}
         <div className="flex items-center gap-4">
+          {/* Model sync indicator */}
+          {isSyncing && (
+            <Link
+              to="/models"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <RefreshCw className="h-3 w-3 animate-spin" />
+              <span>syncing</span>
+            </Link>
+          )}
+
           {/* Pending jobs indicator */}
           {pendingCount > 0 && (
             <Link
@@ -80,9 +112,11 @@ export default function Header() {
           )}
 
           {/* Connection status */}
-          <div
-            className="flex items-center gap-1.5 text-xs cursor-default"
-            title={env.VITE_SERVER_URL}
+          <a
+            href={`${env.VITE_SERVER_URL}/api`}
+            target="_blank"
+            rel="noopener"
+            className="flex items-center gap-1.5 text-xs"
           >
             <Circle
               className={cn(
@@ -91,9 +125,17 @@ export default function Header() {
               )}
             />
             <span className={cn(isConnected ? "text-muted-foreground" : "text-status-failed")}>
-              {healthQuery.isLoading ? "..." : isConnected ? "connected" : "disconnected"}
+              {(() => {
+                try {
+                  const url = new URL(env.VITE_SERVER_URL)
+                  const match = url.hostname.match(/^ig-server-(\w+)\./)
+                  return match?.[1] ?? url.hostname
+                } catch {
+                  return "..."
+                }
+              })()}
             </span>
-          </div>
+          </a>
 
           {/* API Key settings */}
           <ApiKeySettings />

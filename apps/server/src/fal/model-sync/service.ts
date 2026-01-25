@@ -1,12 +1,23 @@
 import { db } from "@ig/db"
 import { models } from "@ig/db/schema"
-import { eq, isNotNull, sql } from "drizzle-orm"
+import { eq, isNotNull, isNull, or, gt, lt } from "drizzle-orm"
 import { up, isResponseError } from "up-fetch"
 import z from "zod"
 import * as R from "remeda"
 
 const MODEL_BATCH_SIZE = 100
-const PRICING_QUEUE_BATCH_SIZE = 10
+export const PRICING_BATCH_SIZE = 10
+
+// Sync thresholds - configurable via workflow params
+export const SYNC_THRESHOLDS = {
+  NEW_MODEL_DAYS: 7, // models created within this period always refetch pricing
+  STALE_PRICING_DAYS: 30, // refetch pricing older than this
+} as const
+
+export type SyncParams = {
+  newModelDays?: number
+  stalePricingDays?: number
+}
 
 // Zod schemas matching the actual fal.ai OpenAPI spec
 const FalModelMetadataSchema = z.object({
@@ -62,7 +73,7 @@ const FalPricingResponseSchema = z.object({
   has_more: z.boolean(),
 })
 
-type FalModel = z.infer<typeof FalModelSchema>
+export type FalModel = z.infer<typeof FalModelSchema>
 
 function createFalClient(key: string) {
   return up(fetch, () => ({
@@ -75,13 +86,9 @@ function createFalClient(key: string) {
   }))
 }
 
-type FalClient = ReturnType<typeof createFalClient>
-
-// Queue message type
-export type ModelSyncMessage = { type: "fetch_pricing"; endpointIds: string[] }
-
-// Fetch all models from fal.ai
-async function fetchAllModels(fal: FalClient): Promise<FalModel[]> {
+// Fetch all models from fal.ai - used by workflow
+export async function fetchAllModels(falKey: string): Promise<FalModel[]> {
+  const fal = createFalClient(falKey)
   const results: FalModel[] = []
   let cursor = ""
 
@@ -101,18 +108,8 @@ async function fetchAllModels(fal: FalClient): Promise<FalModel[]> {
   return results
 }
 
-// Start sync: fetch models, upsert them, enqueue pricing jobs
-export async function startModelSync(args: {
-  falKey: string
-  queue: { send(message: ModelSyncMessage): Promise<void> }
-}) {
-  const { falKey, queue } = args
-  const fal = createFalClient(falKey)
-
-  // Fetch all models (fast operation)
-  const falModels = await fetchAllModels(fal)
-
-  // Prepare records for upsert (metadata only, no pricing fields)
+// Upsert models to database - used by workflow
+export async function upsertModels(falModels: FalModel[]) {
   const records = falModels
     .filter((m) => m.metadata)
     .map((m) => {
@@ -153,26 +150,52 @@ export async function startModelSync(args: {
     }
   }
 
-  for (const chunk of R.chunk(records, PRICING_QUEUE_BATCH_SIZE)) {
-    await queue.send({
-      type: "fetch_pricing",
-      endpointIds: chunk.map(({ endpointId }) => endpointId),
-    })
-  }
-
-  return { found: falModels.length }
+  return { upserted: records.length }
 }
 
-// * Model Sync Queue
-// NOTE: fal will failed an entire price request batch if a single item returns a 404
-export async function processModelSyncMessage(args: { message: ModelSyncMessage; falKey: string }) {
-  const { message, falKey } = args
+// Query models needing pricing - smart filtering for workflow
+export async function queryModelsNeedingPricing(params: SyncParams = {}) {
+  const {
+    newModelDays = SYNC_THRESHOLDS.NEW_MODEL_DAYS,
+    stalePricingDays = SYNC_THRESHOLDS.STALE_PRICING_DAYS,
+  } = params
+
+  const now = Date.now()
+  const newModelThreshold = new Date(now - newModelDays * 24 * 60 * 60 * 1000)
+  const stalePricingThreshold = new Date(now - stalePricingDays * 24 * 60 * 60 * 1000)
+
+  // Queue pricing when:
+  // 1. No pricing yet (unitPrice IS NULL)
+  // 2. Has error (syncError IS NOT NULL) - retry, 404 might be temporary
+  // 3. New model (upstreamCreatedAt within threshold) - always refetch
+  // 4. Stale pricing (pricingSyncedAt older than threshold)
+  // 5. Never synced pricing (pricingSyncedAt IS NULL) - catches legacy data
+  const m = await db
+    .select({ endpointId: models.endpointId })
+    .from(models)
+    .where(
+      or(
+        isNull(models.unitPrice),
+        isNotNull(models.syncError),
+        gt(models.upstreamCreatedAt, newModelThreshold),
+        lt(models.pricingSyncedAt, stalePricingThreshold),
+        isNull(models.pricingSyncedAt),
+      ),
+    )
+
+  return m.map(({ endpointId }) => endpointId)
+}
+
+// Fetch pricing for a batch of models
+// NOTE: fal will return a single 404 error any one of the endpoints in the batch are not found
+//  - try a batch first, if it fails, try each individually to isolate the problematic endpoint
+export async function fetchPricingBatch(endpointIds: string[], falKey: string) {
   const fal = createFalClient(falKey)
 
-  async function fetchPrices(endpointIds: string[]) {
+  async function fetchPrices(ids: string[]) {
     return await fal("/models/pricing", {
       method: "GET",
-      params: { endpoint_id: endpointIds },
+      params: { endpoint_id: ids },
       schema: FalPricingResponseSchema,
       retry: {
         attempts: 5,
@@ -184,9 +207,11 @@ export async function processModelSyncMessage(args: { message: ModelSyncMessage;
     })
   }
 
+  const pricingSyncedAt = new Date()
+
   try {
     // Try batch fetch first
-    const data = await fetchPrices(message.endpointIds)
+    const data = await fetchPrices(endpointIds)
 
     const batch = data.prices.map(({ endpoint_id, ...pricing }) => {
       return db
@@ -195,6 +220,7 @@ export async function processModelSyncMessage(args: { message: ModelSyncMessage;
           unitPrice: pricing.unit_price,
           unit: pricing.unit,
           currency: pricing.currency,
+          pricingSyncedAt,
           syncError: null,
         })
         .where(eq(models.endpointId, endpoint_id))
@@ -203,9 +229,12 @@ export async function processModelSyncMessage(args: { message: ModelSyncMessage;
     if (R.hasAtLeast(batch, 1)) {
       await db.batch(batch)
     }
+
+    return { updated: endpointIds.length, errors: 0 }
   } catch {
     // Batch failed (likely 404 for one model), try individually
-    for (const endpointId of message.endpointIds) {
+    let errors = 0
+    for (const endpointId of endpointIds) {
       try {
         const data = await fetchPrices([endpointId])
         const pricing = data.prices[0] // min(1) ensured by zod
@@ -217,10 +246,12 @@ export async function processModelSyncMessage(args: { message: ModelSyncMessage;
             unitPrice: pricing.unit_price,
             unit: pricing.unit,
             currency: pricing.currency,
+            pricingSyncedAt,
             syncError: null,
           })
           .where(eq(models.endpointId, endpointId))
       } catch (error) {
+        errors++
         if (isResponseError(error)) {
           // fal has no pricing for this model
           if (error.status === 404) {
@@ -230,45 +261,25 @@ export async function processModelSyncMessage(args: { message: ModelSyncMessage;
                 unitPrice: null,
                 unit: null,
                 currency: null,
+                pricingSyncedAt,
                 syncError: error.message,
               })
               .where(eq(models.endpointId, endpointId))
+            continue
           }
         }
 
-        // unknown error, leave existing pricing in place
+        // unknown error, leave existing pricing in place, record error
         await db
           .update(models)
           .set({
+            pricingSyncedAt,
             syncError: error instanceof Error ? error.message : String(error),
           })
           .where(eq(models.endpointId, endpointId))
       }
     }
-  }
-}
 
-// Get sync status - counts of models with/without pricing and errors
-export async function getSyncStatus(): Promise<{
-  total: number
-  withPricing: number
-  withoutPricing: number
-  withErrors: number
-}> {
-  const [totalResult, withPricingResult, withErrorsResult] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(models),
-    db.select({ count: sql<number>`count(*)` }).from(models).where(isNotNull(models.unitPrice)),
-    db.select({ count: sql<number>`count(*)` }).from(models).where(isNotNull(models.syncError)),
-  ])
-
-  const total = totalResult[0]?.count ?? 0
-  const withPricing = withPricingResult[0]?.count ?? 0
-  const withErrors = withErrorsResult[0]?.count ?? 0
-
-  return {
-    total,
-    withPricing,
-    withoutPricing: total - withPricing,
-    withErrors,
+    return { updated: endpointIds.length - errors, errors }
   }
 }

@@ -1,35 +1,52 @@
 import { useState, useMemo, useDeferredValue } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { RefreshCw, Search } from "lucide-react"
+import { Search, CloudDownload, ChevronDown } from "lucide-react"
+import { toast } from "sonner"
 
 import { PageHeader, PageContent } from "@/components/layout"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { client } from "@/utils/orpc"
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetBody } from "@/components/ui/sheet"
 import { SortableTableHead } from "@/components/sortable-table-head"
 import { TimeAgo } from "@/components/time-ago"
-import { client, queryClient } from "@/utils/orpc"
-import { getModelsCache, setModelsCache } from "@/lib/models-cache"
 import { filterModels } from "@/lib/fuzzy-search"
 import { useSortable } from "@/hooks/use-sortable"
 import { Copyable } from "@/components/copyable"
+import { useAllModels, type Model } from "@/hooks/use-all-models"
 
 export const Route = createFileRoute("/models/")({
   component: ModelsPage,
 })
 
-type Model = Awaited<ReturnType<typeof client.models.listAll>>["items"][number]
 type SortKey = keyof Model
 
 function formatPrice(unitPrice: number | null): string {
   if (unitPrice == null) return "\u2014"
-  return `$${unitPrice}`
+  // Show all significant digits, but minimum 2 decimal places
+  const str = unitPrice.toString()
+  const decimals = str.includes(".") ? (str.split(".")[1]?.length ?? 0) : 0
+  return `$${unitPrice.toFixed(Math.max(2, decimals))}`
 }
 
-function parseDate(value: string | Date): Date {
+function parseDate(value: string | Date | null | undefined): Date | null {
+  if (value == null) return null
   return value instanceof Date ? value : new Date(value)
+}
+
+function getLatestSyncDate(model: Model): Date | null {
+  const modelSync = parseDate(model.modelSyncedAt)
+  const pricingSync = parseDate(model.pricingSyncedAt)
+  if (!modelSync) return pricingSync
+  if (!pricingSync) return modelSync
+  return modelSync > pricingSync ? modelSync : pricingSync
 }
 
 function ModelsPage() {
@@ -37,29 +54,31 @@ function ModelsPage() {
   const deferredSearch = useDeferredValue(searchQuery)
   const [selectedModel, setSelectedModel] = useState<Model | null>(null)
 
-  const modelsQuery = useQuery({
-    queryKey: ["models", "listAll"],
-    queryFn: async () => {
-      const data = await client.models.listAll()
-      setModelsCache(data)
-      return data
+  const { models, isLoading } = useAllModels()
+
+  const syncMutation = useMutation({
+    mutationFn: (params: { all?: boolean }) => client.models.startSync(params),
+    onSuccess: (data) => {
+      if (data.started) {
+        toast.success("Model sync started")
+      } else {
+        toast.info(data.reason ?? "Sync already in progress")
+      }
     },
-    initialData: () => getModelsCache<Model>(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    onError: (error) => {
+      toast.error(error.message)
+    },
   })
 
-  const items = modelsQuery.data?.items ?? []
-
-  const filteredModels = useMemo(() => filterModels(items, deferredSearch), [items, deferredSearch])
+  const filteredModels = useMemo(
+    () => filterModels(models, deferredSearch),
+    [models, deferredSearch],
+  )
 
   const { sortedItems, sortConfig, toggleSort } = useSortable(filteredModels, {
     key: "upstreamCreatedAt" as SortKey,
     direction: "desc",
   })
-
-  const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["models", "listAll"] })
-  }
 
   return (
     <div className="flex flex-col h-full">
@@ -69,7 +88,7 @@ function ModelsPage() {
             <h1 className="text-sm font-medium">models</h1>
             <span className="text-xs text-muted-foreground">
               {sortedItems.length}
-              {deferredSearch && ` / ${modelsQuery.data?.items.length ?? 0}`} models
+              {deferredSearch && ` / ${models.length}`} models
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -83,20 +102,29 @@ function ModelsPage() {
                 className="w-[200px] pl-7"
               />
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={modelsQuery.isFetching}
-            >
-              <RefreshCw className={`h-3 w-3 ${modelsQuery.isFetching ? "animate-spin" : ""}`} />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="inline-flex items-center justify-center gap-1 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-8 px-3"
+                disabled={syncMutation.isPending}
+              >
+                <CloudDownload
+                  className={`h-3 w-3 ${syncMutation.isPending ? "animate-pulse" : ""}`}
+                />
+                <ChevronDown className="h-3 w-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => syncMutation.mutate({})}>Sync</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => syncMutation.mutate({ all: true })}>
+                  Sync all
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </PageHeader>
 
       <PageContent className="p-0">
-        {sortedItems.length === 0 && !modelsQuery.isLoading && (
+        {sortedItems.length === 0 && !isLoading && (
           <div className="text-center py-12 text-muted-foreground text-sm">
             {deferredSearch ? "no models match your search" : "no models found"}
           </div>
@@ -137,11 +165,11 @@ function ModelsPage() {
                   Created
                 </SortableTableHead>
                 <SortableTableHead
-                  sortKey="localUpdatedAt"
+                  sortKey="modelSyncedAt"
                   currentSort={sortConfig}
                   onSort={toggleSort}
                 >
-                  Updated
+                  Synced
                 </SortableTableHead>
               </TableRow>
             </TableHeader>
@@ -162,7 +190,11 @@ function ModelsPage() {
                   <TableCell className="font-mono">{formatPrice(model.unitPrice)}</TableCell>
                   <TableCell className="text-muted-foreground">{model.unit ?? "\u2014"}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    <TimeAgo date={parseDate(model.upstreamCreatedAt)} />
+                    {parseDate(model.upstreamCreatedAt) ? (
+                      <TimeAgo date={parseDate(model.upstreamCreatedAt)!} />
+                    ) : (
+                      "\u2014"
+                    )}
                   </TableCell>
                   <TableCell
                     className={
@@ -170,7 +202,11 @@ function ModelsPage() {
                     }
                     title={model.syncError ?? undefined}
                   >
-                    <TimeAgo date={parseDate(model.localUpdatedAt)} />
+                    {getLatestSyncDate(model) ? (
+                      <TimeAgo date={getLatestSyncDate(model)!} />
+                    ) : (
+                      "\u2014"
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

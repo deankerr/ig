@@ -1,5 +1,5 @@
 import alchemy from "alchemy"
-import { D1Database, Images, Queue, R2Bucket, Vite, Worker } from "alchemy/cloudflare"
+import { D1Database, Images, R2Bucket, Vite, Worker, Workflow } from "alchemy/cloudflare"
 import { CloudflareStateStore } from "alchemy/state"
 import { config } from "dotenv"
 
@@ -32,17 +32,19 @@ const generationsBucket = await R2Bucket("generations", {})
 
 const images = Images()
 
-const modelSyncQueue = await Queue("model-sync", {
-  settings: {
-    deliveryDelay: 5, // avoid fal rate limits
-  },
+const modelSyncWorkflow = Workflow("model-sync-workflow", {
+  className: "ModelSyncWorkflow",
 })
+
+// Build ID for cache busting - changes each deployment
+const buildId = process.env.VITE_BUILD_ID ?? new Date().toISOString().slice(0, 16)
 
 export const web = await Vite("web", {
   cwd: "../../apps/web",
   assets: "dist",
   bindings: {
     VITE_SERVER_URL: serverUrl,
+    VITE_BUILD_ID: buildId,
   },
 })
 
@@ -62,20 +64,9 @@ export const server = await Worker("server", {
     FAL_KEY: alchemy.secret.env.FAL_KEY!,
     WEBHOOK_URL: `${serverUrl}/webhooks/fal`,
     API_KEY: alchemy.secret.env.API_KEY!,
-    MODEL_SYNC_QUEUE: modelSyncQueue,
+    MODEL_SYNC_WORKFLOW: modelSyncWorkflow,
   },
   crons: ["0 4 * * *"],
-  eventSources: [
-    {
-      queue: modelSyncQueue,
-      settings: {
-        batchSize: 1,
-        maxConcurrency: 1,
-        maxRetries: 3,
-        retryDelay: 60,
-      },
-    },
-  ],
   dev: {
     port: 3000,
   },

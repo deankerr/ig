@@ -27,9 +27,10 @@ export const models = sqliteTable(
     unit: text("unit"),
     currency: text("currency").default("USD"),
     // Sync state tracking
-    localUpdatedAt: integer("local_updated_at", { mode: "timestamp_ms" })
+    modelSyncedAt: integer("model_synced_at", { mode: "timestamp_ms" })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
+    pricingSyncedAt: integer("pricing_synced_at", { mode: "timestamp_ms" }),
     syncError: text("sync_error"),
   },
   (table) => [

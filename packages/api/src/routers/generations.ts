@@ -8,7 +8,7 @@ import { z } from "zod"
 import { apiKeyProcedure, publicProcedure } from "../index"
 
 const MAX_TAGS = 20
-const SLUG_PREFIX_LENGTH = 7
+const SLUG_PREFIX_LENGTH = 8
 const PRESET_PREFIX = "ig/"
 
 const tagSchema = z

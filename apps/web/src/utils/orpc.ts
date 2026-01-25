@@ -8,6 +8,14 @@ import { QueryCache, QueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Keep cached data for 24 hours (for localStorage persistence)
+      gcTime: 1000 * 60 * 60 * 24,
+      // Consider data stale after 5 minutes
+      staleTime: 1000 * 60 * 5,
+    },
+  },
   queryCache: new QueryCache({
     onError: (error, query) => {
       toast.error(`Error: ${error.message}`, {
