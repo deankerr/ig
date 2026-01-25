@@ -19,7 +19,7 @@ export default function Header() {
   })
 
   const pendingQuery = useQuery({
-    queryKey: ["generations", "list", { status: "pending" }],
+    queryKey: ["generations", "pending-count"],
     queryFn: () => client.generations.list({ status: "pending", limit: 1 }),
     refetchInterval: 5000,
   })
