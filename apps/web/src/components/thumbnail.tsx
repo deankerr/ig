@@ -1,35 +1,49 @@
-import { useState } from "react"
-import { Image } from "@unpic/react/base"
+import { useState, type ReactNode } from "react"
 import { Film, FileAudio, FileQuestion, Image as ImageIcon } from "lucide-react"
 
 import { env } from "@ig/env/web"
 import { cn } from "@/lib/utils"
 
 /**
- * Max width to request from the server.
- * Cloudflare Images transforms fail on very large sizes (3840+) due to worker limits.
+ * Cloudflare Image Resizing endpoint.
+ * Format: https://orb.town/cdn-cgi/image/<OPTIONS>/<SOURCE-IMAGE>
  */
-const MAX_TRANSFORM_WIDTH = 1920
+const CDN_IMAGE_PREFIX = "https://orb.town/cdn-cgi/image"
 
 /**
- * Custom transformer for our image API.
- * Maps unpic's width/height params to our query string format.
+ * Max thumbnail dimension in pixels.
+ * - CDN resizes images to this width
+ * - Grid cells are capped at this size
+ * - Larger images waste bandwidth without visual benefit
  */
-function igTransformer(src: string | URL, operations: { width?: number; height?: number }) {
-  const base = src.toString().split("?")[0]
-  const params = new URLSearchParams()
-  if (operations.width) {
-    const width = Math.min(Math.round(operations.width), MAX_TRANSFORM_WIDTH)
-    params.set("w", String(width))
-  }
-  if (operations.height) params.set("h", String(Math.round(operations.height)))
-  const query = params.toString()
-  return query ? `${base}?${query}` : base
+export const THUMBNAIL_SIZE = 400
+
+/**
+ * Responsive grid for thumbnail cards.
+ * Auto-fills columns with min 200px, capped at THUMBNAIL_SIZE.
+ */
+export function ThumbnailGrid({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn("grid gap-3 justify-center", className)}
+      style={{
+        gridTemplateColumns: `repeat(auto-fill, minmax(200px, ${THUMBNAIL_SIZE}px))`,
+      }}
+    >
+      {children}
+    </div>
+  )
 }
 
 /**
  * Renders a thumbnail for a generation.
- * Uses unpic for responsive images with our transform API.
+ * Uses Cloudflare Image Resizing for optimized delivery.
  */
 export function Thumbnail({
   generationId,
@@ -48,19 +62,17 @@ export function Thumbnail({
   const isVideo = contentType?.startsWith("video/")
   const isAudio = contentType?.startsWith("audio/")
 
-  // For ready images, use unpic
+  // For ready images, use Cloudflare Image Resizing
   if (status === "ready" && isImage && !error) {
-    const src = `${env.VITE_SERVER_URL}/generations/${generationId}/file`
+    const sourceUrl = `${env.VITE_SERVER_URL}/generations/${generationId}/file`
+    const src = `${CDN_IMAGE_PREFIX}/w=${THUMBNAIL_SIZE},f=auto,q=80/${sourceUrl}`
 
     return (
-      <Image
+      <img
         src={src}
         alt=""
-        layout="fullWidth"
-        transformer={igTransformer}
         onError={() => setError(true)}
         className={cn("object-cover", className)}
-        background="auto"
       />
     )
   }
