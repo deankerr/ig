@@ -8,6 +8,9 @@ import type { Generation } from "@ig/db/schema"
 
 const IMAGE_INPUT_FORMATS = ["image/png", "image/jpeg", "image/gif", "image/webp"]
 
+// Max transform dimensions - larger sizes cause QUIC/HTTP2 protocol errors due to worker limits
+const MAX_TRANSFORM_DIMENSION = 2048
+
 const IMAGE_OUTPUT_FORMATS = [
   "image/png",
   "image/jpeg",
@@ -91,13 +94,23 @@ async function serveGeneration(c: Context, generation: Generation | undefined) {
     })
   }
 
-  // Build transform pipeline
-  let pipeline = env.IMAGES.input(object.body)
+  // Tee the stream so we can use it for both info() and input()
+  const [infoStream, inputStream] = object.body.tee()
+  const info = await env.IMAGES.info(infoStream)
 
-  // Apply size transforms
+  // Get intrinsic dimensions - we've already filtered to IMAGE_INPUT_FORMATS (no SVG)
+  const { width: intrinsicWidth, height: intrinsicHeight } = info as {
+    width: number
+    height: number
+  }
+
+  // Build transform pipeline
+  let pipeline = env.IMAGES.input(inputStream)
+
+  // Apply size transforms - cap to intrinsic size (no upscaling) and max dimension
   const transformOpts: Record<string, number> = {}
-  if (w) transformOpts.width = parseInt(w, 10)
-  if (h) transformOpts.height = parseInt(h, 10)
+  if (w) transformOpts.width = Math.min(parseInt(w, 10), intrinsicWidth, MAX_TRANSFORM_DIMENSION)
+  if (h) transformOpts.height = Math.min(parseInt(h, 10), intrinsicHeight, MAX_TRANSFORM_DIMENSION)
   if (Object.keys(transformOpts).length) {
     pipeline = pipeline.transform(transformOpts)
   }

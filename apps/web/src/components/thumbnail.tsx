@@ -6,13 +6,22 @@ import { env } from "@ig/env/web"
 import { cn } from "@/lib/utils"
 
 /**
+ * Max width to request from the server.
+ * Cloudflare Images transforms fail on very large sizes (3840+) due to worker limits.
+ */
+const MAX_TRANSFORM_WIDTH = 1920
+
+/**
  * Custom transformer for our image API.
  * Maps unpic's width/height params to our query string format.
  */
 function igTransformer(src: string | URL, operations: { width?: number; height?: number }) {
   const base = src.toString().split("?")[0]
   const params = new URLSearchParams()
-  if (operations.width) params.set("w", String(Math.round(operations.width)))
+  if (operations.width) {
+    const width = Math.min(Math.round(operations.width), MAX_TRANSFORM_WIDTH)
+    params.set("w", String(width))
+  }
   if (operations.height) params.set("h", String(Math.round(operations.height)))
   const query = params.toString()
   return query ? `${base}?${query}` : base
