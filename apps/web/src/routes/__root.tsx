@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router"
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
 
+import { RouteError } from "@/components/devtools/route-error"
 import Header from "@/components/header"
 import { Toaster } from "@/components/ui/sonner"
 import { orpc } from "@/utils/orpc"
@@ -17,6 +18,7 @@ export interface RouterAppContext {
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
+  errorComponent: RouteError,
   head: () => ({
     meta: [
       {
