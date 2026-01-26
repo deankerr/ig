@@ -1,7 +1,7 @@
 import type { ErrorComponentProps } from "@tanstack/react-router"
 import { useRouter } from "@tanstack/react-router"
 
-import { ErrorBoundaryUi } from "./error-boundary-ui"
+import { ErrorBoundaryUi } from "./elements/devtools/error-boundary-ui"
 
 export function RouteError({ error, info }: ErrorComponentProps) {
   const router = useRouter()

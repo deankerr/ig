@@ -7,6 +7,10 @@ Always read @VISION.md for a high level understanding of our project.
 - `apps/server/` core backend service
 - `apps/web/` ig-console: developer focused admin UI for generation management and observability
 
+## Latest
+
+NOTE: We're currently experiencing degraded Typescript LSP performance. Stale diagnostics are likely. Rely on `bun check` for accurate information.
+
 ## Workflow
 
 - Run `bun check` to type check, lint and format your work.

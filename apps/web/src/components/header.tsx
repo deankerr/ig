@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link, useLocation } from "@tanstack/react-router"
-import { Circle, RefreshCw } from "lucide-react"
+import { CircleIcon, RefreshCwIcon } from "lucide-react"
 
 import { ApiKeySettings } from "./api-key-settings"
 import { PulsingDot } from "./pulsing-dot"
@@ -92,7 +92,7 @@ export default function Header() {
               to="/models"
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
             >
-              <RefreshCw className="h-3 w-3 animate-spin" />
+              <RefreshCwIcon className="size-3 animate-spin" />
               <span>syncing</span>
             </Link>
           )}
@@ -116,9 +116,9 @@ export default function Header() {
             rel="noopener"
             className="flex items-center gap-1.5 text-xs"
           >
-            <Circle
+            <CircleIcon
               className={cn(
-                "h-2 w-2 fill-current",
+                "size-2 fill-current",
                 isConnected ? "text-status-ready" : "text-status-failed",
               )}
             />

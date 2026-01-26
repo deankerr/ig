@@ -1,4 +1,4 @@
-import { X } from "lucide-react"
+import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -24,7 +24,7 @@ export function Tag({
       <span className="break-all">{children}</span>
       {onRemove && (
         <button onClick={onRemove} className="shrink-0 hover:text-destructive transition-colors">
-          <X className="h-3 w-3" />
+          <XIcon className="size-3" />
         </button>
       )}
     </span>

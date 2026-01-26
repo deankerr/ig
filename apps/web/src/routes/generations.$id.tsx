@@ -1,16 +1,16 @@
-import { useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import {
-  ArrowLeft,
-  Download,
-  ExternalLink,
-  Plus,
-  RefreshCw,
-  Trash2,
-  Copy,
-  Check,
+  ArrowLeftIcon,
+  CheckIcon,
+  CopyIcon,
+  DownloadIcon,
+  ExternalLinkIcon,
+  PlusIcon,
+  RefreshCwIcon,
+  Trash2Icon,
 } from "lucide-react"
+import { useState } from "react"
 import { toast } from "sonner"
 import { SidebarLayout, PageHeader, PageContent } from "@/components/layout"
 import { PulsingDot } from "@/components/pulsing-dot"
@@ -191,7 +191,7 @@ function GenerationDetailPage() {
                   to="/generations"
                   className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeftIcon className="size-4" />
                   <span>back</span>
                 </Link>
                 <div className="flex items-center gap-2">
@@ -201,9 +201,8 @@ function GenerationDetailPage() {
                       size="sm"
                       onClick={() => regenerateMutation.mutate()}
                       disabled={regenerateMutation.isPending}
-                      className="h-7 text-xs"
                     >
-                      <RefreshCw className="mr-1.5 h-3 w-3" />
+                      <RefreshCwIcon data-icon="inline-start" />
                       regenerate
                     </Button>
                   )}
@@ -211,9 +210,9 @@ function GenerationDetailPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowDeleteDialog(true)}
-                    className="h-7 text-xs text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive"
                   >
-                    <Trash2 className="mr-1.5 h-3 w-3" />
+                    <Trash2Icon data-icon="inline-start" />
                     delete
                   </Button>
                 </div>
@@ -234,22 +233,22 @@ function GenerationDetailPage() {
                       </div>
                       <div className="flex justify-center gap-2 pt-4">
                         <ActionLink href={fileUrl}>
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLinkIcon className="size-3" />
                           open
                         </ActionLink>
                         <ActionLink href={fileUrl} download>
-                          <Download className="h-3 w-3" />
+                          <DownloadIcon className="size-3" />
                           download
                         </ActionLink>
                         <ActionLink onClick={copyFileUrl}>
                           {copiedUrl ? (
                             <>
-                              <Check className="h-3 w-3 text-status-ready" />
+                              <CheckIcon className="size-3 text-status-ready" />
                               <span className="text-status-ready">copied</span>
                             </>
                           ) : (
                             <>
-                              <Copy className="h-3 w-3" />
+                              <CopyIcon className="size-3" />
                               copy url
                             </>
                           )}
@@ -270,7 +269,7 @@ function GenerationDetailPage() {
                       <p>content type: {generation.contentType}</p>
                       <div className="mt-4">
                         <ActionLink href={fileUrl} download>
-                          <Download className="h-3 w-3" />
+                          <DownloadIcon className="size-3" />
                           download file
                         </ActionLink>
                       </div>
@@ -430,9 +429,9 @@ function GenerationDetailPage() {
                   placeholder="add tag"
                   className="h-7 text-xs flex-1"
                 />
-                <button onClick={handleAddTag} className="p-1.5 hover:bg-muted transition-colors">
-                  <Plus className="h-3 w-3" />
-                </button>
+                <Button size="icon-xs" variant="ghost" onClick={handleAddTag}>
+                  <PlusIcon />
+                </Button>
               </div>
             </div>
 

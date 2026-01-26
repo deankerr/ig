@@ -1,5 +1,5 @@
+import { KeyIcon } from "lucide-react"
 import { useState } from "react"
-import { Key } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { clearApiKey, getApiKey, setApiKey } from "@/utils/orpc"
-import { cn } from "@/lib/utils"
 
 export function ApiKeySettings() {
   const [open, setOpen] = useState(false)
@@ -43,17 +42,14 @@ export function ApiKeySettings() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <button
-            className={cn(
-              "p-1.5 transition-colors",
-              hasKey
-                ? "text-status-ready hover:text-status-ready/80"
-                : "text-muted-foreground hover:text-foreground",
-            )}
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            className={hasKey ? "text-status-ready hover:text-status-ready/80" : ""}
             title={hasKey ? "API key set" : "No API key"}
           >
-            <Key className="h-3.5 w-3.5" />
-          </button>
+            <KeyIcon />
+          </Button>
         }
       />
       <DialogContent className="max-w-sm">

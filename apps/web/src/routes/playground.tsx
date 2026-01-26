@@ -1,7 +1,16 @@
-import { useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Plus, Send, ChevronDown, Save, Trash2, Pencil, Check, X } from "lucide-react"
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  PencilIcon,
+  PlusIcon,
+  SaveIcon,
+  SendIcon,
+  Trash2Icon,
+  XIcon,
+} from "lucide-react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { SidebarLayout, PageHeader, PageContent } from "@/components/layout"
@@ -282,7 +291,7 @@ function PlaygroundPage() {
                     "submitting..."
                   ) : (
                     <>
-                      <Send className="mr-1.5 h-3 w-3" />
+                      <SendIcon data-icon="inline-start" />
                       submit
                     </>
                   )}
@@ -332,9 +341,9 @@ function PlaygroundPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={
-                        <button className="flex items-center justify-center w-6 h-6 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                          <ChevronDown className="h-3.5 w-3.5" />
-                        </button>
+                        <Button size="icon-xs" variant="ghost">
+                          <ChevronDownIcon />
+                        </Button>
                       }
                     />
                     <DropdownMenuContent align="start" className="w-56">
@@ -378,40 +387,37 @@ function PlaygroundPage() {
                 </div>
                 {selectedPresetName && !isEditingPreset && (
                   <div className="flex items-center">
-                    <button
-                      onClick={handleStartEditPreset}
-                      className="flex items-center justify-center w-6 h-6 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                    <button
+                    <Button size="icon-xs" variant="ghost" onClick={handleStartEditPreset}>
+                      <PencilIcon />
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
                       onClick={() => deletePresetMutation.mutate(selectedPresetName)}
                       disabled={deletePresetMutation.isPending}
-                      className="flex items-center justify-center w-6 h-6 text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
+                      className="hover:text-destructive"
                     >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+                      <Trash2Icon />
+                    </Button>
                   </div>
                 )}
                 {isEditingPreset && (
                   <div className="flex items-center">
-                    <button
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
                       onClick={handleSavePresetMetadata}
                       disabled={
                         savePresetMutation.isPending ||
                         !editPresetName.startsWith("ig/") ||
                         editPresetName.length < 4
                       }
-                      className="flex items-center justify-center w-6 h-6 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                     >
-                      <Check className="h-3 w-3" />
-                    </button>
-                    <button
-                      onClick={handleCancelEditPreset}
-                      className="flex items-center justify-center w-6 h-6 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                      <CheckIcon />
+                    </Button>
+                    <Button size="icon-xs" variant="ghost" onClick={handleCancelEditPreset}>
+                      <XIcon />
+                    </Button>
                   </div>
                 )}
               </div>
@@ -483,9 +489,9 @@ function PlaygroundPage() {
                   size="sm"
                   onClick={handleOpenSaveDialog}
                   disabled={!endpoint.trim()}
-                  className="w-full h-7 text-xs mt-2"
+                  className="w-full mt-2"
                 >
-                  <Save className="mr-1 h-3 w-3" />
+                  <SaveIcon data-icon="inline-start" />
                   save as preset
                 </Button>
               )}
@@ -527,9 +533,9 @@ function PlaygroundPage() {
                   placeholder="add tag"
                   className="h-7 text-xs flex-1"
                 />
-                <button onClick={handleAddTag} className="p-1.5 hover:bg-muted transition-colors">
-                  <Plus className="h-3 w-3" />
-                </button>
+                <Button size="icon-xs" variant="ghost" onClick={handleAddTag}>
+                  <PlusIcon />
+                </Button>
               </div>
             </div>
           </div>

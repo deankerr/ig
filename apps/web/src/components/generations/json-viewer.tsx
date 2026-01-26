@@ -1,5 +1,5 @@
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon, CopyIcon } from "lucide-react"
 import { useState } from "react"
-import { Check, Copy, ChevronDown, ChevronRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -39,9 +39,9 @@ export function JsonViewer({
               className="p-0.5 hover:text-primary transition-colors"
             >
               {collapsed ? (
-                <ChevronRight className="h-3 w-3" />
+                <ChevronRightIcon className="size-3" />
               ) : (
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDownIcon className="size-3" />
               )}
             </button>
           )}
@@ -53,12 +53,12 @@ export function JsonViewer({
         >
           {copied ? (
             <>
-              <Check className="h-3 w-3 text-status-ready" />
+              <CheckIcon className="size-3 text-status-ready" />
               <span className="text-status-ready">copied</span>
             </>
           ) : (
             <>
-              <Copy className="h-3 w-3" />
+              <CopyIcon className="size-3" />
               <span>copy</span>
             </>
           )}

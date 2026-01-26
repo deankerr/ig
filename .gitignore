@@ -53,3 +53,5 @@ temp
 **/CLAUDE.md
 !/CLAUDE.md
 !/.claude/**/CLAUDE.md
+!/apps/*/CLAUDE.md
+!/packages/*/CLAUDE.md

@@ -1,7 +1,7 @@
-import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { Link, useNavigate } from "@tanstack/react-router"
-import { MoreHorizontal, RefreshCw, Trash2 } from "lucide-react"
+import { MoreHorizontalIcon, RefreshCwIcon, Trash2Icon } from "lucide-react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { Tag } from "@/components/tag"
@@ -98,12 +98,14 @@ export function GenerationCard({
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <button
-                    className="p-1 opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    className="opacity-0 group-hover:opacity-100"
                     onClick={(e) => e.preventDefault()}
                   >
-                    <MoreHorizontal className="h-3 w-3" />
-                  </button>
+                    <MoreHorizontalIcon />
+                  </Button>
                 }
               />
               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
@@ -123,7 +125,7 @@ export function GenerationCard({
                     }}
                     disabled={regenerateMutation.isPending}
                   >
-                    <RefreshCw className="mr-2 h-3 w-3" />
+                    <RefreshCwIcon />
                     regenerate
                   </DropdownMenuItem>
                 )}
@@ -134,7 +136,7 @@ export function GenerationCard({
                   }}
                   variant="destructive"
                 >
-                  <Trash2 className="mr-2 h-3 w-3" />
+                  <Trash2Icon />
                   delete
                 </DropdownMenuItem>
               </DropdownMenuContent>

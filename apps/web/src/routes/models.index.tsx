@@ -1,26 +1,41 @@
-import { useState, useMemo, useDeferredValue } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { Search, CloudDownload, ChevronDown } from "lucide-react"
+import {
+  ChevronDownIcon,
+  CloudDownloadIcon,
+  ExternalLinkIcon,
+  InfoIcon,
+  MoreHorizontalIcon,
+  SearchIcon,
+} from "lucide-react"
+import { useDeferredValue, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import { PageHeader, PageContent } from "@/components/layout"
-import { Input } from "@/components/ui/input"
+import { Copyable } from "@/components/copyable"
+import { PageContent, PageHeader } from "@/components/layout"
+import { SortableTableHead } from "@/components/sortable-table-head"
+import { TimeAgo } from "@/components/time-ago"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { client } from "@/utils/orpc"
-import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetBody } from "@/components/ui/sheet"
-import { SortableTableHead } from "@/components/sortable-table-head"
-import { TimeAgo } from "@/components/time-ago"
-import { filterModels } from "@/lib/fuzzy-search"
-import { useSortable } from "@/hooks/use-sortable"
-import { Copyable } from "@/components/copyable"
+import { Input } from "@/components/ui/input"
+import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { useAllModels, type Model } from "@/hooks/use-all-models"
+import { useSortable } from "@/hooks/use-sortable"
+import { filterModels } from "@/lib/fuzzy-search"
+import { client } from "@/utils/orpc"
 
 export const Route = createFileRoute("/models/")({
   component: ModelsPage,
@@ -93,7 +108,7 @@ function ModelsPage() {
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+              <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Search models..."
@@ -104,14 +119,13 @@ function ModelsPage() {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="inline-flex items-center justify-center gap-1 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-8 px-3"
-                disabled={syncMutation.isPending}
-              >
-                <CloudDownload
-                  className={`h-3 w-3 ${syncMutation.isPending ? "animate-pulse" : ""}`}
-                />
-                <ChevronDown className="h-3 w-3" />
-              </DropdownMenuTrigger>
+                render={
+                  <Button variant="outline" size="sm" disabled={syncMutation.isPending}>
+                    <CloudDownloadIcon className={syncMutation.isPending ? "animate-pulse" : ""} />
+                    <ChevronDownIcon />
+                  </Button>
+                }
+              />
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => syncMutation.mutate({})}>Sync</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => syncMutation.mutate({ all: true })}>
@@ -132,7 +146,7 @@ function ModelsPage() {
 
         {sortedItems.length > 0 && (
           <Table>
-            <TableHeader className="sticky bg-card top-0 inset-shadow-[0_-1px_var(--border)]">
+            <TableHeader className="sticky bg-card top-0 inset-shadow-[0_-1px_var(--border)] z-10">
               <TableRow>
                 <SortableTableHead
                   sortKey="endpointId"
@@ -171,15 +185,14 @@ function ModelsPage() {
                 >
                   Synced
                 </SortableTableHead>
+                <TableHead className="w-10">
+                  <span className="sr-only">Action Menu</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedItems.map((model) => (
-                <TableRow
-                  key={model.endpointId}
-                  className="cursor-pointer"
-                  onClick={() => setSelectedModel(model)}
-                >
+                <TableRow key={model.endpointId}>
                   <TableCell className="font-mono max-w-[300px] truncate">
                     <Copyable text={model.endpointId}>{model.endpointId}</Copyable>
                   </TableCell>
@@ -207,6 +220,35 @@ function ModelsPage() {
                     ) : (
                       "\u2014"
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button size="icon-sm" variant="ghost">
+                            <MoreHorizontalIcon />
+                          </Button>
+                        }
+                      />
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => setSelectedModel(model)}>
+                          <InfoIcon />
+                          View details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            window.open(
+                              `https://fal.ai/models/${model.endpointId}`,
+                              "_blank",
+                              "noopener",
+                            )
+                          }
+                        >
+                          <ExternalLinkIcon />
+                          Open on fal.ai
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
