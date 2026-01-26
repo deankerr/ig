@@ -86,10 +86,9 @@ curl "$SERVER_URL/generations/{id}/file.png"
 
 ```bash
 bun run dev           # Start full stack (server:3000, web:3001)
-bun run build         # Build all packages
-bun run check         # Lint + format (oxlint + oxfmt)
+bun run check         # check-types + lint + format
 bun run check-types   # TypeScript type checking
-bun run db:push       # Push Drizzle schema to D1
+bun run db:generate   # Generate Drizzle migrations
 bun run deploy        # Deploy to Cloudflare
 ```
 
@@ -110,7 +109,6 @@ apps/
   web/        → Admin console UI (React + TanStack Router)
 packages/
   api/        → oRPC procedures and business logic
-  auth/       → Better-Auth configuration (placeholder, not currently used)
   db/         → Drizzle schema and migrations
   env/        → Environment validation and Cloudflare binding types
   infra/      → Alchemy infrastructure-as-code

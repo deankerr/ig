@@ -8,5 +8,5 @@
     "rootDir": "src",
     "types": ["node", "@cloudflare/workers-types"]
   },
-  "include": ["src/**/*.ts", "env.d.ts"]
+  "include": ["src/**/*.ts"]
 }

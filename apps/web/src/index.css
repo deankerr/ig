@@ -4,11 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Z-index layers */
-:root {
-  --z-table-header: 20;
-}
-
 /* Terminal Brutalism - stark, monospace-forward aesthetic */
 .dark {
   --background: oklch(0.09 0 0);
@@ -188,15 +183,5 @@
       oklch(0.65 0.2 25 / 0.2) 3px,
       oklch(0.65 0.2 25 / 0.2) 4px
     );
-  }
-}
-
-/* Sticky table headers */
-@layer utilities {
-  table[data-sticky-header] [data-slot="table-header"] {
-    position: sticky;
-    top: 0;
-    z-index: var(--z-table-header);
-    background: var(--card);
   }
 }

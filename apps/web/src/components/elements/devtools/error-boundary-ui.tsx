@@ -23,17 +23,17 @@ function parseStackTrace(
       if (match) {
         if (match.length === 5) {
           return {
-            fn: match[1],
-            file: match[2],
-            line: match[3],
-            column: match[4],
+            fn: match[1] ?? "",
+            file: match[2] ?? "",
+            line: match[3] ?? "",
+            column: match[4] ?? "",
           }
         }
         return {
           fn: "anonymous",
-          file: match[1],
-          line: match[2],
-          column: match[3],
+          file: match[1] ?? "",
+          line: match[2] ?? "",
+          column: match[3] ?? "",
         }
       }
       return null
