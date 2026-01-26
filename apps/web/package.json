@@ -11,7 +11,7 @@
     "check-types": "tsc -b"
   },
   "dependencies": {
-    "@base-ui/react": "^1.0.0",
+    "@base-ui/react": "^1.1.0",
     "@hookform/resolvers": "^5.1.1",
     "@ig/api": "workspace:*",
     "@ig/env": "workspace:*",

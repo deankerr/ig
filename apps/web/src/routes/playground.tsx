@@ -11,8 +11,9 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
-
+import { useAllModels } from "@/hooks/use-all-models"
 import { SidebarLayout, PageHeader, PageContent } from "@/components/layout"
+import { ModelItem } from "@/components/model-item"
 import { Tag } from "@/components/tag"
 import { TagInput } from "@/components/tag-input"
 import { Button } from "@/components/ui/button"
@@ -34,23 +35,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import {
+  Autocomplete,
+  AutocompleteInput,
+  AutocompletePopup,
+  AutocompleteList,
+  AutocompleteItem,
+  AutocompleteEmpty,
+} from "@/components/ui/autocomplete"
+import { filterModelForAutocomplete } from "@/lib/fuzzy-search"
 import { client, queryClient } from "@/utils/orpc"
 
 export const Route = createFileRoute("/playground")({
   component: PlaygroundPage,
 })
 
-const ENDPOINTS = [
-  { id: "fal-ai/flux/schnell", label: "flux/schnell", description: "Fast text-to-image" },
-  { id: "fal-ai/flux/dev", label: "flux/dev", description: "Development model" },
-  { id: "fal-ai/flux-pro/v1.1", label: "flux-pro/v1.1", description: "Production quality" },
-  { id: "fal-ai/recraft-v3", label: "recraft-v3", description: "Style-focused generation" },
-  {
-    id: "fal-ai/kling-video/v1/standard/image-to-video",
-    label: "kling-video",
-    description: "Image to video",
-  },
-  { id: "fal-ai/minimax/video-01", label: "minimax/video-01", description: "Video generation" },
+const QUICK_START_ENDPOINTS = [
+  "fal-ai/flux/schnell",
+  "fal-ai/flux/dev",
+  "fal-ai/flux-pro/v1.1",
+  "fal-ai/recraft-v3",
+  "fal-ai/kling-video/v1/standard/image-to-video",
+  "fal-ai/minimax/video-01",
 ] as const
 
 const DEFAULT_INPUT = `{
@@ -59,6 +65,7 @@ const DEFAULT_INPUT = `{
 
 function PlaygroundPage() {
   const navigate = useNavigate()
+  const { models } = useAllModels()
   const [endpoint, setEndpoint] = useState("fal-ai/flux/schnell")
   const [inputJson, setInputJson] = useState(DEFAULT_INPUT)
   const [tags, setTags] = useState<string[]>([])
@@ -184,9 +191,9 @@ function PlaygroundPage() {
     })
   }
 
-  function handleSelectQuickStart(ep: (typeof ENDPOINTS)[number]) {
+  function handleSelectQuickStart(endpointId: string) {
     setSelectedPresetName(null)
-    setEndpoint(ep.id)
+    setEndpoint(endpointId)
     setOriginalPresetValues(null)
     setIsEditingPreset(false)
   }
@@ -196,7 +203,10 @@ function PlaygroundPage() {
     if (selectedPresetName) setSelectedPresetName(null)
   }
 
-  const selectedEndpoint = ENDPOINTS.find((e) => e.id === endpoint)
+  const selectedModel = models.find((m) => m.endpointId === endpoint)
+  const quickStartModels = models.filter((m) =>
+    QUICK_START_ENDPOINTS.includes(m.endpointId as (typeof QUICK_START_ENDPOINTS)[number]),
+  )
   const presets = presetsQuery.data?.items ?? []
   const selectedPreset = presets.find((p) => p.name === selectedPresetName)
 
@@ -295,12 +305,27 @@ function PlaygroundPage() {
               <div className="border-b border-border p-4">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground w-16">endpoint</span>
-                  <Input
-                    value={endpoint}
-                    onChange={(e) => handleEndpointChange(e.target.value)}
-                    placeholder="fal-ai/..."
-                    className="flex-1 font-mono text-sm h-8"
-                  />
+                  <div className="flex-1">
+                    <Autocomplete
+                      items={models}
+                      value={endpoint}
+                      onValueChange={handleEndpointChange}
+                      itemToStringValue={(model) => model.endpointId}
+                      filter={filterModelForAutocomplete}
+                    >
+                      <AutocompleteInput placeholder="fal-ai/..." className="font-mono text-sm" />
+                      <AutocompletePopup>
+                        <AutocompleteList>
+                          {(model) => (
+                            <AutocompleteItem value={model} key={model.endpointId}>
+                              <ModelItem model={model} />
+                            </AutocompleteItem>
+                          )}
+                        </AutocompleteList>
+                        <AutocompleteEmpty />
+                      </AutocompletePopup>
+                    </Autocomplete>
+                  </div>
                 </div>
               </div>
 
@@ -360,16 +385,12 @@ function PlaygroundPage() {
                       )}
                       <DropdownMenuGroup>
                         <DropdownMenuLabel>quick start</DropdownMenuLabel>
-                        {ENDPOINTS.map((ep) => (
+                        {quickStartModels.map((model) => (
                           <DropdownMenuItem
-                            key={ep.id}
-                            onClick={() => handleSelectQuickStart(ep)}
-                            className="flex flex-col items-start gap-0.5"
+                            key={model.endpointId}
+                            onClick={() => handleSelectQuickStart(model.endpointId)}
                           >
-                            <span className="font-mono text-xs">{ep.label}</span>
-                            <span className="text-[10px] text-muted-foreground">
-                              {ep.description}
-                            </span>
+                            <ModelItem model={model} />
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuGroup>
@@ -423,7 +444,9 @@ function PlaygroundPage() {
                 />
               ) : (
                 <p className="text-sm font-mono truncate mb-1">
-                  {selectedPresetName ?? selectedEndpoint?.label ?? endpoint.replace("fal-ai/", "")}
+                  {selectedPresetName ??
+                    selectedModel?.displayName ??
+                    endpoint.replace("fal-ai/", "")}
                 </p>
               )}
 

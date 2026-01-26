@@ -218,3 +218,27 @@ curl -H "Accept: image/webp,*/*" "$SERVER_URL/generations/{id}/file.png?w=400&f=
 - **AI Provider**: fal.ai (queue-based async with webhooks)
 - **Infra**: Alchemy (TypeScript IaC for Cloudflare)
 - **Tooling**: Turborepo, Oxlint, Oxfmt, Lefthook (pre-commit hooks)
+
+## fal.ai
+
+fal.ai is our inference provider. They offer 500+ AI endpoints across modalities (image, video, audio, vision).
+
+### Terminology: "Model" vs "Endpoint"
+
+fal.ai uses "model" and "endpoint" interchangeably in their API. The identifier `fal-ai/flux/schnell` is called an `endpoint_id` in their API, but they also refer to these as "models" in documentation and response collections.
+
+In our codebase:
+
+| Term         | Meaning                                                                          |
+| ------------ | -------------------------------------------------------------------------------- |
+| `endpointId` | The string identifier (e.g., `"fal-ai/flux/schnell"`) - what you pass to fal.ai  |
+| `Model`      | Our local entity with full metadata (name, category, pricing) synced from fal.ai |
+
+**Current state:** We have some inconsistency - the `models` table uses `endpointId`, but `generations` and `presets` tables use `endpoint`. We plan to standardize on `endpointId` everywhere for the identifier string.
+
+### Resources
+
+- Model catalog: https://fal.ai/models
+- Queue API docs: https://docs.fal.ai/model-apis/model-endpoints/queue
+- Webhooks: https://docs.fal.ai/model-apis/model-endpoints/webhooks
+- OpenAPI schemas: `https://fal.ai/api/openapi/queue/openapi.json?endpoint_id={endpoint}`
