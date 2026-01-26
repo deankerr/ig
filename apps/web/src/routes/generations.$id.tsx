@@ -6,7 +6,6 @@ import {
   CopyIcon,
   DownloadIcon,
   ExternalLinkIcon,
-  PlusIcon,
   RefreshCwIcon,
   Trash2Icon,
 } from "lucide-react"
@@ -17,6 +16,7 @@ import { PulsingDot } from "@/components/pulsing-dot"
 import { Copyable } from "@/components/copyable"
 import { JsonViewer } from "@/components/generations/json-viewer"
 import { Tag } from "@/components/tag"
+import { TagInput } from "@/components/tag-input"
 import { TimeAgo } from "@/components/time-ago"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,7 +27,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import { client, queryClient } from "@/utils/orpc"
 import { env } from "@ig/env/web"
 
@@ -83,7 +88,6 @@ function GenerationDetailPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [newTag, setNewTag] = useState("")
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [editingSlug, setEditingSlug] = useState(false)
   const [slugInput, setSlugInput] = useState("")
@@ -154,14 +158,6 @@ function GenerationDetailPage() {
   const isVideo = generation.contentType?.startsWith("video/")
   const isAudio = generation.contentType?.startsWith("audio/")
   const prompt = typeof generation.input.prompt === "string" ? generation.input.prompt : null
-
-  function handleAddTag() {
-    if (!generation) return
-    if (newTag.trim() && !generation.tags.includes(newTag.trim())) {
-      updateMutation.mutate({ add: [newTag.trim()] })
-      setNewTag("")
-    }
-  }
 
   function handleRemoveTag(tag: string) {
     updateMutation.mutate({ remove: [tag] })
@@ -313,8 +309,8 @@ function GenerationDetailPage() {
             <div className="p-4">
               <Field label="slug">
                 {editingSlug ? (
-                  <div className="flex items-center gap-1">
-                    <Input
+                  <InputGroup className="h-7">
+                    <InputGroupInput
                       value={slugInput}
                       onChange={(e) =>
                         setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-/]/g, ""))
@@ -327,19 +323,18 @@ function GenerationDetailPage() {
                         }
                       }}
                       placeholder="custom-slug"
-                      className="h-7 text-xs font-mono flex-1"
+                      className="text-xs font-mono"
                       autoFocus
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => updateMutation.mutate({ slug: slugInput })}
-                      disabled={updateMutation.isPending}
-                    >
-                      {updateMutation.isPending ? "..." : "save"}
-                    </Button>
-                  </div>
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton
+                        onClick={() => updateMutation.mutate({ slug: slugInput })}
+                        disabled={updateMutation.isPending}
+                      >
+                        {updateMutation.isPending ? "..." : "save"}
+                      </InputGroupButton>
+                    </InputGroupAddon>
+                  </InputGroup>
                 ) : generation.slug ? (
                   <div className="flex items-center gap-2">
                     <Copyable text={generation.slug} className="font-mono text-xs break-all">
@@ -421,18 +416,13 @@ function GenerationDetailPage() {
                   </Tag>
                 ))}
               </div>
-              <div className="flex items-center gap-1">
-                <Input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
-                  placeholder="add tag"
-                  className="h-7 text-xs flex-1"
-                />
-                <Button size="icon-xs" variant="ghost" onClick={handleAddTag}>
-                  <PlusIcon />
-                </Button>
-              </div>
+              <TagInput
+                onAdd={(tag) => {
+                  if (!generation.tags.includes(tag)) {
+                    updateMutation.mutate({ add: [tag] })
+                  }
+                }}
+              />
             </div>
 
             {/* JSON sections */}

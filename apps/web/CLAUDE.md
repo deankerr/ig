@@ -314,6 +314,11 @@ The shadcn registry system now allows anyone to easily create and distribute the
 
 - `elements/` Elements Error Boundary UI
 
+## Custom Components
+
+- Just put them in the root `components/` directory.
+- If they have a logical group, create a directory for them.
+
 <claude-mem-context>
 # Recent Activity
 

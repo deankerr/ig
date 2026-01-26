@@ -22,7 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
   Table,
@@ -107,16 +107,17 @@ function ModelsPage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
-              <Input
+            <InputGroup className="w-[200px] h-8">
+              <InputGroupAddon>
+                <SearchIcon className="size-3" />
+              </InputGroupAddon>
+              <InputGroupInput
                 type="text"
                 placeholder="Search models..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-[200px] pl-7"
               />
-            </div>
+            </InputGroup>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={

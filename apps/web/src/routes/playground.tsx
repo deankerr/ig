@@ -4,7 +4,6 @@ import {
   CheckIcon,
   ChevronDownIcon,
   PencilIcon,
-  PlusIcon,
   SaveIcon,
   SendIcon,
   Trash2Icon,
@@ -15,6 +14,7 @@ import { toast } from "sonner"
 
 import { SidebarLayout, PageHeader, PageContent } from "@/components/layout"
 import { Tag } from "@/components/tag"
+import { TagInput } from "@/components/tag-input"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -62,7 +62,6 @@ function PlaygroundPage() {
   const [endpoint, setEndpoint] = useState("fal-ai/flux/schnell")
   const [inputJson, setInputJson] = useState(DEFAULT_INPUT)
   const [tags, setTags] = useState<string[]>([])
-  const [newTag, setNewTag] = useState("")
   const [slug, setSlug] = useState("")
   const [jsonError, setJsonError] = useState<string | null>(null)
   const [selectedPresetName, setSelectedPresetName] = useState<string | null>(null)
@@ -149,14 +148,6 @@ function PlaygroundPage() {
     },
     onError: (error) => toast.error(error.message || "Failed to delete preset"),
   })
-
-  function handleAddTag() {
-    const trimmed = newTag.trim()
-    if (trimmed && !tags.includes(trimmed)) {
-      setTags([...tags, trimmed])
-      setNewTag("")
-    }
-  }
 
   function handleRemoveTag(tag: string) {
     setTags(tags.filter((t) => t !== tag))
@@ -520,23 +511,13 @@ function PlaygroundPage() {
                   ))}
                 </div>
               )}
-              <div className="flex items-center gap-1">
-                <Input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleAddTag()
-                    }
-                  }}
-                  placeholder="add tag"
-                  className="h-7 text-xs flex-1"
-                />
-                <Button size="icon-xs" variant="ghost" onClick={handleAddTag}>
-                  <PlusIcon />
-                </Button>
-              </div>
+              <TagInput
+                onAdd={(tag) => {
+                  if (!tags.includes(tag)) {
+                    setTags([...tags, tag])
+                  }
+                }}
+              />
             </div>
           </div>
         }
