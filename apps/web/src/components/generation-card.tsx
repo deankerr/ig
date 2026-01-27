@@ -45,10 +45,12 @@ export function GenerationCard({
   generation,
   maxWidth = THUMBNAIL_SIZE,
   onViewJson,
+  onSelect,
 }: {
   generation: Generation
   maxWidth?: number
   onViewJson?: (generation: Generation) => void
+  onSelect?: (id: string) => void
 }) {
   const navigate = useNavigate()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -76,113 +78,140 @@ export function GenerationCard({
     },
   })
 
+  const cardClassName =
+    "group border border-border bg-card hover:border-muted-foreground/50 transition-colors block cursor-pointer"
+
+  const cardContent = (
+    <>
+      <div className="aspect-square overflow-hidden bg-muted">
+        <Thumbnail
+          generationId={generation.id}
+          contentType={generation.contentType}
+          status={generation.status}
+          className="w-full h-full"
+        />
+      </div>
+
+      <div className="p-2 space-y-1.5 border-t border-border">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-xs text-muted-foreground truncate">
+            {generation.slug ?? generation.id}
+          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  size="icon-xs"
+                  variant="ghost"
+                  className="opacity-0 group-hover:opacity-100"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <MoreHorizontalIcon />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault()
+                  navigate({ to: "/generations/$id", params: { id: generation.id } })
+                }}
+              >
+                view details
+              </DropdownMenuItem>
+              {onViewJson && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault()
+                    onViewJson(generation)
+                  }}
+                >
+                  <BracesIcon />
+                  view json
+                </DropdownMenuItem>
+              )}
+              {generation.status === "failed" && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault()
+                    regenerateMutation.mutate()
+                  }}
+                  disabled={regenerateMutation.isPending}
+                >
+                  <RefreshCwIcon />
+                  regenerate
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault()
+                  setShowDeleteDialog(true)
+                }}
+                variant="destructive"
+              >
+                <Trash2Icon />
+                delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {prompt && (
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{prompt}</p>
+        )}
+
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          <span className="truncate max-w-[120px]">{formatEndpointId(generation.endpoint)}</span>
+          <span>·</span>
+          <TimeAgo date={new Date(generation.createdAt)} />
+        </div>
+
+        {generation.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {generation.tags.slice(0, 3).map((tag) => (
+              <Tag key={tag} className="text-[10px]">
+                {tag}
+              </Tag>
+            ))}
+            {generation.tags.length > 3 && (
+              <span className="text-[10px] text-muted-foreground">
+                +{generation.tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  )
+
   return (
     <>
-      <Link
-        to="/generations/$id"
-        params={{ id: generation.id }}
-        className="group border border-border bg-card hover:border-muted-foreground/50 transition-colors block"
-        style={{ maxWidth }}
-      >
-        <div className="aspect-square overflow-hidden bg-muted">
-          <Thumbnail
-            generationId={generation.id}
-            contentType={generation.contentType}
-            status={generation.status}
-            className="w-full h-full"
-          />
+      {onSelect ? (
+        <div
+          className={cardClassName}
+          style={{ maxWidth }}
+          onClick={() => onSelect(generation.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
+              onSelect(generation.id)
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          {cardContent}
         </div>
-
-        <div className="p-2 space-y-1.5 border-t border-border">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-muted-foreground truncate">
-              {generation.slug ?? generation.id}
-            </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    size="icon-xs"
-                    variant="ghost"
-                    className="opacity-0 group-hover:opacity-100"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    <MoreHorizontalIcon />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.preventDefault()
-                    navigate({ to: "/generations/$id", params: { id: generation.id } })
-                  }}
-                >
-                  view details
-                </DropdownMenuItem>
-                {onViewJson && (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.preventDefault()
-                      onViewJson(generation)
-                    }}
-                  >
-                    <BracesIcon />
-                    view json
-                  </DropdownMenuItem>
-                )}
-                {generation.status === "failed" && (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.preventDefault()
-                      regenerateMutation.mutate()
-                    }}
-                    disabled={regenerateMutation.isPending}
-                  >
-                    <RefreshCwIcon />
-                    regenerate
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setShowDeleteDialog(true)
-                  }}
-                  variant="destructive"
-                >
-                  <Trash2Icon />
-                  delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {prompt && (
-            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{prompt}</p>
-          )}
-
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-            <span className="truncate max-w-[120px]">{formatEndpointId(generation.endpoint)}</span>
-            <span>·</span>
-            <TimeAgo date={new Date(generation.createdAt)} />
-          </div>
-
-          {generation.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {generation.tags.slice(0, 3).map((tag) => (
-                <Tag key={tag} className="text-[10px]">
-                  {tag}
-                </Tag>
-              ))}
-              {generation.tags.length > 3 && (
-                <span className="text-[10px] text-muted-foreground">
-                  +{generation.tags.length - 3}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      </Link>
+      ) : (
+        <Link
+          to="/generations/$id"
+          params={{ id: generation.id }}
+          className={cardClassName}
+          style={{ maxWidth }}
+        >
+          {cardContent}
+        </Link>
+      )}
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="max-w-sm">

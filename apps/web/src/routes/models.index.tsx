@@ -12,6 +12,7 @@ import { useDeferredValue, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { Copyable } from "@/components/copyable"
+import { JsonSheet } from "@/components/json-sheet"
 import { PageContent, PageHeader } from "@/components/layout"
 import { SortableTableHead } from "@/components/sortable-table-head"
 import { TimeAgo } from "@/components/time-ago"
@@ -23,7 +24,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
-import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
   Table,
   TableBody,
@@ -262,20 +262,12 @@ function ModelsPage() {
       </PageContent>
 
       {/* Model detail sheet */}
-      <Sheet open={!!selectedModel} onOpenChange={(open) => !open && setSelectedModel(null)}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle className="font-mono">
-              {selectedModel && formatEndpointId(selectedModel.endpointId)}
-            </SheetTitle>
-          </SheetHeader>
-          <SheetBody>
-            <pre className="text-xs font-mono whitespace-pre-wrap break-all">
-              {JSON.stringify(selectedModel, null, 2)}
-            </pre>
-          </SheetBody>
-        </SheetContent>
-      </Sheet>
+      <JsonSheet
+        data={selectedModel}
+        title={selectedModel ? formatEndpointId(selectedModel.endpointId) : undefined}
+        open={!!selectedModel}
+        onOpenChange={(open) => !open && setSelectedModel(null)}
+      />
     </div>
   )
 }

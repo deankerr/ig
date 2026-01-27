@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { z } from "zod"
-import { BracesIcon, LayoutGridIcon, ListIcon, MoreHorizontalIcon, XIcon } from "lucide-react"
+import { LayoutGridIcon, ListIcon, XIcon } from "lucide-react"
 
 import { GenerationCard } from "@/components/generation-card"
+import { GenerationDetailModal } from "@/components/generations/generation-detail-modal"
 import { PageHeader, PageContent } from "@/components/layout"
 import { Tag } from "@/components/tag"
 import { TimeAgo } from "@/components/time-ago"
@@ -20,14 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item"
-import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item"
 import {
   Select,
   SelectContent,
@@ -42,6 +36,7 @@ const searchSchema = z.object({
   status: z.enum(["all", "pending", "ready", "failed"]).optional(),
   endpoint: z.string().optional(),
   tags: z.array(z.string()).optional(),
+  selected: z.string().optional(),
 })
 
 export const Route = createFileRoute("/generations/")({
@@ -64,15 +59,34 @@ type Generation = {
 
 function GenerationListItem({
   generation,
-  onViewJson,
+  onSelect,
 }: {
   generation: Generation
-  onViewJson?: (generation: Generation) => void
+  onSelect?: (id: string) => void
 }) {
   const prompt = generation.input?.prompt as string | undefined
 
+  const itemProps = onSelect
+    ? {
+        onClick: () => onSelect(generation.id),
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            onSelect(generation.id)
+          }
+        },
+        role: "button" as const,
+        tabIndex: 0,
+        className: "cursor-pointer",
+      }
+    : {}
+
   return (
-    <Item variant="outline" render={<Link to="/generations/$id" params={{ id: generation.id }} />}>
+    <Item
+      variant="outline"
+      render={onSelect ? undefined : <Link to="/generations/$id" params={{ id: generation.id }} />}
+      {...itemProps}
+    >
       <ItemMedia className="w-[180px]">
         <Thumbnail
           generationId={generation.id}
@@ -105,30 +119,6 @@ function GenerationListItem({
           </div>
         )}
       </ItemContent>
-      <ItemActions>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button size="icon-sm" variant="ghost" onClick={(e) => e.preventDefault()}>
-                <MoreHorizontalIcon />
-              </Button>
-            }
-          />
-          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            {onViewJson && (
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.preventDefault()
-                  onViewJson(generation)
-                }}
-              >
-                <BracesIcon />
-                view json
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </ItemActions>
     </Item>
   )
 }
@@ -138,6 +128,7 @@ function GenerationsPage() {
   const statusFilter = search.status ?? "all"
   const endpointFilter = search.endpoint
   const tagFilters = search.tags ?? []
+  const selectedId = search.selected
   const navigate = useNavigate()
 
   const setStatusFilter = (status: "all" | "pending" | "ready" | "failed") => {
@@ -161,13 +152,19 @@ function GenerationsPage() {
     })
   }
 
+  const setSelectedId = (id: string | undefined) => {
+    navigate({
+      from: Route.fullPath,
+      search: (prev) => ({ ...prev, selected: id || undefined }),
+    })
+  }
+
   const [endpointInput, setEndpointInput] = useState(endpointFilter ?? "")
   const [tagInput, setTagInput] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     if (typeof window === "undefined") return "grid"
     return (localStorage.getItem("generations-view-mode") as "grid" | "list") || "grid"
   })
-  const [selectedGeneration, setSelectedGeneration] = useState<Generation | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -398,7 +395,7 @@ function GenerationsPage() {
               <GenerationCard
                 key={generation.id}
                 generation={generation}
-                onViewJson={setSelectedGeneration}
+                onSelect={setSelectedId}
               />
             ))}
           </ThumbnailGrid>
@@ -408,7 +405,7 @@ function GenerationsPage() {
               <GenerationListItem
                 key={generation.id}
                 generation={generation}
-                onViewJson={setSelectedGeneration}
+                onSelect={setSelectedId}
               />
             ))}
           </div>
@@ -420,23 +417,32 @@ function GenerationsPage() {
         )}
       </PageContent>
 
-      <Sheet
-        open={!!selectedGeneration}
-        onOpenChange={(open) => !open && setSelectedGeneration(null)}
-      >
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle className="font-mono">
-              {selectedGeneration?.slug ?? selectedGeneration?.id}
-            </SheetTitle>
-          </SheetHeader>
-          <SheetBody>
-            <pre className="text-xs font-mono whitespace-pre-wrap break-all">
-              {JSON.stringify(selectedGeneration, null, 2)}
-            </pre>
-          </SheetBody>
-        </SheetContent>
-      </Sheet>
+      <GenerationDetailModal
+        generationId={selectedId ?? null}
+        onClose={() => setSelectedId(undefined)}
+        onPrev={() => {
+          const currentIndex = allGenerations.findIndex((g) => g.id === selectedId)
+          if (currentIndex > 0) {
+            setSelectedId(allGenerations[currentIndex - 1]?.id)
+          }
+        }}
+        onNext={() => {
+          const currentIndex = allGenerations.findIndex((g) => g.id === selectedId)
+          if (currentIndex < allGenerations.length - 1) {
+            setSelectedId(allGenerations[currentIndex + 1]?.id)
+          } else if (generationsQuery.hasNextPage && !generationsQuery.isFetchingNextPage) {
+            generationsQuery.fetchNextPage()
+          }
+        }}
+        hasPrev={(() => {
+          const currentIndex = allGenerations.findIndex((g) => g.id === selectedId)
+          return currentIndex > 0
+        })()}
+        hasNext={(() => {
+          const currentIndex = allGenerations.findIndex((g) => g.id === selectedId)
+          return currentIndex < allGenerations.length - 1 || generationsQuery.hasNextPage
+        })()}
+      />
     </div>
   )
 }

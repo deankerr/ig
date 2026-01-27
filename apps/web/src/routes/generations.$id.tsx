@@ -12,10 +12,10 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
+import { Copyable } from "@/components/copyable"
+import { JsonSheet } from "@/components/json-sheet"
 import { SidebarLayout, PageHeader, PageContent } from "@/components/layout"
 import { PulsingDot } from "@/components/pulsing-dot"
-import { Copyable } from "@/components/copyable"
-import { JsonViewer } from "@/components/generations/json-viewer"
 import { Tag } from "@/components/tag"
 import { TagInput } from "@/components/tag-input"
 import { TimeAgo } from "@/components/time-ago"
@@ -34,7 +34,6 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
-import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { client, queryClient } from "@/utils/orpc"
 import { env } from "@ig/env/web"
 
@@ -431,33 +430,6 @@ function GenerationDetailPage() {
                 }}
               />
             </div>
-
-            {/* JSON sections */}
-            <div className="p-4 space-y-4">
-              <JsonViewer
-                data={generation.input}
-                label="input"
-                collapsible
-                defaultCollapsed={!!prompt}
-                maxHeight="300px"
-              />
-              {generation.providerMetadata && (
-                <JsonViewer
-                  data={generation.providerMetadata}
-                  label="provider metadata"
-                  collapsible
-                  defaultCollapsed
-                  maxHeight="300px"
-                />
-              )}
-              <JsonViewer
-                data={generation}
-                label="raw"
-                collapsible
-                defaultCollapsed
-                maxHeight="400px"
-              />
-            </div>
           </div>
         }
       />
@@ -488,18 +460,12 @@ function GenerationDetailPage() {
       </Dialog>
 
       {/* JSON sheet */}
-      <Sheet open={showJsonSheet} onOpenChange={setShowJsonSheet}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle className="font-mono">{generation.slug ?? generation.id}</SheetTitle>
-          </SheetHeader>
-          <SheetBody>
-            <pre className="text-xs font-mono whitespace-pre-wrap break-all">
-              {JSON.stringify(generation, null, 2)}
-            </pre>
-          </SheetBody>
-        </SheetContent>
-      </Sheet>
+      <JsonSheet
+        data={generation}
+        title={generation.slug ?? generation.id}
+        open={showJsonSheet}
+        onOpenChange={setShowJsonSheet}
+      />
     </div>
   )
 }
