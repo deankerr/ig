@@ -4,7 +4,6 @@ import { CloudflareStateStore } from "alchemy/state"
 import { config } from "dotenv"
 
 config({ path: "./.env" })
-config({ path: "../../apps/server/.env" })
 
 // Default to "dev" to match existing deployed resources (ig-*-dev)
 // Use ALCHEMY_STAGE=prod for production deployment

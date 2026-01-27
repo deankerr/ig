@@ -7,7 +7,7 @@ TypeScript-native infrastructure-as-code for Cloudflare. Resources are async fun
 ```bash
 bun run deploy                    # Deploy to default stage (dev)
 ALCHEMY_STAGE=prod bun run deploy # Deploy to production
-bun run dev                       # Local development with Miniflare
+bun run dev                       # Local dev with Cloudflare tunnel (webhooks work)
 bun alchemy destroy               # Delete all resources for current stage
 ```
 
@@ -130,12 +130,13 @@ This imports existing resources into state instead of trying to create duplicate
 
 ### Loading
 
-Alchemy loads env vars via dotenv in `alchemy.run.ts`:
+Alchemy loads all env vars from a single file:
 
 ```typescript
-config({ path: "./.env" });           // packages/infra/.env (Alchemy config)
-config({ path: "../../apps/server/.env" }); // Secrets
+config({ path: "./.env" });  // packages/infra/.env
 ```
+
+Since Alchemy controls what bindings each worker receives, there's no need for separate `.env` files per app.
 
 ### Two Types of Bindings
 
@@ -155,26 +156,25 @@ Secrets require `ALCHEMY_PASSWORD` env var for encryption/decryption.
 
 ### Our Pattern: Derived URLs
 
-Instead of per-environment `.env` files, we derive URLs from stage:
+Instead of per-environment `.env` files, we derive URLs from stage and environment variables:
 
 ```typescript
 const stage = process.env.ALCHEMY_STAGE ?? "dev";
-const cfSubdomain = process.env.CF_WORKERS_SUBDOMAIN; // e.g., "dean-kerr"
+const isProd = stage.startsWith("prod");
 
-const webUrl = `https://ig-web-${stage}.${cfSubdomain}.workers.dev`;
-const serverUrl = `https://ig-server-${stage}.${cfSubdomain}.workers.dev`;
+// Dev: use workers.dev subdomain
+const cfWorkersSubdomain = process.env.CF_WORKERS_SUBDOMAIN; // e.g., "dean-kerr"
 
-// Use in bindings:
-bindings: {
-  CORS_ORIGIN: webUrl,
-  WEBHOOK_URL: `${serverUrl}/webhooks/fal`,
-  BETTER_AUTH_URL: serverUrl,
-  // Secrets still from .env:
-  API_KEY: alchemy.secret.env.API_KEY!,
-}
+// Prod: use custom domains
+const prodServerDomain = process.env.PROD_SERVER_DOMAIN;
+const prodWebDomain = process.env.PROD_WEB_DOMAIN;
+
+const serverPublicUrl = isProd
+  ? `https://${prodServerDomain}`
+  : `https://ig-server-${stage}.${cfWorkersSubdomain}.workers.dev`;
 ```
 
-**Result:** Same `.env` files work for all stages. Only secrets need to be in `.env`.
+**Result:** Same `.env` file works for all stages. Only secrets and domain config need to be in `.env`.
 
 ## Resource Types
 
@@ -270,14 +270,119 @@ env.API_KEY;            // Typed as string
 ## Local Development
 
 ```bash
-bun run dev  # Starts Miniflare-based local environment
+bun run dev  # Starts local environment with Cloudflare tunnel
 ```
 
 - D1: In-memory SQLite
 - R2: Local filesystem simulation
-- Workers: Miniflare emulation
+- Workers: Miniflare emulation with remote tunnel
 
-**Note:** We primarily use remote deployment for dev because webhooks require public URLs. Local dev is available but rarely used.
+### Webhook Support via Cloudflare Tunnel
+
+Local dev uses Alchemy's built-in Cloudflare tunnel support to enable webhooks:
+
+```typescript
+const server = await Worker("server", {
+  // ...
+  dev: {
+    port: 3000,
+    tunnel: true, // Creates Cloudflare quick tunnel
+  },
+});
+```
+
+When `tunnel: true`, Alchemy spawns `cloudflared` and creates a temporary `trycloudflare.com` URL that routes to your local server. This enables fal.ai webhooks to reach your local environment.
+
+### PUBLIC_URL Binding
+
+Since the tunnel creates a dynamic URL, webhook URLs can't be derived from the request origin. Instead, we pre-compute the public URL and pass it as a binding:
+
+```typescript
+// Compute before worker creation
+const serverPublicUrl = isProd
+  ? `https://${prodServerDomain}`
+  : `https://ig-server-${stage}.${cfWorkersSubdomain}.workers.dev`;
+
+const server = await Worker("server", {
+  bindings: {
+    PUBLIC_URL: serverPublicUrl,
+    // ...
+  },
+});
+```
+
+In the API code, use `env.PUBLIC_URL` instead of deriving from request headers:
+
+```typescript
+// Good - uses pre-computed public URL
+const webhookUrl = `${env.PUBLIC_URL}/webhooks/fal`;
+
+// Bad - returns localhost through tunnel
+const webhookUrl = `${new URL(request.url).origin}/webhooks/fal`;
+```
+
+**Note:** Quick tunnels are for development only. Cloudflare warns they have no uptime guarantees.
+
+## Custom Domains (Production)
+
+Production deployments use custom domains instead of `workers.dev` subdomains:
+
+```typescript
+const isProd = stage.startsWith("prod");
+
+const server = await Worker("server", {
+  url: !isProd,  // workers.dev URL only for non-prod
+  domains: isProd ? [{ domainName: prodServerDomain!, adopt: true }] : undefined,
+});
+
+const web = await Vite("web", {
+  url: !isProd,
+  domains: isProd ? [{ domainName: prodWebDomain!, adopt: true }] : undefined,
+});
+```
+
+### Configuration
+
+Set domain environment variables in `packages/infra/.env`:
+
+```bash
+# Production domains
+PROD_SERVER_DOMAIN=api.yourdomain.com
+PROD_WEB_DOMAIN=app.yourdomain.com
+```
+
+The deploy script validates these are set for production:
+
+```typescript
+if (isProd && (!prodServerDomain || !prodWebDomain)) {
+  throw new Error("PROD_SERVER_DOMAIN and PROD_WEB_DOMAIN must be set");
+}
+```
+
+### URL Resolution
+
+The `getWorkerUrl()` helper resolves the correct URL regardless of environment:
+
+```typescript
+function getWorkerUrl(worker: Awaited<ReturnType<typeof Worker>>): string {
+  // Prefer custom domain if configured
+  if (worker.domains?.[0]) {
+    return `https://${worker.domains[0].name}`;
+  }
+  // Fall back to workers.dev URL
+  return worker.url.replace(/\/$/, "");  // Strip trailing slash
+}
+```
+
+This ensures the web app receives the correct server URL in all environments:
+
+```typescript
+const web = await Vite("web", {
+  bindings: {
+    VITE_SERVER_URL: getWorkerUrl(server),
+  },
+});
+```
 
 ## Common Operations
 
@@ -319,11 +424,27 @@ ALCHEMY_STAGE=prod bun alchemy destroy  # For specific stage
 ```
 packages/infra/
 ├── alchemy.run.ts    # Infrastructure definition
-├── .env              # ALCHEMY_PASSWORD, ALCHEMY_STATE_TOKEN, CF_WORKERS_SUBDOMAIN
+├── .env              # All configuration (see below)
 └── .alchemy/         # Local state cache (can be deleted if using remote state)
+```
 
-apps/server/.env      # FAL_KEY, API_KEY (secrets only)
-apps/web/.env         # VITE_SERVER_URL (for local Vite dev)
+### packages/infra/.env
+
+```bash
+# Required for all deployments
+ALCHEMY_PASSWORD=...          # Encrypts secrets in state
+ALCHEMY_STATE_TOKEN=...       # Auth for CloudflareStateStore (openssl rand -base64 32)
+
+# Required for dev deployments
+CF_WORKERS_SUBDOMAIN=...      # Your workers.dev subdomain (e.g., "dean-kerr")
+
+# Required for prod deployments
+PROD_SERVER_DOMAIN=...        # Custom domain for API (e.g., "api.yourdomain.com")
+PROD_WEB_DOMAIN=...           # Custom domain for web (e.g., "app.yourdomain.com")
+
+# Secrets (passed to workers via bindings)
+FAL_KEY=...                   # fal.ai API key
+API_KEY=...                   # Internal API authentication
 ```
 
 ## Resources

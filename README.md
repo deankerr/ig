@@ -24,28 +24,26 @@ bun run dev        # Start full stack via Alchemy
 
 ## Environment Variables
 
-Create the following `.env` files before deploying:
-
-**`packages/infra/.env`** (Alchemy configuration):
+Create `packages/infra/.env` before deploying:
 
 ```bash
+# Alchemy configuration
 ALCHEMY_PASSWORD=<generate with: openssl rand -base64 32>
 ALCHEMY_STATE_TOKEN=<generate with: openssl rand -base64 32>
+
+# Dev deployment (workers.dev subdomain)
 CF_WORKERS_SUBDOMAIN=<your-cloudflare-workers-subdomain>  # e.g., "my-account"
-```
 
-**`apps/server/.env`** (secrets):
+# Prod deployment (custom domains)
+PROD_SERVER_DOMAIN=api.yourdomain.com
+PROD_WEB_DOMAIN=app.yourdomain.com
 
-```bash
+# Secrets (passed to workers via Alchemy bindings)
 FAL_KEY=<your fal.ai API key>
 API_KEY=<generate with: openssl rand -base64 32>
 ```
 
-**`apps/web/.env`** (local development):
-
-```bash
-VITE_SERVER_URL=https://ig-server-dev.<your-subdomain>.workers.dev
-```
+Alchemy controls what each worker receives via bindings - no separate `.env` files needed per app.
 
 ## API
 
