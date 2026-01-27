@@ -15,7 +15,8 @@ export async function resolveOutputs(payload: Record<string, unknown>): Promise<
   const outputs: ResolvedOutput[] = []
 
   // Try to find file URLs - check common field names
-  const fileFields = ["images", "image", "video", "audio", "audio_url"]
+  // Singular fields (image, video, audio) checked before plurals since they often have richer metadata
+  const fileFields = ["image", "images", "video", "audio", "audio_url"]
 
   for (const field of fileFields) {
     const value = payload[field]

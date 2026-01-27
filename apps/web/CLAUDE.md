@@ -2,6 +2,8 @@
 
 Developer-focused admin UI for generation management and observability.
 
+- This is an admin console that won't be used on mobile - favour layouts that make good use of desktop viewport space.
+
 ## shadcn/ui with Base UI
 
 We use the latest shadcn/ui which now supports **Base UI** primitives in addition to Radix. Base UI is built by a collective including ex-Radix developers and is actively maintained (7-person full-time team), whereas Radix has been barely maintained for over a year.
