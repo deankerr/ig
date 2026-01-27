@@ -5,7 +5,8 @@
       "WebFetch(domain:alchemy.run)",
       "Bash(bun run db:generate:*)",
       "WebFetch(domain:base-ui.com)",
-      "WebFetch(domain:ui.shadcn.com)"
+      "WebFetch(domain:ui.shadcn.com)",
+      "WebFetch(domain:nuqs.dev)"
     ]
   }
 }

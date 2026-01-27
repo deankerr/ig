@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { z } from "zod"
 import { BracesIcon, LayoutGridIcon, ListIcon, MoreHorizontalIcon, XIcon } from "lucide-react"
 
 import { GenerationCard } from "@/components/generation-card"
@@ -37,8 +38,15 @@ import {
 import { formatEndpointId } from "@/lib/format-endpoint"
 import { client } from "@/utils/orpc"
 
+const searchSchema = z.object({
+  status: z.enum(["all", "pending", "ready", "failed"]).optional(),
+  endpoint: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+})
+
 export const Route = createFileRoute("/generations/")({
   component: GenerationsPage,
+  validateSearch: searchSchema,
 })
 
 type GenerationStatus = "pending" | "ready" | "failed"
@@ -126,9 +134,34 @@ function GenerationListItem({
 }
 
 function GenerationsPage() {
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [endpointFilter, setEndpointFilter] = useState<string | undefined>(undefined)
-  const [tagFilters, setTagFilters] = useState<string[]>([])
+  const search = Route.useSearch()
+  const statusFilter = search.status ?? "all"
+  const endpointFilter = search.endpoint
+  const tagFilters = search.tags ?? []
+  const navigate = useNavigate()
+
+  const setStatusFilter = (status: "all" | "pending" | "ready" | "failed") => {
+    navigate({
+      from: Route.fullPath,
+      search: (prev) => ({ ...prev, status: status === "all" ? undefined : status }),
+    })
+  }
+
+  const setEndpointFilter = (endpoint: string | undefined) => {
+    navigate({
+      from: Route.fullPath,
+      search: (prev) => ({ ...prev, endpoint: endpoint || undefined }),
+    })
+  }
+
+  const setTagFilters = (tags: string[]) => {
+    navigate({
+      from: Route.fullPath,
+      search: (prev) => ({ ...prev, tags: tags.length > 0 ? tags : undefined }),
+    })
+  }
+
+  const [endpointInput, setEndpointInput] = useState(endpointFilter ?? "")
   const [tagInput, setTagInput] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     if (typeof window === "undefined") return "grid"
@@ -141,11 +174,22 @@ function GenerationsPage() {
     localStorage.setItem("generations-view-mode", viewMode)
   }, [viewMode])
 
+  useEffect(() => {
+    setEndpointInput(endpointFilter ?? "")
+  }, [endpointFilter])
+
   const endpointsQuery = useQuery({
     queryKey: ["generations", "listEndpoints"],
     queryFn: () => client.generations.listEndpoints({}),
     staleTime: 60_000,
   })
+
+  const filteredEndpoints = useMemo(() => {
+    const all = endpointsQuery.data?.endpoints ?? []
+    if (!endpointInput) return all
+    const lower = endpointInput.toLowerCase()
+    return all.filter((e) => e.toLowerCase().includes(lower))
+  }, [endpointsQuery.data?.endpoints, endpointInput])
 
   const tagsQuery = useQuery({
     queryKey: ["generations", "listTags"],
@@ -239,12 +283,30 @@ function GenerationsPage() {
             </ButtonGroup>
           </div>
           <div className="flex items-center gap-2">
-            <Autocomplete value={endpointFilter} onValueChange={setEndpointFilter}>
-              <AutocompleteInput placeholder="endpoint" className="w-[220px] h-7" />
+            <Autocomplete>
+              <AutocompleteInput
+                placeholder="endpoint"
+                className="w-[220px] h-7"
+                value={endpointInput}
+                onChange={(e) => setEndpointInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && endpointInput.trim()) {
+                    e.preventDefault()
+                    setEndpointFilter(endpointInput.trim())
+                  }
+                }}
+              />
               <AutocompletePopup>
                 <AutocompleteList>
-                  {endpointsQuery.data?.endpoints.map((endpoint) => (
-                    <AutocompleteItem key={endpoint} value={endpoint}>
+                  {filteredEndpoints.map((endpoint) => (
+                    <AutocompleteItem
+                      key={endpoint}
+                      value={endpoint}
+                      onClick={() => {
+                        setEndpointFilter(endpoint)
+                        setEndpointInput(endpoint)
+                      }}
+                    >
                       {formatEndpointId(endpoint)}
                     </AutocompleteItem>
                   ))}
@@ -303,7 +365,12 @@ function GenerationsPage() {
               </Badge>
             ))}
 
-            <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
+            <Select
+              value={statusFilter}
+              onValueChange={(v) =>
+                v && setStatusFilter(v as "all" | "pending" | "ready" | "failed")
+              }
+            >
               <SelectTrigger className="w-[100px] h-7 text-xs">
                 <SelectValue />
               </SelectTrigger>
