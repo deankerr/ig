@@ -114,7 +114,7 @@ function PlaygroundPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["generations"] })
       toast.success("Generation submitted")
-      navigate({ to: "/generations/$id", params: { id: data.id } })
+      navigate({ to: "/generations", search: { selected: data.id } })
     },
     onError: (error) => {
       if (error.message === "Invalid JSON input") {

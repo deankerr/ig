@@ -1,5 +1,4 @@
 import { useMutation } from "@tanstack/react-query"
-import { Link, useNavigate } from "@tanstack/react-router"
 import { BracesIcon, MoreHorizontalIcon, RefreshCwIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -52,7 +51,6 @@ export function GenerationCard({
   onViewJson?: (generation: Generation) => void
   onSelect?: (id: string) => void
 }) {
-  const navigate = useNavigate()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const prompt = getPrompt(generation.input)
 
@@ -69,9 +67,9 @@ export function GenerationCard({
 
   const regenerateMutation = useMutation({
     mutationFn: () => client.generations.regenerate({ id: generation.id }),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["generations"] })
-      navigate({ to: "/generations/$id", params: { id: data.id } })
+      toast.success("Regeneration submitted")
     },
     onError: (error) => {
       toast.error(error.message || "Failed to regenerate")
@@ -111,14 +109,6 @@ export function GenerationCard({
               }
             />
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.preventDefault()
-                  navigate({ to: "/generations/$id", params: { id: generation.id } })
-                }}
-              >
-                view details
-              </DropdownMenuItem>
               {onViewJson && (
                 <DropdownMenuItem
                   onClick={(e) => {
@@ -186,32 +176,25 @@ export function GenerationCard({
 
   return (
     <>
-      {onSelect ? (
-        <div
-          className={cardClassName}
-          style={{ maxWidth }}
-          onClick={() => onSelect(generation.id)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              onSelect(generation.id)
-            }
-          }}
-          role="button"
-          tabIndex={0}
-        >
-          {cardContent}
-        </div>
-      ) : (
-        <Link
-          to="/generations/$id"
-          params={{ id: generation.id }}
-          className={cardClassName}
-          style={{ maxWidth }}
-        >
-          {cardContent}
-        </Link>
-      )}
+      <div
+        className={cardClassName}
+        style={{ maxWidth }}
+        onClick={onSelect ? () => onSelect(generation.id) : undefined}
+        onKeyDown={
+          onSelect
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  onSelect(generation.id)
+                }
+              }
+            : undefined
+        }
+        role={onSelect ? "button" : undefined}
+        tabIndex={onSelect ? 0 : undefined}
+      >
+        {cardContent}
+      </div>
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="max-w-sm">

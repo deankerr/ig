@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { z } from "zod"
 import { LayoutGridIcon, ListIcon, XIcon } from "lucide-react"
 
@@ -82,11 +82,7 @@ function GenerationListItem({
     : {}
 
   return (
-    <Item
-      variant="outline"
-      render={onSelect ? undefined : <Link to="/generations/$id" params={{ id: generation.id }} />}
-      {...itemProps}
-    >
+    <Item variant="outline" {...itemProps}>
       <ItemMedia className="w-[180px]">
         <Thumbnail
           generationId={generation.id}

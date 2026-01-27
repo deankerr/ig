@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
 import {
   BracesIcon,
   CheckIcon,
@@ -100,7 +99,6 @@ export function GenerationDetailModal({
   hasPrev = false,
   hasNext = false,
 }: GenerationDetailModalProps) {
-  const navigate = useNavigate()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showJsonSheet, setShowJsonSheet] = useState(false)
   const [copiedUrl, setCopiedUrl] = useState(false)
@@ -152,9 +150,10 @@ export function GenerationDetailModal({
 
   const regenerateMutation = useMutation({
     mutationFn: () => client.generations.regenerate({ id: generationId! }),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["generations"] })
-      navigate({ to: "/generations/$id", params: { id: data.id } })
+      onClose()
+      toast.success("Regeneration submitted")
     },
     onError: (error) => {
       toast.error(error.message || "Failed to regenerate")
@@ -237,14 +236,6 @@ export function GenerationDetailModal({
               <Button variant="ghost" size="sm" onClick={() => setShowJsonSheet(true)}>
                 <BracesIcon data-icon="inline-start" />
                 json
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate({ to: "/generations/$id", params: { id: generationId! } })}
-              >
-                <ExternalLinkIcon data-icon="inline-start" />
-                full page
               </Button>
               <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
                 <XIcon />
