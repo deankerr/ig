@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { LayoutGridIcon, ListIcon, XIcon } from "lucide-react"
+import { BracesIcon, LayoutGridIcon, ListIcon, MoreHorizontalIcon, XIcon } from "lucide-react"
 
 import { GenerationCard } from "@/components/generation-card"
 import { PageHeader, PageContent } from "@/components/layout"
@@ -19,7 +19,14 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
-import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item"
+import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
   Select,
   SelectContent,
@@ -47,7 +54,13 @@ type Generation = {
   createdAt: Date
 }
 
-function GenerationListItem({ generation }: { generation: Generation }) {
+function GenerationListItem({
+  generation,
+  onViewJson,
+}: {
+  generation: Generation
+  onViewJson?: (generation: Generation) => void
+}) {
   const prompt = generation.input?.prompt as string | undefined
 
   return (
@@ -84,6 +97,30 @@ function GenerationListItem({ generation }: { generation: Generation }) {
           </div>
         )}
       </ItemContent>
+      <ItemActions>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button size="icon-sm" variant="ghost" onClick={(e) => e.preventDefault()}>
+                <MoreHorizontalIcon />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            {onViewJson && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault()
+                  onViewJson(generation)
+                }}
+              >
+                <BracesIcon />
+                view json
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </ItemActions>
     </Item>
   )
 }
@@ -97,6 +134,7 @@ function GenerationsPage() {
     if (typeof window === "undefined") return "grid"
     return (localStorage.getItem("generations-view-mode") as "grid" | "list") || "grid"
   })
+  const [selectedGeneration, setSelectedGeneration] = useState<Generation | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -290,13 +328,21 @@ function GenerationsPage() {
         {viewMode === "grid" ? (
           <ThumbnailGrid>
             {allGenerations.map((generation) => (
-              <GenerationCard key={generation.id} generation={generation} />
+              <GenerationCard
+                key={generation.id}
+                generation={generation}
+                onViewJson={setSelectedGeneration}
+              />
             ))}
           </ThumbnailGrid>
         ) : (
           <div className="flex flex-col gap-2 max-w-4xl mx-auto">
             {allGenerations.map((generation) => (
-              <GenerationListItem key={generation.id} generation={generation} />
+              <GenerationListItem
+                key={generation.id}
+                generation={generation}
+                onViewJson={setSelectedGeneration}
+              />
             ))}
           </div>
         )}
@@ -306,6 +352,24 @@ function GenerationsPage() {
           <div className="py-4 text-center text-xs text-muted-foreground">loading...</div>
         )}
       </PageContent>
+
+      <Sheet
+        open={!!selectedGeneration}
+        onOpenChange={(open) => !open && setSelectedGeneration(null)}
+      >
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle className="font-mono">
+              {selectedGeneration?.slug ?? selectedGeneration?.id}
+            </SheetTitle>
+          </SheetHeader>
+          <SheetBody>
+            <pre className="text-xs font-mono whitespace-pre-wrap break-all">
+              {JSON.stringify(selectedGeneration, null, 2)}
+            </pre>
+          </SheetBody>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import {
   ArrowLeftIcon,
+  BracesIcon,
   CheckIcon,
   CopyIcon,
   DownloadIcon,
@@ -33,6 +34,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
+import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { client, queryClient } from "@/utils/orpc"
 import { env } from "@ig/env/web"
 
@@ -91,6 +93,7 @@ function GenerationDetailPage() {
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [editingSlug, setEditingSlug] = useState(false)
   const [slugInput, setSlugInput] = useState("")
+  const [showJsonSheet, setShowJsonSheet] = useState(false)
 
   const generationQuery = useQuery({
     queryKey: ["generations", "get", { id }],
@@ -202,6 +205,10 @@ function GenerationDetailPage() {
                       regenerate
                     </Button>
                   )}
+                  <Button variant="outline" size="sm" onClick={() => setShowJsonSheet(true)}>
+                    <BracesIcon data-icon="inline-start" />
+                    json
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -479,6 +486,20 @@ function GenerationDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* JSON sheet */}
+      <Sheet open={showJsonSheet} onOpenChange={setShowJsonSheet}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle className="font-mono">{generation.slug ?? generation.id}</SheetTitle>
+          </SheetHeader>
+          <SheetBody>
+            <pre className="text-xs font-mono whitespace-pre-wrap break-all">
+              {JSON.stringify(generation, null, 2)}
+            </pre>
+          </SheetBody>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

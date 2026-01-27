@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query"
 import { Link, useNavigate } from "@tanstack/react-router"
-import { MoreHorizontalIcon, RefreshCwIcon, Trash2Icon } from "lucide-react"
+import { BracesIcon, MoreHorizontalIcon, RefreshCwIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -44,9 +44,11 @@ function getPrompt(input: Record<string, unknown>): string | null {
 export function GenerationCard({
   generation,
   maxWidth = THUMBNAIL_SIZE,
+  onViewJson,
 }: {
   generation: Generation
   maxWidth?: number
+  onViewJson?: (generation: Generation) => void
 }) {
   const navigate = useNavigate()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -118,6 +120,17 @@ export function GenerationCard({
                 >
                   view details
                 </DropdownMenuItem>
+                {onViewJson && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault()
+                      onViewJson(generation)
+                    }}
+                  >
+                    <BracesIcon />
+                    view json
+                  </DropdownMenuItem>
+                )}
                 {generation.status === "failed" && (
                   <DropdownMenuItem
                     onClick={(e) => {
