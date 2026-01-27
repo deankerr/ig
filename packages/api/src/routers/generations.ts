@@ -9,6 +9,8 @@ import type { Context } from "../context"
 import { apiKeyProcedure, publicProcedure } from "../index"
 import { resolveAutoAspectRatio } from "../utils/auto-aspect-ratio"
 
+const PROVIDERS = ["fal", "runware"] as const
+
 const MAX_TAGS = 20
 const SLUG_PREFIX_LENGTH = 8
 const PRESET_PREFIX = "ig/"
@@ -35,16 +37,18 @@ const slugSchema = z
 
 type SubmitArgs = {
   id: string
+  provider: (typeof PROVIDERS)[number]
   endpoint: string
   input: Record<string, unknown>
   env: Context["env"]
 }
 
-async function submitToProvider({ id, endpoint, input, env }: SubmitArgs) {
+async function submitToProvider({ id, provider, endpoint, input, env }: SubmitArgs) {
   const resolvedInput = { ...input }
   let preprocessingMetadata: Record<string, unknown> | undefined
 
-  if (resolvedInput.prompt && resolvedInput.image_size === "auto") {
+  // Auto aspect ratio only applies to fal provider
+  if (provider === "fal" && resolvedInput.prompt && resolvedInput.image_size === "auto") {
     const result = await resolveAutoAspectRatio(resolvedInput.prompt as string, env.AI)
 
     if (result.ok) {
@@ -60,21 +64,51 @@ async function submitToProvider({ id, endpoint, input, env }: SubmitArgs) {
     }
   }
 
-  fal.config({ credentials: env.FAL_KEY })
-  const webhookUrl = `${env.PUBLIC_URL}/webhooks/fal?generation_id=${id}`
-  const { request_id } = await fal.queue.submit(endpoint, { input: resolvedInput, webhookUrl })
+  let requestId: string
+
+  if (provider === "runware") {
+    const webhookUrl = `${env.PUBLIC_URL}/webhooks/runware?generation_id=${id}`
+    const taskType = endpoint.includes("video") ? "videoInference" : "imageInference"
+
+    // Runware REST API submission
+    const response = await fetch("https://api.runware.ai/v1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([
+        { taskType: "authentication", apiKey: env.RUNWARE_KEY },
+        { taskType, taskUUID: id, includeCost: true, webhookURL: webhookUrl, ...resolvedInput },
+      ]),
+    })
+
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(`Runware API error: ${response.status} ${text}`)
+    }
+
+    const result = (await response.json()) as { error?: string }
+    if (result.error) {
+      throw new Error(`Runware API error: ${result.error}`)
+    }
+
+    requestId = id // Runware uses our taskUUID as the request ID
+  } else {
+    fal.config({ credentials: env.FAL_KEY })
+    const webhookUrl = `${env.PUBLIC_URL}/webhooks/fal?generation_id=${id}`
+    const { request_id } = await fal.queue.submit(endpoint, { input: resolvedInput, webhookUrl })
+    requestId = request_id
+  }
 
   await db
     .update(generations)
     .set({
-      providerRequestId: request_id,
+      providerRequestId: requestId,
       ...(preprocessingMetadata && {
         providerMetadata: { ig_preprocessing: preprocessingMetadata },
       }),
     })
     .where(eq(generations.id, id))
 
-  return { requestId: request_id }
+  return { requestId }
 }
 
 function makeSlug(id: string, slugArg?: string) {
@@ -89,6 +123,7 @@ export const generationsRouter = {
   create: apiKeyProcedure
     .input(
       z.object({
+        provider: z.enum(PROVIDERS).optional().default("fal"),
         endpoint: z.string().min(1),
         input: z.record(z.string(), z.unknown()),
         tags: tagsSchema.optional().default([]),
@@ -98,6 +133,7 @@ export const generationsRouter = {
     .handler(async ({ input: args, context }) => {
       const id = uuidv7()
       const slug = makeSlug(id, args.slug)
+      const provider = args.provider
 
       let endpoint = args.endpoint
       let input = args.input
@@ -123,6 +159,7 @@ export const generationsRouter = {
       await db.insert(generations).values({
         id,
         status: "pending",
+        provider,
         endpoint,
         input,
         tags,
@@ -131,6 +168,7 @@ export const generationsRouter = {
 
       const { requestId } = await submitToProvider({
         id,
+        provider,
         endpoint,
         input,
         env: context.env,
@@ -139,6 +177,7 @@ export const generationsRouter = {
       console.log("generation_created", {
         id,
         slug,
+        provider,
         endpoint,
         preset: args.endpoint.startsWith(PRESET_PREFIX) ? args.endpoint : undefined,
         requestId,
@@ -312,10 +351,12 @@ export const generationsRouter = {
 
       const id = uuidv7()
       const slug = makeSlug(id, args.slug)
+      const provider = (original.provider ?? "fal") as (typeof PROVIDERS)[number]
 
       await db.insert(generations).values({
         id,
         status: "pending",
+        provider,
         endpoint: original.endpoint,
         input: original.input,
         tags: mergeTags(args.tags, original.tags, [`regenerate:${original.id}`]),
@@ -324,6 +365,7 @@ export const generationsRouter = {
 
       const { requestId } = await submitToProvider({
         id,
+        provider,
         endpoint: original.endpoint,
         input: original.input,
         env: context.env,
@@ -332,6 +374,7 @@ export const generationsRouter = {
       console.log("generation_regenerated", {
         id,
         originalId: args.id,
+        provider,
         endpoint: original.endpoint,
         requestId,
       })

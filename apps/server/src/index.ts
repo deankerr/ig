@@ -8,6 +8,7 @@ import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { falWebhook } from "./fal"
+import { runwareWebhook } from "./runware"
 import { fileRoutes } from "./routes/file"
 
 // Export workflow class for Cloudflare
@@ -25,6 +26,7 @@ app.use(
 )
 
 app.route("/webhooks/fal", falWebhook)
+app.route("/webhooks/runware", runwareWebhook)
 app.route("/", fileRoutes)
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
