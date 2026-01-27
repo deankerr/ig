@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { formatEndpointId } from "@/lib/format-endpoint"
 import { client } from "@/utils/orpc"
 
 export const Route = createFileRoute("/generations/")({
@@ -62,7 +63,7 @@ function GenerationListItem({ generation }: { generation: Generation }) {
       </ItemMedia>
       <ItemContent className="justify-between h-full">
         <div className="flex items-center gap-2">
-          <ItemTitle>{generation.endpoint.replace("fal-ai/", "")}</ItemTitle>
+          <ItemTitle>{formatEndpointId(generation.endpoint)}</ItemTitle>
           <span className="text-muted-foreground">·</span>
           <TimeAgo date={generation.createdAt} className=" text-muted-foreground" />
         </div>
@@ -206,7 +207,7 @@ function GenerationsPage() {
                 <AutocompleteList>
                   {endpointsQuery.data?.endpoints.map((endpoint) => (
                     <AutocompleteItem key={endpoint} value={endpoint}>
-                      {endpoint.replace("fal-ai/", "")}
+                      {formatEndpointId(endpoint)}
                     </AutocompleteItem>
                   ))}
                 </AutocompleteList>

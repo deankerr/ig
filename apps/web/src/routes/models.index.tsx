@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table"
 import { useAllModels, type Model } from "@/hooks/use-all-models"
 import { useSortable } from "@/hooks/use-sortable"
+import { formatEndpointId } from "@/lib/format-endpoint"
 import { filterModels } from "@/lib/fuzzy-search"
 import { client } from "@/utils/orpc"
 
@@ -195,7 +196,9 @@ function ModelsPage() {
               {sortedItems.map((model) => (
                 <TableRow key={model.endpointId}>
                   <TableCell className="font-mono max-w-[300px] truncate">
-                    <Copyable text={model.endpointId}>{model.endpointId}</Copyable>
+                    <Copyable text={model.endpointId}>
+                      {formatEndpointId(model.endpointId)}
+                    </Copyable>
                   </TableCell>
                   <TableCell className="max-w-[250px] truncate">{model.displayName}</TableCell>
                   <TableCell>
@@ -262,7 +265,9 @@ function ModelsPage() {
       <Sheet open={!!selectedModel} onOpenChange={(open) => !open && setSelectedModel(null)}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle className="font-mono">{selectedModel?.endpointId}</SheetTitle>
+            <SheetTitle className="font-mono">
+              {selectedModel && formatEndpointId(selectedModel.endpointId)}
+            </SheetTitle>
           </SheetHeader>
           <SheetBody>
             <pre className="text-xs font-mono whitespace-pre-wrap break-all">

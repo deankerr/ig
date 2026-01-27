@@ -43,6 +43,7 @@ import {
   AutocompleteItem,
   AutocompleteEmpty,
 } from "@/components/ui/autocomplete"
+import { formatEndpointId } from "@/lib/format-endpoint"
 import { filterModelForAutocomplete } from "@/lib/fuzzy-search"
 import { client, queryClient } from "@/utils/orpc"
 
@@ -375,7 +376,7 @@ function PlaygroundPage() {
                               >
                                 <span className="font-mono text-xs">{preset.name}</span>
                                 <span className="text-[10px] text-muted-foreground">
-                                  {preset.description || preset.endpoint.replace("fal-ai/", "")}
+                                  {preset.description || formatEndpointId(preset.endpoint)}
                                 </span>
                               </DropdownMenuItem>
                             ))}
@@ -444,9 +445,7 @@ function PlaygroundPage() {
                 />
               ) : (
                 <p className="text-sm font-mono truncate mb-1">
-                  {selectedPresetName ??
-                    selectedModel?.displayName ??
-                    endpoint.replace("fal-ai/", "")}
+                  {selectedPresetName ?? selectedModel?.displayName ?? formatEndpointId(endpoint)}
                 </p>
               )}
 

@@ -16,7 +16,6 @@ const cfSubdomain = process.env.CF_WORKERS_SUBDOMAIN
 if (!cfSubdomain) throw new Error("CF_WORKERS_SUBDOMAIN is required")
 
 const serverUrl = process.env.SERVER_URL ?? `https://ig-server-${stage}.${cfSubdomain}.workers.dev`
-console.log("ig-console target:", serverUrl)
 
 const app = await alchemy("ig", {
   stage,
@@ -79,7 +78,7 @@ export const server = await Worker("server", {
   adopt: true,
 })
 
-console.log(`Web    -> ${web.url}`)
+console.log(`Web    -> ${web.url}`, `(target: ${serverUrl})`)
 console.log(`Server -> ${server.url}`)
 
 await app.finalize()
