@@ -24,7 +24,8 @@ function getTimeAgo(date: Date): string {
   return "just now"
 }
 
-export function TimeAgo({ date, className }: { date: Date; className?: string }) {
+export function TimeAgo({ date: input, className }: { date: Date; className?: string }) {
+  const date = new Date(input)
   const [timeAgo, setTimeAgo] = useState(() => getTimeAgo(date))
 
   useEffect(() => {

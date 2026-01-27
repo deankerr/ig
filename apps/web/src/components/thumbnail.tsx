@@ -50,11 +50,13 @@ export function Thumbnail({
   contentType,
   status,
   className,
+  size = THUMBNAIL_SIZE,
 }: {
   generationId: string
   contentType: string | null
   status: "pending" | "ready" | "failed"
   className?: string
+  size?: number
 }) {
   const [error, setError] = useState(false)
 
@@ -65,7 +67,7 @@ export function Thumbnail({
   // For ready images, use Cloudflare Image Resizing
   if (status === "ready" && isImage && !error) {
     const sourceUrl = `${env.VITE_SERVER_URL}/generations/${generationId}/file`
-    const src = `${CDN_IMAGE_PREFIX}/w=${THUMBNAIL_SIZE},f=auto,q=80/${sourceUrl}`
+    const src = `${CDN_IMAGE_PREFIX}/w=${size},f=auto,q=80/${sourceUrl}`
 
     return (
       <img

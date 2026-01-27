@@ -1,0 +1,41 @@
+{
+  "id": "019bfc8b-a96c-71d0-b02e-25c640450f55",
+  "status": "ready",
+  "provider": "fal",
+  "endpoint": "fal-ai/z-image/turbo",
+  "input": {
+    "prompt": "an absence of banana. an empty space where a banana used to be",
+    "enable_safety_checker": false
+  },
+  "tags": [
+    "xchat:buffer:rhonet.#image-gen",
+    "xchat:trigger:message",
+    "xchat:nick:John",
+    "xchat:host:~John@2A33BA99.3E58F49.9030AE9C.IP"
+  ],
+  "contentType": "image/png",
+  "errorCode": null,
+  "errorMessage": null,
+  "providerRequestId": "e7bbd6b6-7298-43b3-ba69-2a7ee7a47c03",
+  "providerMetadata": {
+    "has_nsfw_concepts": [false],
+    "images": [
+      {
+        "content_type": "image/png",
+        "file_name": "OGCrl563RZA-uSr3FyFoB.png",
+        "file_size": null,
+        "height": 768,
+        "url": "https://v3b.fal.media/files/b/0a8bfea9/OGCrl563RZA-uSr3FyFoB.png",
+        "width": 1024
+      }
+    ],
+    "prompt": "an absence of banana. an empty space where a banana used to be",
+    "seed": 1235317536,
+    "timings": {
+      "inference": 0.44174549356102943
+    }
+  },
+  "slug": "019bfc8b-john-an-absence-of-banana-an-empty-space-where-a-banana-used-to-be",
+  "createdAt": "2026-01-26T23:02:49.965Z",
+  "completedAt": "2026-01-26T23:02:56.689Z"
+}

@@ -208,6 +208,24 @@ export const generationsRouter = {
       return { id: input.id, tags: newTags, slug }
     }),
 
+  listEndpoints: publicProcedure.route({ spec: { security: [] } }).handler(async () => {
+    const results = await db
+      .selectDistinct({ endpoint: generations.endpoint })
+      .from(generations)
+      .orderBy(generations.endpoint)
+
+    return { endpoints: results.map((r) => r.endpoint) }
+  }),
+
+  listTags: publicProcedure.route({ spec: { security: [] } }).handler(async () => {
+    const results = await db
+      .select({ tag: sql<string>`DISTINCT value` })
+      .from(sql`${generations}, json_each(${generations.tags})`)
+      .orderBy(sql`value`)
+
+    return { tags: results.map((r) => r.tag) }
+  }),
+
   delete: apiKeyProcedure
     .input(z.object({ id: z.string().min(1) }))
     .handler(async ({ input, context }) => {

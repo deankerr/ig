@@ -14,8 +14,9 @@ console.log("is dev", stage === "dev")
 // Derive URLs from stage - no need for per-environment .env files
 const cfSubdomain = process.env.CF_WORKERS_SUBDOMAIN
 if (!cfSubdomain) throw new Error("CF_WORKERS_SUBDOMAIN is required")
-const webUrl = `https://ig-web-${stage}.${cfSubdomain}.workers.dev`
-const serverUrl = `https://ig-server-${stage}.${cfSubdomain}.workers.dev`
+
+const serverUrl = process.env.SERVER_URL ?? `https://ig-server-${stage}.${cfSubdomain}.workers.dev`
+console.log("ig-console target:", serverUrl)
 
 const app = await alchemy("ig", {
   stage,
@@ -27,10 +28,12 @@ const app = await alchemy("ig", {
 
 const db = await D1Database("database", {
   migrationsDir: "../../packages/db/src/migrations",
+  adopt: true,
 })
 
 const generationsBucket = await R2Bucket("generations", {
   empty: stage === "dev",
+  adopt: true,
 })
 
 const images = Images()
@@ -49,6 +52,7 @@ export const web = await Vite("web", {
     VITE_SERVER_URL: serverUrl,
     VITE_BUILD_ID: buildId,
   },
+  adopt: true,
 })
 
 export const server = await Worker("server", {
@@ -63,7 +67,6 @@ export const server = await Worker("server", {
     DB: db,
     GENERATIONS_BUCKET: generationsBucket,
     IMAGES: images,
-    CORS_ORIGIN: webUrl,
     FAL_KEY: alchemy.secret.env.FAL_KEY!,
     WEBHOOK_URL: `${serverUrl}/webhooks/fal`,
     API_KEY: alchemy.secret.env.API_KEY!,
@@ -73,6 +76,7 @@ export const server = await Worker("server", {
   dev: {
     port: 3000,
   },
+  adopt: true,
 })
 
 console.log(`Web    -> ${web.url}`)
