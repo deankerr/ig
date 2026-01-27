@@ -49,6 +49,8 @@ coverage
 tmp
 temp
 
+*.local.*
+
 # claude-mem
 **/CLAUDE.md
 !/CLAUDE.md

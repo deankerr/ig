@@ -5,14 +5,8 @@ import { env } from "@ig/env/web"
 import { cn } from "@/lib/utils"
 
 /**
- * Cloudflare Image Resizing endpoint.
- * Format: https://orb.town/cdn-cgi/image/<OPTIONS>/<SOURCE-IMAGE>
- */
-const CDN_IMAGE_PREFIX = "https://orb.town/cdn-cgi/image"
-
-/**
  * Max thumbnail dimension in pixels.
- * - CDN resizes images to this width
+ * - Server resizes images to this width via Cloudflare Images binding
  * - Grid cells are capped at this size
  * - Larger images waste bandwidth without visual benefit
  */
@@ -43,7 +37,7 @@ export function ThumbnailGrid({
 
 /**
  * Renders a thumbnail for a generation.
- * Uses Cloudflare Image Resizing for optimized delivery.
+ * Uses server-side image transforms via Cloudflare Images binding.
  */
 export function Thumbnail({
   generationId,
@@ -64,10 +58,10 @@ export function Thumbnail({
   const isVideo = contentType?.startsWith("video/")
   const isAudio = contentType?.startsWith("audio/")
 
-  // For ready images, use Cloudflare Image Resizing
+  // For ready images, use server-side image transforms (Cloudflare Images binding)
+  // f=auto negotiates best format (avif/webp) based on browser Accept header
   if (status === "ready" && isImage && !error) {
-    const sourceUrl = `${env.VITE_SERVER_URL}/generations/${generationId}/file`
-    const src = `${CDN_IMAGE_PREFIX}/w=${size},f=auto,q=80/${sourceUrl}`
+    const src = `${env.VITE_SERVER_URL}/generations/${generationId}/file?w=${size}&f=auto`
 
     return (
       <img

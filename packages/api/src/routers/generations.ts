@@ -76,8 +76,7 @@ export const generationsRouter = {
       })
 
       fal.config({ credentials: context.env.FAL_KEY })
-
-      const webhookUrl = `${context.env.WEBHOOK_URL}?generation_id=${id}`
+      const webhookUrl = `${context.env.PUBLIC_URL}/webhooks/fal?generation_id=${id}`
       const result = await fal.queue.submit(endpoint, {
         input: mergedInput,
         webhookUrl,
@@ -281,8 +280,7 @@ export const generationsRouter = {
       })
 
       fal.config({ credentials: context.env.FAL_KEY })
-
-      const webhookUrl = `${context.env.WEBHOOK_URL}?generation_id=${id}`
+      const webhookUrl = `${context.env.PUBLIC_URL}/webhooks/fal?generation_id=${id}`
       const result = await fal.queue.submit(original.endpoint, {
         input: original.input,
         webhookUrl,
