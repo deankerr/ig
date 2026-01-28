@@ -5,7 +5,9 @@ import { and, desc, eq, lt, sql } from "drizzle-orm"
 import { v7 as uuidv7 } from "uuid"
 import { z } from "zod"
 
+import type { Context } from "../context"
 import { apiKeyProcedure, publicProcedure } from "../index"
+import { resolveAutoAspectRatio } from "../utils/auto-aspect-ratio"
 
 const MAX_TAGS = 20
 const SLUG_PREFIX_LENGTH = 8
@@ -31,6 +33,58 @@ const slugSchema = z
     "Slug must be lowercase alphanumeric with hyphens, underscores, and slashes",
   )
 
+type SubmitArgs = {
+  id: string
+  endpoint: string
+  input: Record<string, unknown>
+  env: Context["env"]
+}
+
+async function submitToProvider({ id, endpoint, input, env }: SubmitArgs) {
+  const resolvedInput = { ...input }
+  let preprocessingMetadata: Record<string, unknown> | undefined
+
+  if (resolvedInput.prompt && resolvedInput.image_size === "auto") {
+    const result = await resolveAutoAspectRatio(resolvedInput.prompt as string, env.AI)
+
+    if (result.ok) {
+      resolvedInput.image_size = result.data.imageSize
+      console.log("auto_aspect_ratio_created", result.data)
+    } else {
+      resolvedInput.image_size = undefined
+      console.log("auto_aspect_ratio_error", result.error)
+    }
+
+    preprocessingMetadata = {
+      autoAspectRatio: { data: result.data },
+    }
+  }
+
+  fal.config({ credentials: env.FAL_KEY })
+  const webhookUrl = `${env.PUBLIC_URL}/webhooks/fal?generation_id=${id}`
+  const { request_id } = await fal.queue.submit(endpoint, { input: resolvedInput, webhookUrl })
+
+  await db
+    .update(generations)
+    .set({
+      providerRequestId: request_id,
+      ...(preprocessingMetadata && {
+        providerMetadata: { ig_preprocessing: preprocessingMetadata },
+      }),
+    })
+    .where(eq(generations.id, id))
+
+  return { requestId: request_id }
+}
+
+function makeSlug(id: string, slugArg?: string) {
+  return slugArg ? `${id.slice(0, SLUG_PREFIX_LENGTH)}-${slugArg}` : null
+}
+
+function mergeTags(...args: (string[] | null | undefined)[]) {
+  return [...new Set(args.flatMap((a) => a ?? []))]
+}
+
 export const generationsRouter = {
   create: apiKeyProcedure
     .input(
@@ -41,60 +95,55 @@ export const generationsRouter = {
         slug: slugSchema.optional(),
       }),
     )
-    .handler(async ({ input, context }) => {
+    .handler(async ({ input: args, context }) => {
       const id = uuidv7()
-      const slug = input.slug ? `${id.slice(0, SLUG_PREFIX_LENGTH)}-${input.slug}` : null
+      const slug = makeSlug(id, args.slug)
+
+      let endpoint = args.endpoint
+      let input = args.input
+      let tags = args.tags
 
       // Resolve preset if endpoint starts with ig/
-      let endpoint = input.endpoint
-      let mergedInput = input.input
-      let mergedTags = input.tags
-
-      if (input.endpoint.startsWith(PRESET_PREFIX)) {
+      if (args.endpoint.startsWith(PRESET_PREFIX)) {
         const preset = await db
           .select()
           .from(presets)
-          .where(eq(presets.name, input.endpoint))
+          .where(eq(presets.name, args.endpoint))
           .limit(1)
 
         if (!preset[0]) {
-          throw new Error(`Preset not found: ${input.endpoint}`)
+          throw new Error(`Preset not found: ${args.endpoint}`)
         }
 
         endpoint = preset[0].endpoint
-        mergedInput = { ...preset[0].input, ...input.input }
-        mergedTags = [...new Set([...(preset[0].tags ?? []), ...input.tags])]
+        input = { ...preset[0].input, ...args.input }
+        tags = mergeTags(preset[0].tags, args.tags)
       }
 
       await db.insert(generations).values({
         id,
         status: "pending",
         endpoint,
-        input: mergedInput,
-        tags: mergedTags,
+        input,
+        tags,
         slug,
       })
 
-      fal.config({ credentials: context.env.FAL_KEY })
-      const webhookUrl = `${context.env.PUBLIC_URL}/webhooks/fal?generation_id=${id}`
-      const result = await fal.queue.submit(endpoint, {
-        input: mergedInput,
-        webhookUrl,
+      const { requestId } = await submitToProvider({
+        id,
+        endpoint,
+        input,
+        env: context.env,
       })
-
-      await db
-        .update(generations)
-        .set({ providerRequestId: result.request_id })
-        .where(eq(generations.id, id))
 
       console.log("generation_created", {
         id,
         slug,
         endpoint,
-        preset: input.endpoint.startsWith(PRESET_PREFIX) ? input.endpoint : undefined,
-        requestId: result.request_id,
+        preset: args.endpoint.startsWith(PRESET_PREFIX) ? args.endpoint : undefined,
+        requestId,
       })
-      return { id, slug, requestId: result.request_id }
+      return { id, slug, requestId }
     }),
 
   list: publicProcedure
@@ -151,18 +200,14 @@ export const generationsRouter = {
   get: publicProcedure
     .route({ spec: { security: [] } })
     .input(z.object({ id: z.string().min(1) }))
-    .handler(async ({ input }) => {
-      const result = await db
+    .handler(async ({ input: args }) => {
+      const [generation] = await db
         .select()
         .from(generations)
-        .where(eq(generations.id, input.id))
+        .where(eq(generations.id, args.id))
         .limit(1)
 
-      if (result.length === 0) {
-        return null
-      }
-
-      return result[0]
+      return generation ?? null
     }),
 
   update: apiKeyProcedure
@@ -174,11 +219,11 @@ export const generationsRouter = {
         slug: slugSchema.optional(),
       }),
     )
-    .handler(async ({ input }) => {
+    .handler(async ({ input: args }) => {
       const existing = await db
         .select({ tags: generations.tags, id: generations.id })
         .from(generations)
-        .where(eq(generations.id, input.id))
+        .where(eq(generations.id, args.id))
         .limit(1)
 
       const generation = existing[0]
@@ -186,25 +231,22 @@ export const generationsRouter = {
         throw new Error("Generation not found")
       }
 
-      const currentTags = generation.tags
+      const withoutRemoved = generation.tags.filter((tag: string) => !args.remove.includes(tag))
+      const tags = mergeTags(withoutRemoved, args.add)
 
-      const withoutRemoved = currentTags.filter((tag: string) => !input.remove.includes(tag))
-      const newTags = [...new Set([...withoutRemoved, ...input.add])]
-
-      if (newTags.length > MAX_TAGS) {
+      if (tags.length > MAX_TAGS) {
         throw new Error(`Cannot exceed ${MAX_TAGS} tags per generation`)
       }
 
-      const slug = input.slug
-        ? `${generation.id.slice(0, SLUG_PREFIX_LENGTH)}-${input.slug}`
-        : undefined
+      const slug = makeSlug(generation.id, args.slug)
 
       await db
         .update(generations)
-        .set({ tags: newTags, ...(slug && { slug }) })
-        .where(eq(generations.id, input.id))
+        .set({ tags, ...(slug && { slug }) })
+        .where(eq(generations.id, args.id))
 
-      return { id: input.id, tags: newTags, slug }
+      console.log("generation_updated", { id: args.id, tags, slug })
+      return { id: args.id, tags, slug }
     }),
 
   listEndpoints: publicProcedure.route({ spec: { security: [] } }).handler(async () => {
@@ -227,26 +269,24 @@ export const generationsRouter = {
 
   delete: apiKeyProcedure
     .input(z.object({ id: z.string().min(1) }))
-    .handler(async ({ input, context }) => {
-      const existing = await db
+    .handler(async ({ input: args, context }) => {
+      const [generation] = await db
         .select()
         .from(generations)
-        .where(eq(generations.id, input.id))
+        .where(eq(generations.id, args.id))
         .limit(1)
 
-      const generation = existing[0]
       if (!generation) {
         return { deleted: false }
       }
 
       if (generation.status === "ready") {
-        const key = `generations/${input.id}`
-        await context.env.GENERATIONS_BUCKET.delete(key)
+        await context.env.GENERATIONS_BUCKET.delete(`generations/${args.id}`)
       }
 
-      await db.delete(generations).where(eq(generations.id, input.id))
+      await db.delete(generations).where(eq(generations.id, args.id))
 
-      console.log("generation_deleted", { id: input.id })
+      console.log("generation_deleted", { id: args.id })
       return { deleted: true }
     }),
 
@@ -255,13 +295,14 @@ export const generationsRouter = {
       z.object({
         id: z.string().min(1),
         tags: tagsSchema.optional(),
+        slug: slugSchema.optional(),
       }),
     )
-    .handler(async ({ input, context }) => {
+    .handler(async ({ input: args, context }) => {
       const existing = await db
         .select()
         .from(generations)
-        .where(eq(generations.id, input.id))
+        .where(eq(generations.id, args.id))
         .limit(1)
 
       const original = existing[0]
@@ -270,33 +311,30 @@ export const generationsRouter = {
       }
 
       const id = uuidv7()
+      const slug = makeSlug(id, args.slug)
 
       await db.insert(generations).values({
         id,
         status: "pending",
         endpoint: original.endpoint,
         input: original.input,
-        tags: input.tags ?? original.tags,
+        tags: mergeTags(args.tags, original.tags, [`regenerate:${original.id}`]),
+        slug,
       })
 
-      fal.config({ credentials: context.env.FAL_KEY })
-      const webhookUrl = `${context.env.PUBLIC_URL}/webhooks/fal?generation_id=${id}`
-      const result = await fal.queue.submit(original.endpoint, {
+      const { requestId } = await submitToProvider({
+        id,
+        endpoint: original.endpoint,
         input: original.input,
-        webhookUrl,
+        env: context.env,
       })
-
-      await db
-        .update(generations)
-        .set({ providerRequestId: result.request_id })
-        .where(eq(generations.id, id))
 
       console.log("generation_regenerated", {
         id,
-        originalId: input.id,
+        originalId: args.id,
         endpoint: original.endpoint,
-        requestId: result.request_id,
+        requestId,
       })
-      return { id, requestId: result.request_id, originalId: input.id }
+      return { id, requestId, originalId: args.id }
     }),
 }

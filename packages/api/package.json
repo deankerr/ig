@@ -18,11 +18,13 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "ai": "^6.0.57",
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "catalog:",
     "remeda": "catalog:",
     "uuid": "catalog:",
+    "workers-ai-provider": "^3.0.3",
     "zod": "catalog:"
   },
   "devDependencies": {
