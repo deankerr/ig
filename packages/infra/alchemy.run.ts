@@ -1,5 +1,5 @@
 import alchemy from "alchemy"
-import { D1Database, Images, R2Bucket, Vite, Worker, Workflow } from "alchemy/cloudflare"
+import { Ai, D1Database, Images, R2Bucket, Vite, Worker, Workflow } from "alchemy/cloudflare"
 import { CloudflareStateStore } from "alchemy/state"
 import { config } from "dotenv"
 
@@ -60,6 +60,8 @@ const generationsBucket = await R2Bucket("generations", {
 
 const images = Images()
 
+const ai = Ai()
+
 const modelSyncWorkflow = Workflow("model-sync-workflow", {
   className: "ModelSyncWorkflow",
 })
@@ -77,6 +79,7 @@ export const server = await Worker("server", {
     DB: db,
     GENERATIONS_BUCKET: generationsBucket,
     IMAGES: images,
+    AI: ai,
     FAL_KEY: alchemy.secret.env.FAL_KEY!,
     API_KEY: alchemy.secret.env.API_KEY!,
     MODEL_SYNC_WORKFLOW: modelSyncWorkflow,

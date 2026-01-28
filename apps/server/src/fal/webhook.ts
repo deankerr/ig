@@ -66,7 +66,10 @@ falWebhook.post("/", async (c) => {
         errorCode: "FAL_ERROR",
         errorMessage: body.error ?? "Unknown error",
         completedAt: new Date(),
-        providerMetadata: payload,
+        providerMetadata: {
+          ...originalGen.providerMetadata,
+          ...payload,
+        },
       })
       .where(eq(generations.id, generationId))
 
@@ -100,7 +103,10 @@ falWebhook.post("/", async (c) => {
           errorCode: output.ok ? null : output.errorCode,
           errorMessage: output.ok ? null : output.errorMessage,
           providerRequestId: body.request_id,
-          providerMetadata: payload,
+          providerMetadata: {
+            ...originalGen.providerMetadata,
+            ...payload,
+          },
           createdAt: originalGen.createdAt,
           completedAt: new Date(),
         })
@@ -119,7 +125,10 @@ falWebhook.post("/", async (c) => {
             status: "ready",
             contentType: output.contentType,
             completedAt: new Date(),
-            providerMetadata: payload,
+            providerMetadata: {
+              ...originalGen.providerMetadata,
+              ...payload,
+            },
             ...(isFirst ? {} : { tags: [...originalGen.tags, batchTag] }),
           })
           .where(eq(generations.id, genId))
@@ -138,7 +147,10 @@ falWebhook.post("/", async (c) => {
             errorCode: output.errorCode,
             errorMessage: output.errorMessage,
             completedAt: new Date(),
-            providerMetadata: payload,
+            providerMetadata: {
+              ...originalGen.providerMetadata,
+              ...payload,
+            },
           })
           .where(eq(generations.id, genId))
 
@@ -171,7 +183,10 @@ falWebhook.post("/", async (c) => {
       errorCode: output.ok ? null : output.errorCode,
       errorMessage: output.ok ? null : output.errorMessage,
       completedAt: new Date(),
-      providerMetadata: payload,
+      providerMetadata: {
+        ...originalGen.providerMetadata,
+        ...payload,
+      },
     })
     .where(eq(generations.id, generationId))
 
