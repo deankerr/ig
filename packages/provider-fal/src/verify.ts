@@ -90,7 +90,7 @@ export type WebhookVerificationResult = { valid: true } | { valid: false; error:
 /**
  * Verifies a fal.ai webhook request signature
  */
-export async function verifyFalWebhook(
+export async function verifyWebhook(
   headers: Headers,
   rawBody: ArrayBuffer,
 ): Promise<WebhookVerificationResult> {

@@ -1,0 +1,23 @@
+{
+  "name": "@ig/provider-runware",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "dependencies": {
+    "@ig/db": "workspace:*",
+    "@ig/env": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "hono": "catalog:",
+    "uuid": "catalog:"
+  },
+  "devDependencies": {
+    "@ig/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

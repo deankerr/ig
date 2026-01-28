@@ -23,10 +23,11 @@
     "apps/server": {
       "name": "server",
       "dependencies": {
-        "@fal-ai/client": "catalog:",
         "@ig/api": "workspace:*",
         "@ig/db": "workspace:*",
         "@ig/env": "workspace:*",
+        "@ig/provider-fal": "workspace:*",
+        "@ig/provider-runware": "workspace:*",
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",
@@ -95,9 +96,10 @@
     "packages/api": {
       "name": "@ig/api",
       "dependencies": {
-        "@fal-ai/client": "catalog:",
         "@ig/db": "workspace:*",
         "@ig/env": "workspace:*",
+        "@ig/provider-fal": "workspace:*",
+        "@ig/provider-runware": "workspace:*",
         "@orpc/client": "catalog:",
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
@@ -161,6 +163,35 @@
       "devDependencies": {
         "@ig/config": "workspace:*",
         "alchemy": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/provider-fal": {
+      "name": "@ig/provider-fal",
+      "dependencies": {
+        "@fal-ai/client": "catalog:",
+        "@ig/db": "workspace:*",
+        "@ig/env": "workspace:*",
+        "drizzle-orm": "catalog:",
+        "hono": "catalog:",
+        "uuid": "catalog:",
+      },
+      "devDependencies": {
+        "@ig/config": "workspace:*",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/provider-runware": {
+      "name": "@ig/provider-runware",
+      "dependencies": {
+        "@ig/db": "workspace:*",
+        "@ig/env": "workspace:*",
+        "drizzle-orm": "catalog:",
+        "hono": "catalog:",
+        "uuid": "catalog:",
+      },
+      "devDependencies": {
+        "@ig/config": "workspace:*",
         "typescript": "catalog:",
       },
     },
@@ -432,6 +463,10 @@
     "@ig/env": ["@ig/env@workspace:packages/env"],
 
     "@ig/infra": ["@ig/infra@workspace:packages/infra"],
+
+    "@ig/provider-fal": ["@ig/provider-fal@workspace:packages/provider-fal"],
+
+    "@ig/provider-runware": ["@ig/provider-runware@workspace:packages/provider-runware"],
 
     "@img/colour": ["@img/colour@1.0.0", "", {}, "sha512-A5P/LfWGFSl6nsckYtjw9da+19jB8hkJ6ACTGcDfEJ0aE+l2n2El7dsVM7UVHZQ9s2lmYMWlrS21YLy2IR1LUw=="],
 

@@ -1,6 +1,7 @@
-import { fal } from "@fal-ai/client"
 import { db } from "@ig/db"
 import { generations, presets } from "@ig/db/schema"
+import { submit as submitToFal } from "@ig/provider-fal"
+import { submit as submitToRunware } from "@ig/provider-runware"
 import { and, desc, eq, lt, sql } from "drizzle-orm"
 import { v7 as uuidv7 } from "uuid"
 import { z } from "zod"
@@ -70,32 +71,23 @@ async function submitToProvider({ id, provider, endpoint, input, env }: SubmitAr
     const webhookUrl = `${env.PUBLIC_URL}/webhooks/runware?generation_id=${id}`
     const taskType = endpoint.includes("video") ? "videoInference" : "imageInference"
 
-    // Runware REST API submission
-    const response = await fetch("https://api.runware.ai/v1", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([
-        { taskType: "authentication", apiKey: env.RUNWARE_KEY },
-        { taskType, taskUUID: id, includeCost: true, webhookURL: webhookUrl, ...resolvedInput },
-      ]),
+    const result = await submitToRunware({
+      apiKey: env.RUNWARE_KEY,
+      taskType,
+      taskUUID: id,
+      input: resolvedInput,
+      webhookUrl,
     })
-
-    if (!response.ok) {
-      const text = await response.text()
-      throw new Error(`Runware API error: ${response.status} ${text}`)
-    }
-
-    const result = (await response.json()) as { error?: string }
-    if (result.error) {
-      throw new Error(`Runware API error: ${result.error}`)
-    }
-
-    requestId = id // Runware uses our taskUUID as the request ID
+    requestId = result.requestId
   } else {
-    fal.config({ credentials: env.FAL_KEY })
     const webhookUrl = `${env.PUBLIC_URL}/webhooks/fal?generation_id=${id}`
-    const { request_id } = await fal.queue.submit(endpoint, { input: resolvedInput, webhookUrl })
-    requestId = request_id
+    const result = await submitToFal({
+      apiKey: env.FAL_KEY,
+      endpoint,
+      input: resolvedInput,
+      webhookUrl,
+    })
+    requestId = result.requestId
   }
 
   await db

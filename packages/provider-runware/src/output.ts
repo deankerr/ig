@@ -15,9 +15,7 @@ export type ResolvedOutput =
  * Resolves outputs from a Runware webhook payload.
  * Returns an array of outputs - Runware can return multiple images per request.
  */
-export async function resolveRunwareOutputs(
-  payload: Record<string, unknown>,
-): Promise<ResolvedOutput[]> {
+export async function resolveOutputs(payload: Record<string, unknown>): Promise<ResolvedOutput[]> {
   const outputs: ResolvedOutput[] = []
 
   // Check for imageURL (image inference)

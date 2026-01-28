@@ -1,4 +1,10 @@
-import type { WebHookResponse } from "@fal-ai/client"
+/**
+ * Runware webhook handler
+ *
+ * Receives inference results from Runware and updates the generation record.
+ * Runware webhook payloads are simpler and more standardized than fal.ai.
+ */
+
 import { db } from "@ig/db"
 import { generations } from "@ig/db/schema"
 import { env } from "@ig/env/server"
@@ -7,32 +13,49 @@ import { Hono } from "hono"
 import { v7 as uuidv7 } from "uuid"
 
 import { resolveOutputs } from "./output"
-import { verifyFalWebhook } from "./verify"
 
-export const falWebhook = new Hono()
+export const webhook = new Hono()
 
-falWebhook.post("/", async (c) => {
-  // Verify webhook signature
-  const rawBody = await c.req.arrayBuffer()
-  const verification = await verifyFalWebhook(c.req.raw.headers, rawBody)
-  if (!verification.valid) {
-    console.error("webhook_verification_failed", { error: verification.error })
-    return c.json({ error: "Invalid webhook signature" }, 401)
-  }
+/**
+ * Runware webhook payload structure
+ */
+type RunwareWebhookPayload = {
+  taskType: string
+  taskUUID: string
+  imageUUID?: string
+  videoUUID?: string
+  imageURL?: string
+  videoURL?: string
+  imageDataURI?: string
+  imageBase64Data?: string
+  cost?: number
+  seed?: number
+  NSFWContent?: boolean
+  error?: string
+  errorMessage?: string
+  [key: string]: unknown
+}
 
+webhook.post("/", async (c) => {
   const generationId = c.req.query("generation_id")
   if (!generationId) {
-    console.error("webhook_missing_generation_id")
+    console.error("runware_webhook_missing_generation_id")
     return c.json({ error: "Missing generation_id" }, 400)
   }
 
-  const body = JSON.parse(new TextDecoder().decode(rawBody)) as WebHookResponse
-  const payload = (body.payload ?? {}) as Record<string, unknown>
+  let payload: RunwareWebhookPayload
+  try {
+    payload = await c.req.json()
+  } catch {
+    console.error("runware_webhook_invalid_json")
+    return c.json({ error: "Invalid JSON" }, 400)
+  }
 
-  console.log("fal_webhook_received", {
+  console.log("runware_webhook_received", {
     generationId,
-    status: body.status,
-    requestId: body.request_id,
+    taskType: payload.taskType,
+    taskUUID: payload.taskUUID,
+    hasError: !!payload.error,
   })
 
   // Verify generation exists
@@ -41,46 +64,45 @@ falWebhook.post("/", async (c) => {
     .from(generations)
     .where(eq(generations.id, generationId))
     .limit(1)
+
   if (existing.length === 0) {
-    console.error("webhook_generation_not_found", { generationId })
+    console.error("runware_webhook_generation_not_found", { generationId })
     return c.json({ error: "Generation not found" }, 404)
   }
 
-  // Idempotency: if already processed, return success without reprocessing
   const originalGen = existing[0]
   if (!originalGen) {
-    console.error("webhook_generation_not_found_after_check", { generationId })
+    console.error("runware_webhook_generation_not_found_after_check", { generationId })
     return c.json({ error: "Generation not found" }, 404)
   }
+
+  // Idempotency: if already processed, return success
   if (originalGen.status === "ready" || originalGen.status === "failed") {
-    console.log("webhook_already_processed", { generationId, status: originalGen.status })
+    console.log("runware_webhook_already_processed", { generationId, status: originalGen.status })
     return c.json({ ok: true, alreadyProcessed: true })
   }
 
-  // Handle fal errors
-  if (body.status === "ERROR") {
+  // Handle errors
+  if (payload.error || payload.errorMessage) {
     await db
       .update(generations)
       .set({
         status: "failed",
-        errorCode: "FAL_ERROR",
-        errorMessage: body.error ?? "Unknown error",
+        errorCode: "RUNWARE_ERROR",
+        errorMessage: payload.errorMessage ?? payload.error ?? "Unknown error",
         completedAt: new Date(),
-        providerMetadata: {
-          ...originalGen.providerMetadata,
-          ...payload,
-        },
+        providerMetadata: payload,
       })
       .where(eq(generations.id, generationId))
 
-    console.log("generation_failed", { generationId, errorCode: "FAL_ERROR" })
+    console.log("runware_generation_failed", { generationId, errorCode: "RUNWARE_ERROR" })
     return c.json({ ok: true })
   }
 
   // Resolve outputs
   const outputs = await resolveOutputs(payload)
 
-  // Handle multi-output: create additional generation records
+  // Handle multi-output (if Runware returns multiple results)
   if (outputs.length > 1) {
     const batchTag = `batch:${generationId}`
 
@@ -96,16 +118,17 @@ falWebhook.post("/", async (c) => {
         await db.insert(generations).values({
           id: genId,
           status: output.ok ? "ready" : "failed",
+          provider: "runware",
           endpoint: originalGen.endpoint,
           input: originalGen.input,
           tags: [...originalGen.tags, batchTag],
           contentType: output.ok ? output.contentType : null,
           errorCode: output.ok ? null : output.errorCode,
           errorMessage: output.ok ? null : output.errorMessage,
-          providerRequestId: body.request_id,
+          providerRequestId: payload.taskUUID,
           providerMetadata: {
-            ...originalGen.providerMetadata,
             ...payload,
+            cost: output.ok ? output.cost : undefined,
           },
           createdAt: originalGen.createdAt,
           completedAt: new Date(),
@@ -126,20 +149,20 @@ falWebhook.post("/", async (c) => {
             contentType: output.contentType,
             completedAt: new Date(),
             providerMetadata: {
-              ...originalGen.providerMetadata,
               ...payload,
+              cost: output.cost,
             },
             ...(isFirst ? {} : { tags: [...originalGen.tags, batchTag] }),
           })
           .where(eq(generations.id, genId))
 
-        console.log("generation_ready", {
+        console.log("runware_generation_ready", {
           generationId: genId,
           contentType: output.contentType,
+          cost: output.cost,
           batch: !isFirst,
         })
       } else if (isFirst) {
-        // Only update first generation if it's an error
         await db
           .update(generations)
           .set({
@@ -147,14 +170,14 @@ falWebhook.post("/", async (c) => {
             errorCode: output.errorCode,
             errorMessage: output.errorMessage,
             completedAt: new Date(),
-            providerMetadata: {
-              ...originalGen.providerMetadata,
-              ...payload,
-            },
+            providerMetadata: payload,
           })
           .where(eq(generations.id, genId))
 
-        console.log("generation_failed", { generationId: genId, errorCode: output.errorCode })
+        console.log("runware_generation_failed", {
+          generationId: genId,
+          errorCode: output.errorCode,
+        })
       }
     }
 
@@ -164,9 +187,10 @@ falWebhook.post("/", async (c) => {
   // Single output path
   const output = outputs[0]
   if (!output) {
-    console.error("no_output_resolved", { generationId })
+    console.error("runware_no_output_resolved", { generationId })
     return c.json({ error: "No output resolved" }, 500)
   }
+
   const r2Key = `generations/${generationId}`
 
   if (output.ok) {
@@ -184,16 +208,20 @@ falWebhook.post("/", async (c) => {
       errorMessage: output.ok ? null : output.errorMessage,
       completedAt: new Date(),
       providerMetadata: {
-        ...originalGen.providerMetadata,
         ...payload,
+        cost: output.ok ? output.cost : undefined,
       },
     })
     .where(eq(generations.id, generationId))
 
   if (output.ok) {
-    console.log("generation_ready", { generationId, contentType: output.contentType })
+    console.log("runware_generation_ready", {
+      generationId,
+      contentType: output.contentType,
+      cost: output.cost,
+    })
   } else {
-    console.log("generation_failed", { generationId, errorCode: output.errorCode })
+    console.log("runware_generation_failed", { generationId, errorCode: output.errorCode })
   }
 
   return c.json({ ok: true })

@@ -7,10 +7,18 @@
 
 const RUNWARE_API_URL = "https://api.runware.ai/v1"
 
-export type RunwareTaskType = "imageInference" | "videoInference"
+export type TaskType = "imageInference" | "videoInference"
 
-export type RunwareSubmitResult = {
+export type SubmitOptions = {
+  apiKey: string
+  taskType: TaskType
   taskUUID: string
+  input: Record<string, unknown>
+  webhookUrl?: string
+}
+
+export type SubmitResult = {
+  requestId: string
 }
 
 type RunwareAuthTask = {
@@ -19,7 +27,7 @@ type RunwareAuthTask = {
 }
 
 type RunwareInferenceTask = {
-  taskType: RunwareTaskType
+  taskType: TaskType
   taskUUID: string
   webhookURL?: string
   includeCost?: boolean
@@ -37,14 +45,8 @@ type RunwareResponse = {
  * The input object should contain the Runware-specific parameters for the task type.
  * Common parameters for imageInference: positivePrompt, model, width, height, steps, etc.
  */
-export async function submitToRunware(options: {
-  apiKey: string
-  taskType: RunwareTaskType
-  taskUUID: string
-  input: Record<string, unknown>
-  webhookURL?: string
-}): Promise<RunwareSubmitResult> {
-  const { apiKey, taskType, taskUUID, input, webhookURL } = options
+export async function submit(options: SubmitOptions): Promise<SubmitResult> {
+  const { apiKey, taskType, taskUUID, input, webhookUrl } = options
 
   // Build the request payload
   // Runware accepts an array of tasks, with auth as first element
@@ -60,8 +62,8 @@ export async function submitToRunware(options: {
     ...input,
   }
 
-  if (webhookURL) {
-    inferenceTask.webhookURL = webhookURL
+  if (webhookUrl) {
+    inferenceTask.webhookURL = webhookUrl
   }
 
   const response = await fetch(RUNWARE_API_URL, {
@@ -85,5 +87,6 @@ export async function submitToRunware(options: {
 
   // With webhook, we get immediate acknowledgment
   // The actual result will come via webhook
-  return { taskUUID }
+  // Runware uses our taskUUID as the request ID
+  return { requestId: taskUUID }
 }
