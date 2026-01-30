@@ -1,5 +1,7 @@
 import { createContext } from "@ig/api/context"
 import { appRouter } from "@ig/api/routers/index"
+import { webhook as falWebhook } from "@ig/provider-fal"
+import { webhook as runwareWebhook } from "@ig/provider-runware"
 import { OpenAPIHandler } from "@orpc/openapi/fetch"
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins"
 import { onError } from "@orpc/server"
@@ -7,7 +9,6 @@ import { RPCHandler } from "@orpc/server/fetch"
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { falWebhook } from "./fal"
 import { fileRoutes } from "./routes/file"
 
 // Export workflow class for Cloudflare
@@ -25,6 +26,7 @@ app.use(
 )
 
 app.route("/webhooks/fal", falWebhook)
+app.route("/webhooks/runware", runwareWebhook)
 app.route("/", fileRoutes)
 
 export const apiHandler = new OpenAPIHandler(appRouter, {

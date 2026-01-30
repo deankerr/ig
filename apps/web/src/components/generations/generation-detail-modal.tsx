@@ -34,7 +34,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
-import { formatEndpointId } from "@/lib/format-endpoint"
+import { formatFalEndpointId } from "@/lib/format-endpoint"
 import { client, queryClient } from "@/utils/orpc"
 import { env } from "@ig/env/web"
 
@@ -452,9 +452,9 @@ export function GenerationDetailModal({
 
                   {/* Metadata */}
                   <div className="p-4 space-y-3">
-                    <Field label="endpoint">
-                      <Copyable text={generation.endpoint} className="text-sm block">
-                        {formatEndpointId(generation.endpoint)}
+                    <Field label="model">
+                      <Copyable text={generation.model} className="text-sm block">
+                        {formatFalEndpointId(generation.model)}
                       </Copyable>
                     </Field>
                     <Field label="created">

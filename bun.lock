@@ -23,10 +23,11 @@
     "apps/server": {
       "name": "server",
       "dependencies": {
-        "@fal-ai/client": "catalog:",
         "@ig/api": "workspace:*",
         "@ig/db": "workspace:*",
         "@ig/env": "workspace:*",
+        "@ig/provider-fal": "workspace:*",
+        "@ig/provider-runware": "workspace:*",
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",
@@ -95,9 +96,10 @@
     "packages/api": {
       "name": "@ig/api",
       "dependencies": {
-        "@fal-ai/client": "catalog:",
         "@ig/db": "workspace:*",
         "@ig/env": "workspace:*",
+        "@ig/provider-fal": "workspace:*",
+        "@ig/provider-runware": "workspace:*",
         "@orpc/client": "catalog:",
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
@@ -164,6 +166,36 @@
         "typescript": "catalog:",
       },
     },
+    "packages/provider-fal": {
+      "name": "@ig/provider-fal",
+      "dependencies": {
+        "@fal-ai/client": "catalog:",
+        "@ig/db": "workspace:*",
+        "@ig/env": "workspace:*",
+        "drizzle-orm": "catalog:",
+        "hono": "catalog:",
+        "uuid": "catalog:",
+      },
+      "devDependencies": {
+        "@ig/config": "workspace:*",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/provider-runware": {
+      "name": "@ig/provider-runware",
+      "dependencies": {
+        "@ig/db": "workspace:*",
+        "@ig/env": "workspace:*",
+        "@runware/sdk-js": "^1.2.3",
+        "drizzle-orm": "catalog:",
+        "hono": "catalog:",
+        "uuid": "catalog:",
+      },
+      "devDependencies": {
+        "@ig/config": "workspace:*",
+        "typescript": "catalog:",
+      },
+    },
   },
   "catalog": {
     "@cloudflare/workers-types": "^4.20260124.0",
@@ -175,7 +207,6 @@
     "@orpc/zod": "^1.12.2",
     "@types/node": "^25.0.10",
     "@types/uuid": "^11.0.0",
-    "ai": "^4.0.42",
     "alchemy": "^0.83.1",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
@@ -185,7 +216,6 @@
     "typescript": "^5.9.3",
     "up-fetch": "^2.5.1",
     "uuid": "^13.0.0",
-    "workers-ai-provider": "^0.1.1",
     "zod": "^4.3.6",
   },
   "packages": {
@@ -432,6 +462,10 @@
     "@ig/env": ["@ig/env@workspace:packages/env"],
 
     "@ig/infra": ["@ig/infra@workspace:packages/infra"],
+
+    "@ig/provider-fal": ["@ig/provider-fal@workspace:packages/provider-fal"],
+
+    "@ig/provider-runware": ["@ig/provider-runware@workspace:packages/provider-runware"],
 
     "@img/colour": ["@img/colour@1.0.0", "", {}, "sha512-A5P/LfWGFSl6nsckYtjw9da+19jB8hkJ6ACTGcDfEJ0aE+l2n2El7dsVM7UVHZQ9s2lmYMWlrS21YLy2IR1LUw=="],
 
@@ -713,6 +747,8 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.55.1", "", { "os": "win32", "cpu": "x64" }, "sha512-SPEpaL6DX4rmcXtnhdrQYgzQ5W2uW3SCJch88lB2zImhJRhIIK44fkUrgIV/Q8yUNfw5oyZ5vkeQsZLhCb06lw=="],
 
+    "@runware/sdk-js": ["@runware/sdk-js@1.2.3", "", { "dependencies": { "uuid": "^9.0.1", "ws": "^8.18.0" }, "optionalDependencies": { "bufferutil": "^4.0.8" } }, "sha512-BnFh/+rQxutMmrcH0uFfP0XJ+YL2PiWSLL2g95hJYriEvd5o+W1d2DJz12SS2OE9imo9iA8Ux/YlavQy9nFflA=="],
+
     "@sec-ant/readable-stream": ["@sec-ant/readable-stream@0.4.1", "", {}, "sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg=="],
 
     "@sindresorhus/is": ["@sindresorhus/is@7.2.0", "", {}, "sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw=="],
@@ -962,6 +998,8 @@
     "browserslist": ["browserslist@4.28.1", "", { "dependencies": { "baseline-browser-mapping": "^2.9.0", "caniuse-lite": "^1.0.30001759", "electron-to-chromium": "^1.5.263", "node-releases": "^2.0.27", "update-browserslist-db": "^1.2.0" }, "bin": { "browserslist": "cli.js" } }, "sha512-ZC5Bd0LgJXgwGqUknZY/vkUQ04r8NXnJZ3yYi4vDmSiZmC/pdSN0NbNRPxZpbtO4uAfDUAFffO8IZoM3Gj8IkA=="],
 
     "buffer-from": ["buffer-from@1.1.2", "", {}, "sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ=="],
+
+    "bufferutil": ["bufferutil@4.1.0", "", { "dependencies": { "node-gyp-build": "^4.3.0" } }, "sha512-ZMANVnAixE6AWWnPzlW2KpUrxhm9woycYvPOo67jWHyFowASTEd9s+QN1EIMsSDtwhIxN4sWE1jotpuDUIgyIw=="],
 
     "bundle-name": ["bundle-name@4.1.0", "", { "dependencies": { "run-applescript": "^7.0.0" } }, "sha512-tjwM5exMg6BGRI+kNmTntNsvdZS1X8BFYS6tnJ2hdH0kVxM6/eVZ2xy+FqStSWvYmtfFMDLIxurorHwDKfDz5Q=="],
 
@@ -1395,6 +1433,8 @@
 
     "node-fetch": ["node-fetch@3.3.2", "", { "dependencies": { "data-uri-to-buffer": "^4.0.0", "fetch-blob": "^3.1.4", "formdata-polyfill": "^4.0.10" } }, "sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA=="],
 
+    "node-gyp-build": ["node-gyp-build@4.8.4", "", { "bin": { "node-gyp-build": "bin.js", "node-gyp-build-optional": "optional.js", "node-gyp-build-test": "build-test.js" } }, "sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ=="],
+
     "node-releases": ["node-releases@2.0.27", "", {}, "sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA=="],
 
     "normalize-path": ["normalize-path@3.0.0", "", {}, "sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA=="],
@@ -1794,6 +1834,8 @@
     "@octokit/plugin-rest-endpoint-methods/@octokit/types": ["@octokit/types@13.10.0", "", { "dependencies": { "@octokit/openapi-types": "^24.2.0" } }, "sha512-ifLaO34EbbPj0Xgro4G5lP5asESjwHracYJvVaPIyXMuiuXLlhic3S47cBdTb+jfODkTE5YtGCLt3Ay3+J97sA=="],
 
     "@poppinss/dumper/supports-color": ["supports-color@10.2.2", "", {}, "sha512-SS+jx45GF1QjgEXQx4NJZV9ImqmO2NPz5FNsIHrsDjh2YsHnawpan7SNQ1o8NuhrbHZy9AZhIoCUiCeaW/C80g=="],
+
+    "@runware/sdk-js/uuid": ["uuid@9.0.1", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA=="],
 
     "@tailwindcss/oxide-wasm32-wasi/@emnapi/core": ["@emnapi/core@1.8.1", "", { "dependencies": { "@emnapi/wasi-threads": "1.1.0", "tslib": "^2.4.0" }, "bundled": true }, "sha512-AvT9QFpxK0Zd8J0jopedNm+w/2fIzvtPKPjqyw9jwvBaReTTqPBk9Hixaz7KbjimP+QNz605/XnjFcDAL2pqBg=="],
 

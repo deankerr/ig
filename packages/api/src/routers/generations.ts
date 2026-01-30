@@ -1,6 +1,7 @@
-import { fal } from "@fal-ai/client"
 import { db } from "@ig/db"
 import { generations, presets } from "@ig/db/schema"
+import { submit as submitToFal } from "@ig/provider-fal"
+import { submit as submitToRunware } from "@ig/provider-runware"
 import { and, desc, eq, lt, sql } from "drizzle-orm"
 import { v7 as uuidv7 } from "uuid"
 import { z } from "zod"
@@ -8,6 +9,8 @@ import { z } from "zod"
 import type { Context } from "../context"
 import { apiKeyProcedure, publicProcedure } from "../index"
 import { resolveAutoAspectRatio } from "../utils/auto-aspect-ratio"
+
+const PROVIDERS = ["fal", "runware"] as const
 
 const MAX_TAGS = 20
 const SLUG_PREFIX_LENGTH = 8
@@ -35,16 +38,18 @@ const slugSchema = z
 
 type SubmitArgs = {
   id: string
-  endpoint: string
+  provider: (typeof PROVIDERS)[number]
+  model: string
   input: Record<string, unknown>
   env: Context["env"]
 }
 
-async function submitToProvider({ id, endpoint, input, env }: SubmitArgs) {
+async function submitToProvider({ id, provider, model, input, env }: SubmitArgs) {
   const resolvedInput = { ...input }
   let preprocessingMetadata: Record<string, unknown> | undefined
 
-  if (resolvedInput.prompt && resolvedInput.image_size === "auto") {
+  // Auto aspect ratio only applies to fal provider
+  if (provider === "fal" && resolvedInput.prompt && resolvedInput.image_size === "auto") {
     const result = await resolveAutoAspectRatio(resolvedInput.prompt as string, env.AI)
 
     if (result.ok) {
@@ -60,21 +65,41 @@ async function submitToProvider({ id, endpoint, input, env }: SubmitArgs) {
     }
   }
 
-  fal.config({ credentials: env.FAL_KEY })
-  const webhookUrl = `${env.PUBLIC_URL}/webhooks/fal?generation_id=${id}`
-  const { request_id } = await fal.queue.submit(endpoint, { input: resolvedInput, webhookUrl })
+  let requestId: string
+
+  if (provider === "runware") {
+    await submitToRunware({
+      apiKey: env.RUNWARE_KEY,
+      input: {
+        ...resolvedInput,
+        model,
+        taskUUID: id,
+        webhookURL: `${env.PUBLIC_URL}/webhooks/runware?generation_id=${id}`,
+      },
+    })
+    requestId = id
+  } else {
+    const webhookUrl = `${env.PUBLIC_URL}/webhooks/fal?generation_id=${id}`
+    const result = await submitToFal({
+      apiKey: env.FAL_KEY,
+      endpoint: model, // model IS the fal endpoint
+      input: resolvedInput,
+      webhookUrl,
+    })
+    requestId = result.requestId
+  }
 
   await db
     .update(generations)
     .set({
-      providerRequestId: request_id,
+      providerRequestId: requestId,
       ...(preprocessingMetadata && {
         providerMetadata: { ig_preprocessing: preprocessingMetadata },
       }),
     })
     .where(eq(generations.id, id))
 
-  return { requestId: request_id }
+  return { requestId }
 }
 
 function makeSlug(id: string, slugArg?: string) {
@@ -89,7 +114,8 @@ export const generationsRouter = {
   create: apiKeyProcedure
     .input(
       z.object({
-        endpoint: z.string().min(1),
+        provider: z.enum(PROVIDERS).optional().default("fal"),
+        model: z.string().min(1),
         input: z.record(z.string(), z.unknown()),
         tags: tagsSchema.optional().default([]),
         slug: slugSchema.optional(),
@@ -98,24 +124,21 @@ export const generationsRouter = {
     .handler(async ({ input: args, context }) => {
       const id = uuidv7()
       const slug = makeSlug(id, args.slug)
+      const provider = args.provider
 
-      let endpoint = args.endpoint
+      let model = args.model
       let input = args.input
       let tags = args.tags
 
-      // Resolve preset if endpoint starts with ig/
-      if (args.endpoint.startsWith(PRESET_PREFIX)) {
-        const preset = await db
-          .select()
-          .from(presets)
-          .where(eq(presets.name, args.endpoint))
-          .limit(1)
+      // Resolve preset if model starts with ig/
+      if (args.model.startsWith(PRESET_PREFIX)) {
+        const preset = await db.select().from(presets).where(eq(presets.name, args.model)).limit(1)
 
         if (!preset[0]) {
-          throw new Error(`Preset not found: ${args.endpoint}`)
+          throw new Error(`Preset not found: ${args.model}`)
         }
 
-        endpoint = preset[0].endpoint
+        model = preset[0].model
         input = { ...preset[0].input, ...args.input }
         tags = mergeTags(preset[0].tags, args.tags)
       }
@@ -123,7 +146,8 @@ export const generationsRouter = {
       await db.insert(generations).values({
         id,
         status: "pending",
-        endpoint,
+        provider,
+        model,
         input,
         tags,
         slug,
@@ -131,7 +155,8 @@ export const generationsRouter = {
 
       const { requestId } = await submitToProvider({
         id,
-        endpoint,
+        provider,
+        model,
         input,
         env: context.env,
       })
@@ -139,8 +164,9 @@ export const generationsRouter = {
       console.log("generation_created", {
         id,
         slug,
-        endpoint,
-        preset: args.endpoint.startsWith(PRESET_PREFIX) ? args.endpoint : undefined,
+        provider,
+        model,
+        preset: args.model.startsWith(PRESET_PREFIX) ? args.model : undefined,
         requestId,
       })
       return { id, slug, requestId }
@@ -151,7 +177,7 @@ export const generationsRouter = {
     .input(
       z.object({
         status: z.enum(["pending", "ready", "failed"]).optional(),
-        endpoint: z.string().optional(),
+        model: z.string().optional(),
         tags: tagsSchema.optional(),
         limit: z.number().int().min(1).max(100).optional().default(20),
         cursor: z.string().optional(),
@@ -164,8 +190,8 @@ export const generationsRouter = {
         conditions.push(eq(generations.status, input.status))
       }
 
-      if (input.endpoint) {
-        conditions.push(eq(generations.endpoint, input.endpoint))
+      if (input.model) {
+        conditions.push(eq(generations.model, input.model))
       }
 
       if (input.cursor) {
@@ -249,13 +275,13 @@ export const generationsRouter = {
       return { id: args.id, tags, slug }
     }),
 
-  listEndpoints: publicProcedure.route({ spec: { security: [] } }).handler(async () => {
+  listModels: publicProcedure.route({ spec: { security: [] } }).handler(async () => {
     const results = await db
-      .selectDistinct({ endpoint: generations.endpoint })
+      .selectDistinct({ model: generations.model })
       .from(generations)
-      .orderBy(generations.endpoint)
+      .orderBy(generations.model)
 
-    return { endpoints: results.map((r) => r.endpoint) }
+    return { models: results.map((r) => r.model) }
   }),
 
   listTags: publicProcedure.route({ spec: { security: [] } }).handler(async () => {
@@ -312,11 +338,13 @@ export const generationsRouter = {
 
       const id = uuidv7()
       const slug = makeSlug(id, args.slug)
+      const provider = (original.provider ?? "fal") as (typeof PROVIDERS)[number]
 
       await db.insert(generations).values({
         id,
         status: "pending",
-        endpoint: original.endpoint,
+        provider,
+        model: original.model,
         input: original.input,
         tags: mergeTags(args.tags, original.tags, [`regenerate:${original.id}`]),
         slug,
@@ -324,7 +352,8 @@ export const generationsRouter = {
 
       const { requestId } = await submitToProvider({
         id,
-        endpoint: original.endpoint,
+        provider,
+        model: original.model,
         input: original.input,
         env: context.env,
       })
@@ -332,7 +361,8 @@ export const generationsRouter = {
       console.log("generation_regenerated", {
         id,
         originalId: args.id,
-        endpoint: original.endpoint,
+        provider,
+        model: original.model,
         requestId,
       })
       return { id, requestId, originalId: args.id }

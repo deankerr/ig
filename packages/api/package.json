@@ -11,9 +11,10 @@
   },
   "scripts": {},
   "dependencies": {
-    "@fal-ai/client": "catalog:",
     "@ig/db": "workspace:*",
     "@ig/env": "workspace:*",
+    "@ig/provider-fal": "workspace:*",
+    "@ig/provider-runware": "workspace:*",
     "@orpc/client": "catalog:",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",

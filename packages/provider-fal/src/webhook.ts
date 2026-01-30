@@ -1,3 +1,9 @@
+/**
+ * fal.ai webhook handler
+ *
+ * Receives inference results from fal.ai and updates the generation record.
+ */
+
 import type { WebHookResponse } from "@fal-ai/client"
 import { db } from "@ig/db"
 import { generations } from "@ig/db/schema"
@@ -7,22 +13,22 @@ import { Hono } from "hono"
 import { v7 as uuidv7 } from "uuid"
 
 import { resolveOutputs } from "./output"
-import { verifyFalWebhook } from "./verify"
+import { verifyWebhook } from "./verify"
 
-export const falWebhook = new Hono()
+export const webhook = new Hono()
 
-falWebhook.post("/", async (c) => {
+webhook.post("/", async (c) => {
   // Verify webhook signature
   const rawBody = await c.req.arrayBuffer()
-  const verification = await verifyFalWebhook(c.req.raw.headers, rawBody)
+  const verification = await verifyWebhook(c.req.raw.headers, rawBody)
   if (!verification.valid) {
-    console.error("webhook_verification_failed", { error: verification.error })
+    console.error("fal_webhook_verification_failed", { error: verification.error })
     return c.json({ error: "Invalid webhook signature" }, 401)
   }
 
   const generationId = c.req.query("generation_id")
   if (!generationId) {
-    console.error("webhook_missing_generation_id")
+    console.error("fal_webhook_missing_generation_id")
     return c.json({ error: "Missing generation_id" }, 400)
   }
 
@@ -42,18 +48,18 @@ falWebhook.post("/", async (c) => {
     .where(eq(generations.id, generationId))
     .limit(1)
   if (existing.length === 0) {
-    console.error("webhook_generation_not_found", { generationId })
+    console.error("fal_webhook_generation_not_found", { generationId })
     return c.json({ error: "Generation not found" }, 404)
   }
 
   // Idempotency: if already processed, return success without reprocessing
   const originalGen = existing[0]
   if (!originalGen) {
-    console.error("webhook_generation_not_found_after_check", { generationId })
+    console.error("fal_webhook_generation_not_found_after_check", { generationId })
     return c.json({ error: "Generation not found" }, 404)
   }
   if (originalGen.status === "ready" || originalGen.status === "failed") {
-    console.log("webhook_already_processed", { generationId, status: originalGen.status })
+    console.log("fal_webhook_already_processed", { generationId, status: originalGen.status })
     return c.json({ ok: true, alreadyProcessed: true })
   }
 
@@ -73,7 +79,7 @@ falWebhook.post("/", async (c) => {
       })
       .where(eq(generations.id, generationId))
 
-    console.log("generation_failed", { generationId, errorCode: "FAL_ERROR" })
+    console.log("fal_generation_failed", { generationId, errorCode: "FAL_ERROR" })
     return c.json({ ok: true })
   }
 
@@ -96,7 +102,8 @@ falWebhook.post("/", async (c) => {
         await db.insert(generations).values({
           id: genId,
           status: output.ok ? "ready" : "failed",
-          endpoint: originalGen.endpoint,
+          provider: "fal",
+          model: originalGen.model,
           input: originalGen.input,
           tags: [...originalGen.tags, batchTag],
           contentType: output.ok ? output.contentType : null,
@@ -133,7 +140,7 @@ falWebhook.post("/", async (c) => {
           })
           .where(eq(generations.id, genId))
 
-        console.log("generation_ready", {
+        console.log("fal_generation_ready", {
           generationId: genId,
           contentType: output.contentType,
           batch: !isFirst,
@@ -154,7 +161,7 @@ falWebhook.post("/", async (c) => {
           })
           .where(eq(generations.id, genId))
 
-        console.log("generation_failed", { generationId: genId, errorCode: output.errorCode })
+        console.log("fal_generation_failed", { generationId: genId, errorCode: output.errorCode })
       }
     }
 
@@ -164,7 +171,7 @@ falWebhook.post("/", async (c) => {
   // Single output path
   const output = outputs[0]
   if (!output) {
-    console.error("no_output_resolved", { generationId })
+    console.error("fal_no_output_resolved", { generationId })
     return c.json({ error: "No output resolved" }, 500)
   }
   const r2Key = `generations/${generationId}`
@@ -191,9 +198,9 @@ falWebhook.post("/", async (c) => {
     .where(eq(generations.id, generationId))
 
   if (output.ok) {
-    console.log("generation_ready", { generationId, contentType: output.contentType })
+    console.log("fal_generation_ready", { generationId, contentType: output.contentType })
   } else {
-    console.log("generation_failed", { generationId, errorCode: output.errorCode })
+    console.log("fal_generation_failed", { generationId, errorCode: output.errorCode })
   }
 
   return c.json({ ok: true })

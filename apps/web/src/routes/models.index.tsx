@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/table"
 import { useAllModels, type Model } from "@/hooks/use-all-models"
 import { useSortable } from "@/hooks/use-sortable"
-import { formatEndpointId } from "@/lib/format-endpoint"
+import { formatFalEndpointId } from "@/lib/format-endpoint"
 import { filterModels } from "@/lib/fuzzy-search"
 import { client } from "@/utils/orpc"
 
@@ -197,7 +197,7 @@ function ModelsPage() {
                 <TableRow key={model.endpointId}>
                   <TableCell className="font-mono max-w-[300px] truncate">
                     <Copyable text={model.endpointId}>
-                      {formatEndpointId(model.endpointId)}
+                      {formatFalEndpointId(model.endpointId)}
                     </Copyable>
                   </TableCell>
                   <TableCell className="max-w-[250px] truncate">{model.displayName}</TableCell>
@@ -264,7 +264,7 @@ function ModelsPage() {
       {/* Model detail sheet */}
       <JsonSheet
         data={selectedModel}
-        title={selectedModel ? formatEndpointId(selectedModel.endpointId) : undefined}
+        title={selectedModel ? formatFalEndpointId(selectedModel.endpointId) : undefined}
         open={!!selectedModel}
         onOpenChange={(open) => !open && setSelectedModel(null)}
       />

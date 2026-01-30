@@ -19,7 +19,7 @@ export const presetsRouter = {
       z.object({
         name: presetNameSchema,
         description: z.string().max(500).optional(),
-        endpoint: z.string().min(1),
+        model: z.string().min(1),
         input: z.record(z.string(), z.unknown()).optional(),
         tags: z.array(z.string()).optional(),
       }),
@@ -31,7 +31,7 @@ export const presetsRouter = {
         .values({
           name: input.name,
           description: input.description,
-          endpoint: input.endpoint,
+          model: input.model,
           input: input.input,
           tags: input.tags,
           createdAt: now,
@@ -41,7 +41,7 @@ export const presetsRouter = {
           target: presets.name,
           set: {
             description: input.description,
-            endpoint: input.endpoint,
+            model: input.model,
             input: input.input,
             tags: input.tags,
             updatedAt: now,

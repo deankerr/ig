@@ -1,0 +1,24 @@
+{
+  "name": "@ig/provider-fal",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "dependencies": {
+    "@fal-ai/client": "catalog:",
+    "@ig/db": "workspace:*",
+    "@ig/env": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "hono": "catalog:",
+    "uuid": "catalog:"
+  },
+  "devDependencies": {
+    "@ig/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

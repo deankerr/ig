@@ -81,6 +81,7 @@ export const server = await Worker("server", {
     IMAGES: images,
     AI: ai,
     FAL_KEY: alchemy.secret.env.FAL_KEY!,
+    RUNWARE_KEY: alchemy.secret.env.RUNWARE_KEY!,
     API_KEY: alchemy.secret.env.API_KEY!,
     MODEL_SYNC_WORKFLOW: modelSyncWorkflow,
     PUBLIC_URL: serverPublicUrl,
