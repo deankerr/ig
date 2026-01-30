@@ -29,12 +29,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { formatEndpointId } from "@/lib/format-endpoint"
+import { formatFalEndpointId } from "@/lib/format-endpoint"
 import { client } from "@/utils/orpc"
 
 const searchSchema = z.object({
   status: z.enum(["all", "pending", "ready", "failed"]).optional(),
-  endpoint: z.string().optional(),
+  model: z.string().optional(),
   tags: z.array(z.string()).optional(),
   selected: z.string().optional(),
 })
@@ -49,7 +49,7 @@ type GenerationStatus = "pending" | "ready" | "failed"
 type Generation = {
   id: string
   slug: string | null
-  endpoint: string
+  model: string
   status: GenerationStatus
   contentType: string | null
   input: Record<string, unknown>
@@ -94,7 +94,7 @@ function GenerationListItem({
       </ItemMedia>
       <ItemContent className="justify-between h-full">
         <div className="flex items-center gap-2">
-          <ItemTitle>{formatEndpointId(generation.endpoint)}</ItemTitle>
+          <ItemTitle>{formatFalEndpointId(generation.model)}</ItemTitle>
           <span className="text-muted-foreground">·</span>
           <TimeAgo date={generation.createdAt} className=" text-muted-foreground" />
         </div>
@@ -122,7 +122,7 @@ function GenerationListItem({
 function GenerationsPage() {
   const search = Route.useSearch()
   const statusFilter = search.status ?? "all"
-  const endpointFilter = search.endpoint
+  const modelFilter = search.model
   const tagFilters = search.tags ?? []
   const selectedId = search.selected
   const navigate = useNavigate()
@@ -134,10 +134,10 @@ function GenerationsPage() {
     })
   }
 
-  const setEndpointFilter = (endpoint: string | undefined) => {
+  const setModelFilter = (model: string | undefined) => {
     navigate({
       from: Route.fullPath,
-      search: (prev) => ({ ...prev, endpoint: endpoint || undefined }),
+      search: (prev) => ({ ...prev, model: model || undefined }),
     })
   }
 
@@ -155,7 +155,7 @@ function GenerationsPage() {
     })
   }
 
-  const [endpointInput, setEndpointInput] = useState(endpointFilter ?? "")
+  const [modelInput, setModelInput] = useState(modelFilter ?? "")
   const [tagInput, setTagInput] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     if (typeof window === "undefined") return "grid"
@@ -168,21 +168,21 @@ function GenerationsPage() {
   }, [viewMode])
 
   useEffect(() => {
-    setEndpointInput(endpointFilter ?? "")
-  }, [endpointFilter])
+    setModelInput(modelFilter ?? "")
+  }, [modelFilter])
 
-  const endpointsQuery = useQuery({
-    queryKey: ["generations", "listEndpoints"],
-    queryFn: () => client.generations.listEndpoints({}),
+  const modelsQuery = useQuery({
+    queryKey: ["generations", "listModels"],
+    queryFn: () => client.generations.listModels({}),
     staleTime: 60_000,
   })
 
-  const filteredEndpoints = useMemo(() => {
-    const all = endpointsQuery.data?.endpoints ?? []
-    if (!endpointInput) return all
-    const lower = endpointInput.toLowerCase()
-    return all.filter((e) => e.toLowerCase().includes(lower))
-  }, [endpointsQuery.data?.endpoints, endpointInput])
+  const filteredModels = useMemo(() => {
+    const all = modelsQuery.data?.models ?? []
+    if (!modelInput) return all
+    const lower = modelInput.toLowerCase()
+    return all.filter((m: string) => m.toLowerCase().includes(lower))
+  }, [modelsQuery.data?.models, modelInput])
 
   const tagsQuery = useQuery({
     queryKey: ["generations", "listTags"],
@@ -205,12 +205,12 @@ function GenerationsPage() {
     queryKey: [
       "generations",
       "list",
-      { status: statusFilter, endpoint: endpointFilter, tags: tagFilters },
+      { status: statusFilter, model: modelFilter, tags: tagFilters },
     ],
     queryFn: async ({ pageParam }) => {
       return client.generations.list({
         status: statusFilter === "all" ? undefined : (statusFilter as GenerationStatus),
-        endpoint: endpointFilter,
+        model: modelFilter,
         tags: tagFilters.length > 0 ? tagFilters : undefined,
         limit: 24,
         cursor: pageParam,
@@ -278,29 +278,29 @@ function GenerationsPage() {
           <div className="flex items-center gap-2">
             <Autocomplete>
               <AutocompleteInput
-                placeholder="endpoint"
+                placeholder="model"
                 className="w-[220px] h-7"
-                value={endpointInput}
-                onChange={(e) => setEndpointInput(e.target.value)}
+                value={modelInput}
+                onChange={(e) => setModelInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && endpointInput.trim()) {
+                  if (e.key === "Enter" && modelInput.trim()) {
                     e.preventDefault()
-                    setEndpointFilter(endpointInput.trim())
+                    setModelFilter(modelInput.trim())
                   }
                 }}
               />
               <AutocompletePopup>
                 <AutocompleteList>
-                  {filteredEndpoints.map((endpoint) => (
+                  {filteredModels.map((model) => (
                     <AutocompleteItem
-                      key={endpoint}
-                      value={endpoint}
+                      key={model}
+                      value={model}
                       onClick={() => {
-                        setEndpointFilter(endpoint)
-                        setEndpointInput(endpoint)
+                        setModelFilter(model)
+                        setModelInput(model)
                       }}
                     >
-                      {formatEndpointId(endpoint)}
+                      {formatFalEndpointId(model)}
                     </AutocompleteItem>
                   ))}
                 </AutocompleteList>

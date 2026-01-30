@@ -103,7 +103,7 @@ webhook.post("/", async (c) => {
           id: genId,
           status: output.ok ? "ready" : "failed",
           provider: "fal",
-          endpoint: originalGen.endpoint,
+          model: originalGen.model,
           input: originalGen.input,
           tags: [...originalGen.tags, batchTag],
           contentType: output.ok ? output.contentType : null,

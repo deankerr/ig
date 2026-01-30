@@ -7,7 +7,7 @@ export const generations = sqliteTable(
     id: text("id").primaryKey(), // UUIDv7
     status: text("status", { enum: ["pending", "ready", "failed"] }).notNull(),
     provider: text("provider").notNull().default("fal"),
-    endpoint: text("endpoint").notNull(), // fal-ai/flux/schnell
+    model: text("model").notNull(), // provider-specific model identifier
     input: text("input", { mode: "json" }).notNull().$type<Record<string, unknown>>(),
     tags: text("tags", { mode: "json" }).notNull().default([]).$type<string[]>(),
     contentType: text("content_type"),

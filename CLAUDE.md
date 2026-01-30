@@ -44,12 +44,14 @@ bun run deploy        # Deploy to Cloudflare via Alchemy
 Turborepo monorepo with Bun. Two apps, four packages:
 
 ```
-apps/web/       → React 19 + TanStack Router + Vite (port 3001)
-apps/server/    → Hono + oRPC on Cloudflare Workers (port 3000)
-packages/api/   → oRPC procedures and routers (business logic)
-packages/db/    → Drizzle ORM schema (SQLite/D1)
-packages/env/   → Type-safe env validation and Cloudflare binding types
-packages/infra/ → Alchemy infrastructure-as-code (see notes/alchemy.md)
+apps/web/              → React 19 + TanStack Router + Vite (port 3001)
+apps/server/           → Hono + oRPC on Cloudflare Workers (port 3000)
+packages/api/          → oRPC procedures and routers (business logic)
+packages/db/           → Drizzle ORM schema (SQLite/D1)
+packages/env/          → Type-safe env validation and Cloudflare binding types
+packages/infra/        → Alchemy infrastructure-as-code (see notes/alchemy.md)
+packages/provider-fal/ → fal.ai integration (submit + webhook)
+packages/provider-runware/ → Runware integration (submit + webhook)
 ```
 
 ## Key Patterns
@@ -104,30 +106,71 @@ Routers: `packages/api/src/routers/` (generations, models, presets)
 - **Backend**: Hono, oRPC (type-safe RPC with OpenAPI)
 - **Database**: SQLite via D1, Drizzle ORM
 - **Storage**: Cloudflare R2
-- **AI Provider**: fal.ai (queue-based async with webhooks)
+- **AI Providers**: fal.ai, Runware (queue-based async with webhooks)
 - **Infra**: Alchemy (TypeScript IaC for Cloudflare)
 - **Tooling**: Turborepo, Oxlint, Oxfmt, Lefthook (pre-commit hooks)
 
-## fal.ai
+## Providers
 
-fal.ai is our inference provider. They offer 500+ AI endpoints across modalities (image, video, audio, vision).
+We support multiple inference providers. Each has its own package under `packages/provider-*`.
 
-### Terminology: "Model" vs "Endpoint"
+### fal.ai
 
-fal.ai uses "model" and "endpoint" interchangeably in their API. The identifier `fal-ai/flux/schnell` is called an `endpoint_id` in their API, but they also refer to these as "models" in documentation and response collections.
+fal.ai offers 500+ AI endpoints across modalities (image, video, audio, vision).
 
-In our codebase:
+**Request structure:**
 
-| Term         | Meaning                                                                          |
-| ------------ | -------------------------------------------------------------------------------- |
-| `endpointId` | The string identifier (e.g., `"fal-ai/flux/schnell"`) - what you pass to fal.ai  |
-| `Model`      | Our local entity with full metadata (name, category, pricing) synced from fal.ai |
+```
+generations.create({ provider: "fal", model, input })
+        ↓
+submitToFal({ endpoint: model, input, webhookUrl })
+        ↓
+fal.queue.submit(endpoint, { input, webhookUrl })
+```
 
-**Current state:** We have some inconsistency - the `models` table uses `endpointId`, but `generations` and `presets` tables use `endpoint`. We plan to standardize on `endpointId` everywhere for the identifier string.
+- `model` field IS the fal endpoint path (e.g., `fal-ai/flux/schnell`)
+- `input` passes through to fal unchanged
+- Uses official `@fal-ai/client` SDK
+- Returns `requestId` for tracking
 
-### Resources
+**Resources:**
 
 - Model catalog: https://fal.ai/models
 - Queue API docs: https://docs.fal.ai/model-apis/model-endpoints/queue
 - Webhooks: https://docs.fal.ai/model-apis/model-endpoints/webhooks
 - OpenAPI schemas: `https://fal.ai/api/openapi/queue/openapi.json?endpoint_id={endpoint}`
+
+### Runware
+
+Runware provides fast image generation with Civitai model support.
+
+**Request structure:**
+
+```
+generations.create({ provider: "runware", model, input })
+        ↓
+submitToRunware({ input: { ...input, model, taskUUID, webhookURL } })
+        ↓
+POST https://api.runware.ai/v1
+  [{ taskType: "authentication", apiKey }, input]
+```
+
+- `model` is an AIR identifier (e.g., `civitai:108@1`) - injected into input
+- `taskUUID` is our generation ID - doubles as request ID
+- `webhookURL` included in the task payload
+- Payload is array: `[authTask, inferenceTask]`
+
+**Automatic defaults applied:**
+
+```typescript
+input.taskType ??= "imageInference"
+input.positivePrompt ??= input.prompt  // fal compatibility
+input.includeCost ??= true
+input.width ??= 1024
+input.height ??= 1024
+```
+
+**Resources:**
+
+- API docs: https://runware.ai/docs
+- Image inference: https://runware.ai/docs/en/image-inference/api-reference

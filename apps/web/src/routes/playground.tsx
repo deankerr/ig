@@ -43,7 +43,7 @@ import {
   AutocompleteItem,
   AutocompleteEmpty,
 } from "@/components/ui/autocomplete"
-import { formatEndpointId } from "@/lib/format-endpoint"
+import { formatFalEndpointId } from "@/lib/format-endpoint"
 import { filterModelForAutocomplete } from "@/lib/fuzzy-search"
 import { client, queryClient } from "@/utils/orpc"
 
@@ -51,7 +51,7 @@ export const Route = createFileRoute("/playground")({
   component: PlaygroundPage,
 })
 
-const QUICK_START_ENDPOINTS = [
+const QUICK_START_MODELS = [
   "fal-ai/flux/schnell",
   "fal-ai/flux/dev",
   "fal-ai/flux-pro/v1.1",
@@ -67,7 +67,7 @@ const DEFAULT_INPUT = `{
 function PlaygroundPage() {
   const navigate = useNavigate()
   const { models } = useAllModels()
-  const [endpoint, setEndpoint] = useState("fal-ai/flux/schnell")
+  const [model, setModel] = useState("fal-ai/flux/schnell")
   const [inputJson, setInputJson] = useState(DEFAULT_INPUT)
   const [tags, setTags] = useState<string[]>([])
   const [slug, setSlug] = useState("")
@@ -84,7 +84,7 @@ function PlaygroundPage() {
 
   // Track original preset values for modification detection
   const [originalPresetValues, setOriginalPresetValues] = useState<{
-    endpoint: string
+    model: string
     input: string
     tags: string[]
   } | null>(null)
@@ -105,7 +105,8 @@ function PlaygroundPage() {
       }
 
       return client.generations.create({
-        endpoint,
+        provider: model.includes("@") ? "runware" : "fal",
+        model,
         input: parsedInput,
         tags,
         slug: slug.trim() || undefined,
@@ -131,7 +132,7 @@ function PlaygroundPage() {
       return client.presets.create({
         name,
         description: presetDescriptionInput.trim() || undefined,
-        endpoint,
+        model,
         input: parsedInput,
         tags: tags.length > 0 ? tags : undefined,
       })
@@ -178,7 +179,7 @@ function PlaygroundPage() {
     const presetTags = (preset.tags as string[]) ?? []
 
     setSelectedPresetName(preset.name)
-    setEndpoint(preset.endpoint)
+    setModel(preset.model)
     setInputJson(inputStr)
     setTags(presetTags)
     setPresetDescriptionInput(preset.description ?? "")
@@ -186,27 +187,27 @@ function PlaygroundPage() {
 
     // Store original values for modification detection
     setOriginalPresetValues({
-      endpoint: preset.endpoint,
+      model: preset.model,
       input: inputStr,
       tags: presetTags,
     })
   }
 
-  function handleSelectQuickStart(endpointId: string) {
+  function handleSelectQuickStart(modelId: string) {
     setSelectedPresetName(null)
-    setEndpoint(endpointId)
+    setModel(modelId)
     setOriginalPresetValues(null)
     setIsEditingPreset(false)
   }
 
-  function handleEndpointChange(value: string) {
-    setEndpoint(value)
+  function handleModelChange(value: string) {
+    setModel(value)
     if (selectedPresetName) setSelectedPresetName(null)
   }
 
-  const selectedModel = models.find((m) => m.endpointId === endpoint)
+  const selectedModelEntry = models.find((m) => m.endpointId === model)
   const quickStartModels = models.filter((m) =>
-    QUICK_START_ENDPOINTS.includes(m.endpointId as (typeof QUICK_START_ENDPOINTS)[number]),
+    QUICK_START_MODELS.includes(m.endpointId as (typeof QUICK_START_MODELS)[number]),
   )
   const presets = presetsQuery.data?.items ?? []
   const selectedPreset = presets.find((p) => p.name === selectedPresetName)
@@ -214,7 +215,7 @@ function PlaygroundPage() {
   // Detect if form has been modified from the selected preset
   const isModified =
     originalPresetValues !== null &&
-    (endpoint !== originalPresetValues.endpoint ||
+    (model !== originalPresetValues.model ||
       inputJson !== originalPresetValues.input ||
       JSON.stringify(tags) !== JSON.stringify(originalPresetValues.tags))
 
@@ -286,7 +287,7 @@ function PlaygroundPage() {
                 <Button
                   size="sm"
                   onClick={() => createMutation.mutate()}
-                  disabled={createMutation.isPending || !!jsonError || !endpoint.trim()}
+                  disabled={createMutation.isPending || !!jsonError || !model.trim()}
                   className="h-7 text-xs"
                 >
                   {createMutation.isPending ? (
@@ -302,16 +303,16 @@ function PlaygroundPage() {
             </PageHeader>
 
             <PageContent className="p-0 flex-1 flex flex-col">
-              {/* Endpoint selector */}
+              {/* Model selector */}
               <div className="border-b border-border p-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground w-16">endpoint</span>
+                  <span className="text-xs text-muted-foreground w-16">model</span>
                   <div className="flex-1">
                     <Autocomplete
                       items={models}
-                      value={endpoint}
-                      onValueChange={handleEndpointChange}
-                      itemToStringValue={(model) => model.endpointId}
+                      value={model}
+                      onValueChange={handleModelChange}
+                      itemToStringValue={(m) => m.endpointId}
                       filter={filterModelForAutocomplete}
                     >
                       <AutocompleteInput placeholder="fal-ai/..." className="font-mono text-sm" />
@@ -376,7 +377,8 @@ function PlaygroundPage() {
                               >
                                 <span className="font-mono text-xs">{preset.name}</span>
                                 <span className="text-[10px] text-muted-foreground">
-                                  {preset.description || formatEndpointId(preset.endpoint)}
+                                  {preset.description ||
+                                    formatFalEndpointId(preset.model ?? preset.name)}
                                 </span>
                               </DropdownMenuItem>
                             ))}
@@ -445,7 +447,9 @@ function PlaygroundPage() {
                 />
               ) : (
                 <p className="text-sm font-mono truncate mb-1">
-                  {selectedPresetName ?? selectedModel?.displayName ?? formatEndpointId(endpoint)}
+                  {selectedPresetName ??
+                    selectedModelEntry?.displayName ??
+                    formatFalEndpointId(model)}
                 </p>
               )}
 
@@ -501,7 +505,7 @@ function PlaygroundPage() {
                   variant="outline"
                   size="sm"
                   onClick={handleOpenSaveDialog}
-                  disabled={!endpoint.trim()}
+                  disabled={!model.trim()}
                   className="w-full mt-2"
                 >
                   <SaveIcon data-icon="inline-start" />
@@ -576,7 +580,7 @@ function PlaygroundPage() {
             </div>
             <div className="text-xs text-muted-foreground space-y-1">
               <p>
-                endpoint: <span className="font-mono">{endpoint}</span>
+                model: <span className="font-mono">{model}</span>
               </p>
               {tags.length > 0 && <p>tags: {tags.join(", ")}</p>}
             </div>

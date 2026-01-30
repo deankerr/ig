@@ -43,12 +43,31 @@ webhook.post("/", async (c) => {
     return c.json({ error: "Missing generation_id" }, 400)
   }
 
-  let payload: RunwareWebhookPayload
+  let rawPayload: unknown
   try {
-    payload = await c.req.json()
+    rawPayload = await c.req.json()
   } catch {
     console.error("runware_webhook_invalid_json")
     return c.json({ error: "Invalid JSON" }, 400)
+  }
+
+  // Runware API responses wrap results in a `data` array
+  // Webhook payloads may come wrapped or unwrapped - handle both
+  let payload: RunwareWebhookPayload
+  if (
+    rawPayload &&
+    typeof rawPayload === "object" &&
+    "data" in rawPayload &&
+    Array.isArray((rawPayload as { data: unknown }).data)
+  ) {
+    const dataArray = (rawPayload as { data: unknown[] }).data
+    payload = (dataArray[0] ?? {}) as RunwareWebhookPayload
+    console.log("runware_webhook_unwrapped_data", {
+      generationId,
+      itemCount: dataArray.length,
+    })
+  } else {
+    payload = rawPayload as RunwareWebhookPayload
   }
 
   console.log("runware_webhook_received", {
@@ -56,6 +75,7 @@ webhook.post("/", async (c) => {
     taskType: payload.taskType,
     taskUUID: payload.taskUUID,
     hasError: !!payload.error,
+    payloadKeys: Object.keys(payload),
   })
 
   // Verify generation exists
@@ -119,7 +139,7 @@ webhook.post("/", async (c) => {
           id: genId,
           status: output.ok ? "ready" : "failed",
           provider: "runware",
-          endpoint: originalGen.endpoint,
+          model: originalGen.model,
           input: originalGen.input,
           tags: [...originalGen.tags, batchTag],
           contentType: output.ok ? output.contentType : null,
@@ -177,6 +197,7 @@ webhook.post("/", async (c) => {
         console.log("runware_generation_failed", {
           generationId: genId,
           errorCode: output.errorCode,
+          errorMessage: output.errorMessage,
         })
       }
     }
@@ -221,7 +242,11 @@ webhook.post("/", async (c) => {
       cost: output.cost,
     })
   } else {
-    console.log("runware_generation_failed", { generationId, errorCode: output.errorCode })
+    console.log("runware_generation_failed", {
+      generationId,
+      errorCode: output.errorCode,
+      errorMessage: output.errorMessage,
+    })
   }
 
   return c.json({ ok: true })

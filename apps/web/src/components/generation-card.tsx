@@ -21,13 +21,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { formatEndpointId } from "@/lib/format-endpoint"
+import { formatFalEndpointId } from "@/lib/format-endpoint"
 import { client, queryClient } from "@/utils/orpc"
 
 type Generation = {
   id: string
   slug: string | null
-  endpoint: string
+  model: string
   status: "pending" | "ready" | "failed"
   contentType: string | null
   input: Record<string, unknown>
@@ -151,7 +151,7 @@ export function GenerationCard({
         )}
 
         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-          <span className="truncate max-w-[120px]">{formatEndpointId(generation.endpoint)}</span>
+          <span className="truncate max-w-[120px]">{formatFalEndpointId(generation.model)}</span>
           <span>·</span>
           <TimeAgo date={new Date(generation.createdAt)} />
         </div>

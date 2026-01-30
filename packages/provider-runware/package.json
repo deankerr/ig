@@ -12,6 +12,7 @@
   "dependencies": {
     "@ig/db": "workspace:*",
     "@ig/env": "workspace:*",
+    "@runware/sdk-js": "^1.2.3",
     "drizzle-orm": "catalog:",
     "hono": "catalog:",
     "uuid": "catalog:"

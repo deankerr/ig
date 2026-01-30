@@ -4,7 +4,7 @@ import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
 export const presets = sqliteTable("presets", {
   name: text("name").primaryKey(), // e.g. "ig/cheap-model"
   description: text("description"),
-  endpoint: text("endpoint").notNull(),
+  model: text("model").notNull(),
   input: text("input", { mode: "json" }).$type<Record<string, unknown>>(),
   tags: text("tags", { mode: "json" }).$type<string[]>(),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
