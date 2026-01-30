@@ -37,7 +37,8 @@
     "dev:server": "turbo -F server dev",
     "db:generate": "turbo -F @ig/db db:generate",
     "check": "bun check-types && oxlint && oxfmt --write",
-    "deploy": "turbo deploy"
+    "deploy": "turbo deploy",
+    "destroy": "turbo -F @ig/infra destroy"
   },
   "dependencies": {
     "@ig/env": "workspace:*",

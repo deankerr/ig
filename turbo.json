@@ -13,7 +13,34 @@
       "cache": false
     },
     "deploy": {
-      "cache": false
+      "cache": false,
+      "env": [
+        "ALCHEMY_STAGE",
+        "ALCHEMY_PASSWORD",
+        "ALCHEMY_STATE_TOKEN",
+        "CLOUDFLARE_API_TOKEN",
+        "CLOUDFLARE_ACCOUNT_ID",
+        "CLOUDFLARE_EMAIL",
+        "FAL_KEY",
+        "RUNWARE_KEY",
+        "API_KEY",
+        "PROD_SERVER_DOMAIN",
+        "PROD_WEB_DOMAIN",
+        "CF_WORKERS_SUBDOMAIN",
+        "VITE_BUILD_ID"
+      ]
+    },
+    "destroy": {
+      "cache": false,
+      "env": [
+        "ALCHEMY_STAGE",
+        "ALCHEMY_PASSWORD",
+        "ALCHEMY_STATE_TOKEN",
+        "CLOUDFLARE_API_TOKEN",
+        "CLOUDFLARE_ACCOUNT_ID",
+        "CLOUDFLARE_EMAIL",
+        "CF_WORKERS_SUBDOMAIN"
+      ]
     }
   }
 }

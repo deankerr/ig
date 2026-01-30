@@ -9,7 +9,7 @@ config({ path: "./.env" })
 // Use ALCHEMY_STAGE=prod for production deployment
 const stage = process.env.ALCHEMY_STAGE ?? "dev"
 const isProd = stage.startsWith("prod")
-console.log("isProd:", isProd)
+console.log("stage:", stage, "isProd:", isProd)
 
 // Domain configuration from environment (only needed for prod)
 const prodServerDomain = process.env.PROD_SERVER_DOMAIN

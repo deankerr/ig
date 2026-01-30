@@ -1,0 +1,85 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ALCHEMY_PASSWORD: ${{ secrets.ALCHEMY_PASSWORD }}
+  ALCHEMY_STATE_TOKEN: ${{ secrets.ALCHEMY_STATE_TOKEN }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+
+jobs:
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Determine stage
+        id: stage
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "stage=pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "stage=prod-1" >> $GITHUB_OUTPUT
+          else
+            echo "stage=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy
+        run: bun run deploy
+        env:
+          ALCHEMY_STAGE: ${{ steps.stage.outputs.stage }}
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+          RUNWARE_KEY: ${{ secrets.RUNWARE_KEY }}
+          API_KEY: ${{ secrets.API_KEY }}
+          PROD_SERVER_DOMAIN: ${{ secrets.PROD_SERVER_DOMAIN }}
+          PROD_WEB_DOMAIN: ${{ secrets.PROD_WEB_DOMAIN }}
+          CF_WORKERS_SUBDOMAIN: ${{ secrets.CF_WORKERS_SUBDOMAIN }}
+          VITE_BUILD_ID: ${{ github.sha }}
+        timeout-minutes: 10
+
+  cleanup:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Determine stage
+        id: stage
+        run: |
+          STAGE="pr-${{ github.event.pull_request.number }}"
+          if [[ "$STAGE" == prod* ]]; then
+            echo "ERROR: Refusing to destroy production"
+            exit 1
+          fi
+          echo "stage=$STAGE" >> $GITHUB_OUTPUT
+
+      - name: Destroy preview environment
+        run: bun run destroy
+        env:
+          ALCHEMY_STAGE: ${{ steps.stage.outputs.stage }}
+          CF_WORKERS_SUBDOMAIN: ${{ secrets.CF_WORKERS_SUBDOMAIN }}
