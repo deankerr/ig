@@ -1,24 +1,25 @@
 import { generateText, Output } from "ai"
-import { createWorkersAI, type WorkersAI } from "workers-ai-provider"
+import { createWorkersAI } from "workers-ai-provider"
 import { z } from "zod"
-import type { Context } from "../context"
 
-type TextGenerationModels = Parameters<WorkersAI>[0]
-
-// Configuration
-const MODEL_ID: TextGenerationModels = "@hf/nousresearch/hermes-2-pro-mistral-7b"
+const MODEL_ID = "@hf/nousresearch/hermes-2-pro-mistral-7b"
 const TIMEOUT_MS = 5000
 
-const FAL_ASPECT_RATIO_MAP = {
+export type AspectRatio =
+  | "landscape_16_9"
+  | "landscape_4_3"
+  | "square"
+  | "portrait_4_3"
+  | "portrait_16_9"
+
+const ORIENTATION_TO_ASPECT_RATIO = {
   landscape: "landscape_4_3",
-  square: "square_hd",
+  square: "square",
   portrait: "portrait_4_3",
 } as const
 
 /**
  * Serialize any error to a plain object for storage.
- * Copies name, message, and all enumerable properties (AI SDK errors add fields like
- * `text`, `usage`, `finishReason`, `url`, `statusCode`, etc.)
  */
 function serializeError(error: unknown): Record<string, unknown> {
   if (!Error.isError(error)) {
@@ -30,7 +31,6 @@ function serializeError(error: unknown): Record<string, unknown> {
     message: error.message,
   }
 
-  // Copy all enumerable own properties (excludes cause, handled separately)
   for (const key of Object.keys(error)) {
     if (key === "cause") continue
     const value = (error as unknown as Record<string, unknown>)[key]
@@ -38,7 +38,6 @@ function serializeError(error: unknown): Record<string, unknown> {
     serialized[key] = value
   }
 
-  // Handle cause recursively
   if (error.cause !== undefined) {
     serialized.cause = Error.isError(error.cause) ? serializeError(error.cause) : error.cause
   }
@@ -46,7 +45,7 @@ function serializeError(error: unknown): Record<string, unknown> {
   return serialized
 }
 
-export async function resolveAutoAspectRatio(prompt: string, ai: Context["env"]["AI"]) {
+export async function resolveAutoAspectRatio(prompt: string, ai: Ai<AiModelListType>) {
   try {
     // Cast needed: workers-ai-provider expects Ai<AiModels> but Alchemy provides Ai<AiModelListType>
     const workersai = createWorkersAI({ binding: ai as Ai<AiModels> })
@@ -83,10 +82,12 @@ Analyze the image prompt above and respond with the best aspect ratio.`,
       abortSignal: AbortSignal.timeout(TIMEOUT_MS),
     })
 
+    const orientation = output.orientation as "landscape" | "square" | "portrait"
+    const aspectRatio = ORIENTATION_TO_ASPECT_RATIO[orientation]
     return {
       data: {
-        imageSize: FAL_ASPECT_RATIO_MAP[output.orientation],
-        reasoning: output.reasoning,
+        aspectRatio,
+        reasoning: output.reasoning as string,
         model: MODEL_ID,
       },
       ok: true,

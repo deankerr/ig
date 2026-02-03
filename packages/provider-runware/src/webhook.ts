@@ -147,6 +147,7 @@ webhook.post("/", async (c) => {
           errorMessage: output.ok ? null : output.errorMessage,
           providerRequestId: payload.taskUUID,
           providerMetadata: {
+            ...originalGen.providerMetadata,
             ...payload,
             cost: output.ok ? output.cost : undefined,
           },
