@@ -3,7 +3,7 @@ import { presets } from "@ig/db/schema"
 import { eq } from "drizzle-orm"
 import { z } from "zod"
 
-import { apiKeyProcedure, publicProcedure } from "../index"
+import { apiKeyProcedure, publicProcedure } from "../orpc"
 
 const PRESET_PREFIX = "ig/"
 

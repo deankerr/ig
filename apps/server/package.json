@@ -6,11 +6,8 @@
     "check-types": "tsc -b"
   },
   "dependencies": {
-    "@ig/api": "workspace:*",
     "@ig/db": "workspace:*",
     "@ig/env": "workspace:*",
-    "@ig/provider-fal": "workspace:*",
-    "@ig/provider-runware": "workspace:*",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
