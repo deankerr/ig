@@ -4,6 +4,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1"
 import { v7 as uuidv7 } from "uuid"
 
 import type * as schema from "@ig/db/schema"
+import type { ProviderResult } from "../providers/types"
 
 const SLUG_PREFIX_LENGTH = 8
 
@@ -13,7 +14,7 @@ function makeSlug(id: string, slugArg?: string) {
 
 export type GenerationService = ReturnType<typeof createGenerationService>
 
-export function createGenerationService(db: DrizzleD1Database<typeof schema>) {
+export function createGenerationService(db: DrizzleD1Database<typeof schema>, bucket: R2Bucket) {
   // Internal helper - handles optional providerMetadata merge in one place
   async function updateWithMetadata(
     id: string,
@@ -87,9 +88,138 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>) {
     }) {
       await updateWithMetadata(
         args.id,
-        { status: "failed", errorCode: args.error.code, errorMessage: args.error.message },
+        {
+          status: "failed",
+          errorCode: args.error.code,
+          errorMessage: args.error.message,
+          completedAt: new Date(),
+        },
         args.providerMetadata,
       )
+    },
+
+    /**
+     * Complete a generation with resolved provider outputs.
+     * Handles R2 storage and batch record creation.
+     */
+    async complete(args: { id: string; provider: string; result: ProviderResult }) {
+      const { result } = args
+
+      // Handle top-level failure
+      if (!result.ok) {
+        await this.fail({
+          id: args.id,
+          error: { code: result.code, message: result.message },
+        })
+        console.log("generation_failed", { generationId: args.id, code: result.code })
+        return
+      }
+
+      const generation = await this.get({ id: args.id })
+      if (!generation) {
+        throw new Error(`Generation not found: ${args.id}`)
+      }
+
+      const batchTag = result.outputs.length > 1 ? `batch:${args.id}` : null
+
+      for (let i = 0; i < result.outputs.length; i++) {
+        const output = result.outputs[i]
+        if (!output) continue
+
+        const isFirst = i === 0
+        const genId = isFirst ? args.id : uuidv7()
+
+        // Merge metadata (used for both success and failure)
+        const mergedMetadata = {
+          ...generation.providerMetadata,
+          ...result.metadata,
+        }
+
+        // Handle per-output failure
+        if (!output.ok) {
+          if (isFirst) {
+            // Update original generation to failed
+            await db
+              .update(generations)
+              .set({
+                status: "failed",
+                errorCode: output.code,
+                errorMessage: output.message,
+                completedAt: new Date(),
+                providerRequestId: result.requestId,
+                providerMetadata: mergedMetadata,
+              })
+              .where(eq(generations.id, genId))
+          } else {
+            // Create failed record for batch output
+            await db.insert(generations).values({
+              id: genId,
+              status: "failed",
+              provider: args.provider,
+              model: generation.model,
+              input: generation.input,
+              tags: batchTag ? [...generation.tags, batchTag] : generation.tags,
+              errorCode: output.code,
+              errorMessage: output.message,
+              providerRequestId: result.requestId,
+              providerMetadata: mergedMetadata,
+              createdAt: generation.createdAt,
+              completedAt: new Date(),
+            })
+          }
+
+          console.log("generation_output_failed", {
+            generationId: genId,
+            code: output.code,
+            batch: !isFirst,
+          })
+          continue
+        }
+
+        // Store to R2
+        const r2Key = `generations/${genId}`
+        await bucket.put(r2Key, output.data, {
+          httpMetadata: { contentType: output.contentType },
+        })
+
+        // Add per-output metadata
+        const outputMetadata = { ...mergedMetadata, ...output.metadata }
+
+        if (isFirst) {
+          // Update the original generation
+          await db
+            .update(generations)
+            .set({
+              status: "ready",
+              contentType: output.contentType,
+              completedAt: new Date(),
+              providerRequestId: result.requestId,
+              providerMetadata: outputMetadata,
+            })
+            .where(eq(generations.id, genId))
+        } else {
+          // Create new generation record for batch outputs
+          await db.insert(generations).values({
+            id: genId,
+            status: "ready",
+            provider: args.provider,
+            model: generation.model,
+            input: generation.input,
+            tags: batchTag ? [...generation.tags, batchTag] : generation.tags,
+            contentType: output.contentType,
+            providerRequestId: result.requestId,
+            providerMetadata: outputMetadata,
+            createdAt: generation.createdAt,
+            completedAt: new Date(),
+          })
+        }
+
+        console.log("generation_ready", {
+          generationId: genId,
+          contentType: output.contentType,
+          batch: !isFirst,
+        })
+      }
     },
   }
 }
