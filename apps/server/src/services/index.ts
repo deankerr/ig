@@ -8,7 +8,7 @@ export function createServices(env: Env) {
   const db = drizzle(env.DB, { schema })
 
   return {
-    generations: createGenerationService(db),
+    generations: createGenerationService(db, env.GENERATIONS_BUCKET),
     autoAspectRatio: (prompt: string) => resolveAutoAspectRatio(prompt, env.AI),
   }
 }
