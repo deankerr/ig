@@ -3,7 +3,7 @@ import { models } from "@ig/db/schema"
 import { asc, desc, eq, like, or, sql } from "drizzle-orm"
 import { z } from "zod"
 
-import { apiKeyProcedure, publicProcedure } from "../index"
+import { apiKeyProcedure, publicProcedure } from "../orpc"
 
 // Fixed workflow instance IDs
 const WORKFLOW_IDS = {

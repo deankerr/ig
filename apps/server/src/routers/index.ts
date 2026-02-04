@@ -1,6 +1,6 @@
 import type { RouterClient } from "@orpc/server"
 
-import { publicProcedure } from "../index"
+import { publicProcedure } from "../orpc"
 import { generationsRouter } from "./generations"
 import { modelsRouter } from "./models"
 import { presetsRouter } from "./presets"

@@ -1,11 +1,11 @@
 import { db } from "@ig/db"
 import { generations } from "@ig/db/schema"
-import { create as createFal } from "@ig/provider-fal"
-import { create as createRunware } from "@ig/provider-runware"
+import { create as createFal } from "../providers/fal"
+import { create as createRunware } from "../providers/runware"
 import { and, desc, eq, lt, sql } from "drizzle-orm"
 import { z } from "zod"
 
-import { apiKeyProcedure, publicProcedure } from "../index"
+import { apiKeyProcedure, publicProcedure } from "../orpc"
 
 const PROVIDERS = ["fal", "runware"] as const
 

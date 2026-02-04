@@ -1,8 +1,8 @@
-import { appRouter } from "@ig/api/routers/index"
 import { createContext } from "./context"
+import { appRouter } from "./routers"
 import { createServices, type Services } from "./services"
-import { webhook as falWebhook } from "@ig/provider-fal"
-import { webhook as runwareWebhook } from "@ig/provider-runware"
+import { webhook as falWebhook } from "./providers/fal"
+import { webhook as runwareWebhook } from "./providers/runware"
 import { OpenAPIHandler } from "@orpc/openapi/fetch"
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins"
 import { onError } from "@orpc/server"
@@ -13,7 +13,7 @@ import { cors } from "hono/cors"
 import { fileRoutes } from "./routes/file"
 
 // Export workflow class for Cloudflare
-export { ModelSyncWorkflow } from "./fal/model-sync"
+export { ModelSyncWorkflow } from "./providers/fal/model-sync"
 
 type Variables = {
   services: Services

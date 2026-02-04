@@ -141,8 +141,8 @@ export async function verifyWebhook(
       const isValid = await crypto.subtle.verify(
         { name: "Ed25519" },
         key,
-        signatureBytes,
-        messageBytes,
+        signatureBytes as BufferSource,
+        messageBytes as BufferSource,
       )
 
       if (isValid) {

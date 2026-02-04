@@ -1,4 +1,4 @@
-import type { AppRouterClient } from "@ig/api/routers/index"
+import type { AppRouterClient } from "server/src/routers"
 
 import { env } from "@ig/env/web"
 import { createORPCClient } from "@orpc/client"
