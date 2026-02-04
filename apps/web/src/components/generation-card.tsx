@@ -33,6 +33,7 @@ type Generation = {
   input: Record<string, unknown>
   tags: string[]
   createdAt: Date
+  completedAt: Date | null
 }
 
 function getPrompt(input: Record<string, unknown>): string | null {
@@ -154,6 +155,17 @@ export function GenerationCard({
           <span className="truncate max-w-[120px]">{formatFalEndpointId(generation.model)}</span>
           <span>·</span>
           <TimeAgo date={new Date(generation.createdAt)} />
+          {generation.completedAt && (
+            <span>
+              (
+              {(
+                (new Date(generation.completedAt).getTime() -
+                  new Date(generation.createdAt).getTime()) /
+                1000
+              ).toFixed(1)}
+              s)
+            </span>
+          )}
         </div>
 
         {generation.tags.length > 0 && (

@@ -55,6 +55,7 @@ type Generation = {
   input: Record<string, unknown>
   tags: string[]
   createdAt: Date
+  completedAt: Date | null
 }
 
 function GenerationListItem({
@@ -97,6 +98,17 @@ function GenerationListItem({
           <ItemTitle>{formatFalEndpointId(generation.model)}</ItemTitle>
           <span className="text-muted-foreground">·</span>
           <TimeAgo date={generation.createdAt} className=" text-muted-foreground" />
+          {generation.completedAt && (
+            <span className="text-muted-foreground">
+              (
+              {(
+                (new Date(generation.completedAt).getTime() -
+                  new Date(generation.createdAt).getTime()) /
+                1000
+              ).toFixed(1)}
+              s)
+            </span>
+          )}
         </div>
         <span className="font-mono text-muted-foreground">{generation.slug ?? generation.id}</span>
         {prompt && (
