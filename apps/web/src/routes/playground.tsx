@@ -71,6 +71,7 @@ function PlaygroundPage() {
   const [inputJson, setInputJson] = useState(DEFAULT_INPUT)
   const [tags, setTags] = useState<string[]>([])
   const [slug, setSlug] = useState("")
+  const [autoAspectRatio, setAutoAspectRatio] = useState(false)
   const [jsonError, setJsonError] = useState<string | null>(null)
   const [selectedPresetName, setSelectedPresetName] = useState<string | null>(null)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
@@ -110,6 +111,7 @@ function PlaygroundPage() {
         input: parsedInput,
         tags,
         slug: slug.trim() || undefined,
+        autoAspectRatio: autoAspectRatio || undefined,
       })
     },
     onSuccess: (data) => {
@@ -523,6 +525,19 @@ function PlaygroundPage() {
                 placeholder="optional-url-slug"
                 className="h-7 text-xs font-mono"
               />
+            </div>
+
+            {/* Options */}
+            <div className="p-4 border-b border-border">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoAspectRatio}
+                  onChange={(e) => setAutoAspectRatio(e.target.checked)}
+                  className="size-3.5 accent-primary"
+                />
+                <span className="text-xs">auto aspect ratio</span>
+              </label>
             </div>
 
             {/* Tags */}

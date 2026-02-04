@@ -1,16 +1,45 @@
-import type { Context as HonoContext } from "hono"
+/**
+ * Context type expected by the API procedures.
+ *
+ * This is a structural type that defines what the API layer expects from the context.
+ * The actual context is created in apps/server/src/context.ts.
+ */
 
-import { env } from "@ig/env/server"
+type AspectRatio = "landscape_16_9" | "landscape_4_3" | "square" | "portrait_4_3" | "portrait_16_9"
 
-export type CreateContextOptions = {
-  context: HonoContext
+type AutoAspectRatioResult =
+  | {
+      ok: true
+      data: { aspectRatio: AspectRatio; reasoning: string; model: string }
+      error: undefined
+    }
+  | {
+      ok: false
+      data: undefined
+      error: { error: Record<string, unknown>; model: string }
+    }
+
+type GenerationService = {
+  create(args: {
+    provider: string
+    model: string
+    input: Record<string, unknown>
+    tags: string[]
+    slug?: string
+    providerMetadata?: Record<string, unknown>
+  }): Promise<{ id: string; slug: string | null }>
+  markSubmitted(args: {
+    id: string
+    requestId: string
+    providerMetadata?: Record<string, unknown>
+  }): Promise<void>
 }
 
-export async function createContext({ context }: CreateContextOptions) {
-  return {
-    env,
-    headers: context.req.raw.headers,
+export type Context = {
+  env: Env
+  headers: Headers
+  services: {
+    generations: GenerationService
+    autoAspectRatio: (prompt: string) => Promise<AutoAspectRatioResult>
   }
 }
-
-export type Context = Awaited<ReturnType<typeof createContext>>

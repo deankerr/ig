@@ -1,20 +1,16 @@
 import { db } from "@ig/db"
-import { generations, presets } from "@ig/db/schema"
-import { submit as submitToFal } from "@ig/provider-fal"
-import { submit as submitToRunware } from "@ig/provider-runware"
+import { generations } from "@ig/db/schema"
+import { create as createFal } from "@ig/provider-fal"
+import { create as createRunware } from "@ig/provider-runware"
 import { and, desc, eq, lt, sql } from "drizzle-orm"
-import { v7 as uuidv7 } from "uuid"
 import { z } from "zod"
 
-import type { Context } from "../context"
 import { apiKeyProcedure, publicProcedure } from "../index"
-import { resolveAutoAspectRatio } from "../utils/auto-aspect-ratio"
 
 const PROVIDERS = ["fal", "runware"] as const
 
 const MAX_TAGS = 20
 const SLUG_PREFIX_LENGTH = 8
-const PRESET_PREFIX = "ig/"
 
 const tagSchema = z
   .string()
@@ -36,71 +32,10 @@ const slugSchema = z
     "Slug must be lowercase alphanumeric with hyphens, underscores, and slashes",
   )
 
-type SubmitArgs = {
-  id: string
-  provider: (typeof PROVIDERS)[number]
-  model: string
-  input: Record<string, unknown>
-  env: Context["env"]
-}
-
-async function submitToProvider({ id, provider, model, input, env }: SubmitArgs) {
-  const resolvedInput = { ...input }
-  let preprocessingMetadata: Record<string, unknown> | undefined
-
-  // Auto aspect ratio only applies to fal provider
-  if (provider === "fal" && resolvedInput.prompt && resolvedInput.image_size === "auto") {
-    const result = await resolveAutoAspectRatio(resolvedInput.prompt as string, env.AI)
-
-    if (result.ok) {
-      resolvedInput.image_size = result.data.imageSize
-      console.log("auto_aspect_ratio_created", result.data)
-    } else {
-      resolvedInput.image_size = undefined
-      console.log("auto_aspect_ratio_error", result.error)
-    }
-
-    preprocessingMetadata = {
-      autoAspectRatio: { data: result.data },
-    }
-  }
-
-  let requestId: string
-
-  if (provider === "runware") {
-    await submitToRunware({
-      apiKey: env.RUNWARE_KEY,
-      input: {
-        ...resolvedInput,
-        model,
-        taskUUID: id,
-        webhookURL: `${env.PUBLIC_URL}/webhooks/runware?generation_id=${id}`,
-      },
-    })
-    requestId = id
-  } else {
-    const webhookUrl = `${env.PUBLIC_URL}/webhooks/fal?generation_id=${id}`
-    const result = await submitToFal({
-      apiKey: env.FAL_KEY,
-      endpoint: model, // model IS the fal endpoint
-      input: resolvedInput,
-      webhookUrl,
-    })
-    requestId = result.requestId
-  }
-
-  await db
-    .update(generations)
-    .set({
-      providerRequestId: requestId,
-      ...(preprocessingMetadata && {
-        providerMetadata: { ig_preprocessing: preprocessingMetadata },
-      }),
-    })
-    .where(eq(generations.id, id))
-
-  return { requestId }
-}
+const providers = {
+  fal: createFal,
+  runware: createRunware,
+} as const
 
 function makeSlug(id: string, slugArg?: string) {
   return slugArg ? `${id.slice(0, SLUG_PREFIX_LENGTH)}-${slugArg}` : null
@@ -114,62 +49,23 @@ export const generationsRouter = {
   create: apiKeyProcedure
     .input(
       z.object({
-        provider: z.enum(PROVIDERS).optional().default("fal"),
+        provider: z.enum(PROVIDERS),
         model: z.string().min(1),
         input: z.record(z.string(), z.unknown()),
         tags: tagsSchema.optional().default([]),
         slug: slugSchema.optional(),
+        autoAspectRatio: z.boolean().optional(),
       }),
     )
     .handler(async ({ input: args, context }) => {
-      const id = uuidv7()
-      const slug = makeSlug(id, args.slug)
-      const provider = args.provider
-
-      let model = args.model
-      let input = args.input
-      let tags = args.tags
-
-      // Resolve preset if model starts with ig/
-      if (args.model.startsWith(PRESET_PREFIX)) {
-        const preset = await db.select().from(presets).where(eq(presets.name, args.model)).limit(1)
-
-        if (!preset[0]) {
-          throw new Error(`Preset not found: ${args.model}`)
-        }
-
-        model = preset[0].model
-        input = { ...preset[0].input, ...args.input }
-        tags = mergeTags(preset[0].tags, args.tags)
-      }
-
-      await db.insert(generations).values({
-        id,
-        status: "pending",
-        provider,
-        model,
-        input,
-        tags,
-        slug,
+      const createFn = providers[args.provider]
+      return createFn(context, {
+        model: args.model,
+        input: args.input,
+        tags: args.tags,
+        slug: args.slug,
+        autoAspectRatio: args.autoAspectRatio,
       })
-
-      const { requestId } = await submitToProvider({
-        id,
-        provider,
-        model,
-        input,
-        env: context.env,
-      })
-
-      console.log("generation_created", {
-        id,
-        slug,
-        provider,
-        model,
-        preset: args.model.startsWith(PRESET_PREFIX) ? args.model : undefined,
-        requestId,
-      })
-      return { id, slug, requestId }
     }),
 
   list: publicProcedure
@@ -322,6 +218,7 @@ export const generationsRouter = {
         id: z.string().min(1),
         tags: tagsSchema.optional(),
         slug: slugSchema.optional(),
+        autoAspectRatio: z.boolean().optional(),
       }),
     )
     .handler(async ({ input: args, context }) => {
@@ -336,35 +233,27 @@ export const generationsRouter = {
         throw new Error("Generation not found")
       }
 
-      const id = uuidv7()
-      const slug = makeSlug(id, args.slug)
       const provider = (original.provider ?? "fal") as (typeof PROVIDERS)[number]
+      const createFn = providers[provider]
 
-      await db.insert(generations).values({
-        id,
-        status: "pending",
-        provider,
+      // Merge tags with regenerate tracking
+      const mergedTags = mergeTags(args.tags, original.tags, [`regenerate:${original.id}`])
+
+      const result = await createFn(context, {
         model: original.model,
         input: original.input,
-        tags: mergeTags(args.tags, original.tags, [`regenerate:${original.id}`]),
-        slug,
-      })
-
-      const { requestId } = await submitToProvider({
-        id,
-        provider,
-        model: original.model,
-        input: original.input,
-        env: context.env,
+        tags: mergedTags,
+        slug: args.slug,
+        autoAspectRatio: args.autoAspectRatio,
       })
 
       console.log("generation_regenerated", {
-        id,
+        id: result.id,
         originalId: args.id,
         provider,
         model: original.model,
-        requestId,
+        requestId: result.requestId,
       })
-      return { id, requestId, originalId: args.id }
+      return { id: result.id, requestId: result.requestId, originalId: args.id }
     }),
 }

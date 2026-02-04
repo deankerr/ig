@@ -1,5 +1,6 @@
-import { createContext } from "@ig/api/context"
 import { appRouter } from "@ig/api/routers/index"
+import { createContext } from "./context"
+import { createServices, type Services } from "./services"
 import { webhook as falWebhook } from "@ig/provider-fal"
 import { webhook as runwareWebhook } from "@ig/provider-runware"
 import { OpenAPIHandler } from "@orpc/openapi/fetch"
@@ -14,7 +15,11 @@ import { fileRoutes } from "./routes/file"
 // Export workflow class for Cloudflare
 export { ModelSyncWorkflow } from "./fal/model-sync"
 
-const app = new Hono()
+type Variables = {
+  services: Services
+}
+
+const app = new Hono<{ Bindings: Env; Variables: Variables }>()
 
 app.use(
   "/*",
@@ -24,6 +29,12 @@ app.use(
     allowHeaders: ["Content-Type", "Authorization", "x-api-key"],
   }),
 )
+
+// Inject services into context
+app.use("/*", async (c, next) => {
+  c.set("services", createServices(c.env))
+  await next()
+})
 
 app.route("/webhooks/fal", falWebhook)
 app.route("/webhooks/runware", runwareWebhook)
@@ -63,7 +74,7 @@ export const rpcHandler = new RPCHandler(appRouter, {
 })
 
 app.use("/*", async (c, next) => {
-  const context = await createContext({ context: c })
+  const context = await createContext({ context: c, services: c.get("services") })
 
   const rpcResult = await rpcHandler.handle(c.req.raw, {
     prefix: "/rpc",
