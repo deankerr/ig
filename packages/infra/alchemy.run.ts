@@ -88,7 +88,7 @@ export const server = await Worker("server", {
   },
   crons: ["0 4 * * *"],
   dev: {
-    port: 3000,
+    port: 3220,
     tunnel: true, // create remote worker tunnel
   },
   url: !isProd, // workers.dev

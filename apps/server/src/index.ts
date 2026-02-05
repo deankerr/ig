@@ -3,6 +3,7 @@ import { appRouter } from "./routers"
 import { createServices, type Services } from "./services"
 import { webhook as falWebhook } from "./providers/fal"
 import { webhook as runwareWebhook } from "./providers/runware"
+import { logError } from "./utils/error-logging"
 import { OpenAPIHandler } from "@orpc/openapi/fetch"
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins"
 import { onError } from "@orpc/server"
@@ -58,19 +59,11 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
       },
     }),
   ],
-  interceptors: [
-    onError((error) => {
-      console.error(error)
-    }),
-  ],
+  interceptors: [onError(logError)],
 })
 
 export const rpcHandler = new RPCHandler(appRouter, {
-  interceptors: [
-    onError((error) => {
-      console.error(error)
-    }),
-  ],
+  interceptors: [onError(logError)],
 })
 
 app.use("/*", async (c, next) => {

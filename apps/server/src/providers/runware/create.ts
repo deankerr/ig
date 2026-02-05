@@ -4,9 +4,9 @@
  * Owns the complete generation flow for Runware provider.
  */
 
-const RUNWARE_API_URL = "https://api.runware.ai/v1"
+import type { AspectRatio, AutoAspectRatioResult, GenerationService } from "../../services"
 
-type AspectRatio = "landscape_16_9" | "landscape_4_3" | "square" | "portrait_4_3" | "portrait_16_9"
+const RUNWARE_API_URL = "https://api.runware.ai/v1"
 
 // Map provider-agnostic aspect ratios to Runware pixel dimensions
 const ASPECT_RATIO_DIMENSIONS: Record<AspectRatio, { width: number; height: number }> = {
@@ -17,38 +17,10 @@ const ASPECT_RATIO_DIMENSIONS: Record<AspectRatio, { width: number; height: numb
   portrait_16_9: { width: 768, height: 1344 },
 }
 
-type AutoAspectRatioResult =
-  | {
-      ok: true
-      data: { aspectRatio: AspectRatio; reasoning: string; model: string }
-      error: undefined
-    }
-  | {
-      ok: false
-      data: undefined
-      error: { error: Record<string, unknown>; model: string }
-    }
-
-type GenerationService = {
-  create(args: {
-    provider: string
-    model: string
-    input: Record<string, unknown>
-    tags: string[]
-    slug?: string
-    providerMetadata?: Record<string, unknown>
-  }): Promise<{ id: string; slug: string | null }>
-  markSubmitted(args: {
-    id: string
-    requestId: string
-    providerMetadata?: Record<string, unknown>
-  }): Promise<void>
-}
-
 export type CreateContext = {
   env: { RUNWARE_KEY: string; PUBLIC_URL: string }
   services: {
-    generations: GenerationService
+    generations: Pick<GenerationService, "create" | "markSubmitted">
     autoAspectRatio: (prompt: string) => Promise<AutoAspectRatioResult>
   }
 }
@@ -74,29 +46,22 @@ export async function create(ctx: CreateContext, request: CreateRequest) {
   input.positivePrompt ??= input.prompt
 
   // Auto aspect ratio - runware needs dimensions
-  if (request.autoAspectRatio && input.prompt && !input.width && !input.height) {
-    const result = await ctx.services.autoAspectRatio(input.prompt as string)
+  if (request.autoAspectRatio && input.positivePrompt && !input.width && !input.height) {
+    const result = await ctx.services.autoAspectRatio(input.positivePrompt as string)
 
     if (result.ok) {
-      const dims = ASPECT_RATIO_DIMENSIONS[result.data.aspectRatio]
+      const dims = ASPECT_RATIO_DIMENSIONS[result.value.aspectRatio]
       input.width = dims.width
       input.height = dims.height
-      providerMetadata = {
-        ig_preprocessing: {
-          autoAspectRatio: {
-            ...result.data,
-            ...dims,
-          },
-        },
-      }
-      console.log("auto_aspect_ratio_created", { ...result.data, ...dims })
-    } else {
-      console.log("auto_aspect_ratio_error", result.error)
-      providerMetadata = { ig_preprocessing: { autoAspectRatio: { error: result.error } } }
+    }
+
+    // store result data
+    providerMetadata = {
+      ig_preprocessing: { autoAspectRatio: result },
     }
   }
 
-  // Apply runware defaults
+  // Apply reasonable defaults
   input.taskType ??= "imageInference"
   input.includeCost ??= true
   input.width ??= 1024

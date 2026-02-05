@@ -15,5 +15,5 @@ export function createServices(env: Env) {
 
 export type Services = ReturnType<typeof createServices>
 
-export type { AspectRatio } from "./auto-aspect-ratio"
+export type { AspectRatio, AutoAspectRatioData, AutoAspectRatioResult } from "./auto-aspect-ratio"
 export type { GenerationService } from "./generations"

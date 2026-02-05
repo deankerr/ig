@@ -2,6 +2,9 @@ import { generateText, Output } from "ai"
 import { createWorkersAI } from "workers-ai-provider"
 import { z } from "zod"
 
+import type { Result } from "../utils/result"
+import { getErrorMessage, serializeError } from "../utils/error"
+
 const MODEL_ID = "@hf/nousresearch/hermes-2-pro-mistral-7b"
 const TIMEOUT_MS = 5000
 
@@ -18,32 +21,16 @@ const ORIENTATION_TO_ASPECT_RATIO = {
   portrait: "portrait_4_3",
 } as const
 
-/**
- * Serialize any error to a plain object for storage.
- */
-function serializeError(error: unknown): Record<string, unknown> {
-  if (!Error.isError(error)) {
-    return { message: String(error) }
-  }
-
-  const serialized: Record<string, unknown> = {
-    name: error.name,
-    message: error.message,
-  }
-
-  for (const key of Object.keys(error)) {
-    if (key === "cause") continue
-    const value = (error as unknown as Record<string, unknown>)[key]
-    if (typeof value === "function" || typeof value === "symbol") continue
-    serialized[key] = value
-  }
-
-  if (error.cause !== undefined) {
-    serialized.cause = Error.isError(error.cause) ? serializeError(error.cause) : error.cause
-  }
-
-  return serialized
+export type AutoAspectRatioData = {
+  aspectRatio: AspectRatio
+  reasoning: string
+  model: string
 }
+
+export type AutoAspectRatioResult = Result<
+  AutoAspectRatioData,
+  { cause: Record<string, unknown>; model: string }
+>
 
 export async function resolveAutoAspectRatio(prompt: string, ai: Ai<AiModelListType>) {
   try {
@@ -82,26 +69,24 @@ Analyze the image prompt above and respond with the best aspect ratio.`,
       abortSignal: AbortSignal.timeout(TIMEOUT_MS),
     })
 
-    const orientation = output.orientation as "landscape" | "square" | "portrait"
+    const orientation = output.orientation
     const aspectRatio = ORIENTATION_TO_ASPECT_RATIO[orientation]
-    return {
-      data: {
-        aspectRatio,
-        reasoning: output.reasoning as string,
-        model: MODEL_ID,
-      },
+
+    const result = {
       ok: true,
-      error: undefined,
-    } as const
+      value: { aspectRatio, reasoning: output.reasoning as string, model: MODEL_ID },
+    } satisfies AutoAspectRatioResult
+
+    console.log("auto_aspect_ratio", result.value)
+    return result
   } catch (error) {
-    const serialized = serializeError(error)
-    return {
-      error: {
-        error: serialized,
-        model: MODEL_ID,
-      },
+    const result = {
       ok: false,
-      data: undefined,
-    } as const
+      message: getErrorMessage(error),
+      error: { cause: serializeError(error), model: MODEL_ID },
+    } satisfies AutoAspectRatioResult
+
+    console.log("auto_aspect_ratio", { ok: false, message: result.message, ...result.error })
+    return result
   }
 }
