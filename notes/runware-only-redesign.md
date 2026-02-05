@@ -67,25 +67,31 @@ With a single provider, there's no need for provider abstraction layers. Direct,
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    Worker (Hono + oRPC)                              │
 │                                                                      │
+│  Responsibilities:                                                  │
+│  - Input validation and normalization (Zod schemas)                 │
+│  - Create generation record in D1 (status: pending)                 │
+│  - Route to DO for async coordination                               │
+│                                                                      │
 │  Routes:                                                            │
-│  - POST /api/generations        → create                            │
-│  - GET  /api/generations/:id    → get                               │
-│  - GET  /api/generations        → list                              │
-│  - WS   /generations/:id/stream → real-time updates                 │
-│  - POST /webhooks/runware       → webhook receiver                  │
-│  - GET  /files/:id              → artifact retrieval                │
+│  - POST /api/generations        → validate, create, submit          │
+│  - GET  /api/generations/:id    → query D1                          │
+│  - GET  /api/generations        → query D1                          │
+│  - WS   /generations/:id/stream → upgrade to DO                     │
+│  - POST /webhooks/runware       → route to DO                       │
+│  - GET  /files/:id/:index       → serve from R2                     │
 └─────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │              Generation Manager Durable Object                       │
 │                                                                      │
-│  Per-generation instance that:                                      │
-│  - Submits request to Runware                                       │
+│  Pure coordination - receives already-validated data:               │
+│  - Builds and submits Runware payload                               │
+│  - Updates D1: status='submitted', raw_request, raw_response        │
 │  - Accumulates webhook callbacks                                    │
+│  - Writes outputs to R2 and D1 as they arrive                       │
+│  - Updates D1: status='ready' when complete                         │
 │  - Broadcasts progress via WebSocket                                │
-│  - Stores completed artifacts to R2                                 │
-│  - Writes final state to D1                                         │
 │  - Hibernates when idle                                             │
 └─────────────────────────────────────────────────────────────────────┘
                               │
@@ -93,8 +99,17 @@ With a single provider, there's no need for provider abstraction layers. Direct,
               │               │               │
               ▼               ▼               ▼
          Runware API         D1              R2
-         (inference)     (metadata)      (artifacts)
+         (inference)   (source of truth) (artifacts)
 ```
+
+### Key Principle: D1 is Source of Truth
+
+The generation record exists in D1 from the moment of creation. The DO coordinates the async webhook flow but D1 always reflects current state:
+
+- Generation queryable immediately after creation (status: pending)
+- Status updates written to D1 at each stage transition
+- Outputs written to D1 as they arrive, not batched at completion
+- If DO crashes, D1 record survives for debugging
 
 ## Database Schema
 
@@ -191,42 +206,88 @@ CREATE INDEX idx_outputs_generation ON outputs(generation_id);
 - Simpler queries: `SELECT * FROM outputs WHERE generation_id = ?`
 - R2 keys can be organized: `outputs/{generation_id}/{index}`
 
+## Input Validation and Processing
+
+All validation and input normalization happens at the API layer **before** creating any records. The DO receives already-validated, ready-to-use data.
+
+### Zod Schema (API Layer)
+
+```typescript
+const createGenerationSchema = z.object({
+  model: z.string().min(1),
+  taskType: z.enum([
+    'imageInference',
+    'controlNet',
+    'inpainting',
+    'imageUpscale',
+    'imageBackgroundRemoval',
+    'photoMaker',
+  ]).default('imageInference'),
+  input: z.record(z.unknown()).transform(input => ({
+    ...input,
+    // Apply defaults
+    width: input.width ?? 1024,
+    height: input.height ?? 1024,
+    includeCost: input.includeCost ?? true,
+    positivePrompt: input.positivePrompt ?? input.prompt,
+  })),
+  tags: tagsSchema.default([]),
+  slug: slugSchema.optional(),
+})
+```
+
+### Derived Values (API Layer)
+
+After Zod validation, before creating the record:
+
+```typescript
+// Extract expectedCount from normalized input
+const expectedCount = validatedInput.input.numberResults ?? 1
+
+// Generate ID
+const id = uuidv7()
+
+// Build slug
+const slug = input.slug ? `${id.slice(0, 8)}-${input.slug}` : null
+```
+
+### What the DO Receives
+
+The DO receives a minimal, pre-validated payload:
+
+```typescript
+interface SubmitRequest {
+  id: string
+  model: string
+  taskType: string
+  input: Record<string, unknown>  // Already normalized with defaults
+  expectedCount: number
+  webhookUrl: string
+}
+```
+
+No parsing, no validation, no defaulting in the DO. It just coordinates.
+
 ## Durable Object Design
 
 ### State Structure
 
+The DO maintains minimal coordination state. D1 is the source of truth.
+
 ```typescript
 interface GenerationDOState {
-  // Identity
+  // Identity (matches D1 record)
   id: string
-  slug: string | null
-
-  // Request
-  model: string
-  taskType: string
-  input: Record<string, unknown>
-  tags: string[]
-
-  // Status
-  status: 'pending' | 'submitted' | 'processing' | 'ready' | 'failed'
-  errorCode?: string
-  errorMessage?: string
-
-  // Batch tracking
   expectedCount: number
-  receivedOutputs: ReceivedOutput[]  // Accumulated from webhooks
 
-  // Raw payloads
-  rawRequest?: unknown
-  rawResponse?: unknown
+  // Coordination state (not in D1)
+  receivedTaskUUIDs: Set<string>  // For deduplication
 
-  // Timestamps
-  createdAt: number
-  submittedAt?: number
-  completedAt?: number
+  // Transient data (written to D1/R2 as received)
+  pendingOutputs: PendingOutput[]  // Buffered until written
 }
 
-interface ReceivedOutput {
+interface PendingOutput {
   index: number
   taskUUID: string
   contentType: string
@@ -235,56 +296,69 @@ interface ReceivedOutput {
   seed?: number
   metadata: Record<string, unknown>
   rawWebhook: unknown
-  receivedAt: number
 }
 ```
+
+Note: The DO state is intentionally minimal. Most state lives in D1.
 
 ### DO Lifecycle
 
 ```
-1. CREATE
-   ├─ Worker receives POST /api/generations
-   ├─ Generates UUIDv7 ID
-   ├─ Gets DO stub by ID
-   └─ Calls DO.init(request)
+1. CREATE (Worker - before DO involvement)
+   ├─ Validate input via Zod schema
+   ├─ Apply defaults, derive expectedCount
+   ├─ Generate UUIDv7 ID
+   ├─ INSERT into D1: status='pending', all request fields
+   ├─ Return ID to client (generation now queryable)
+   └─ Call DO.submit(request) asynchronously
 
-2. INIT (in DO)
-   ├─ Parse and validate input
-   ├─ Determine expectedCount from input.numberResults
-   ├─ Build Runware payload
-   ├─ Store rawRequest
-   ├─ Submit to Runware API
-   ├─ Store rawResponse
-   ├─ Update status: pending → submitted
-   ├─ Persist state to DO storage
-   └─ Return { id, slug, status }
+2. SUBMIT (in DO)
+   ├─ Build Runware payload (auth task + inference task)
+   ├─ POST to Runware API
+   ├─ UPDATE D1: status='submitted', raw_request, raw_response
+   ├─ If Runware returns error:
+   │   └─ UPDATE D1: status='failed', error fields
+   └─ Initialize DO state (expectedCount, empty receivedTaskUUIDs)
 
 3. WEBHOOK (in DO, per callback)
-   ├─ Parse webhook payload
-   ├─ Check for errors → fail() if error
+   ├─ Parse webhook payload (light validation only)
+   ├─ If error webhook:
+   │   ├─ UPDATE D1: status='failed', error fields
+   │   └─ Broadcast error to WebSocket clients
    ├─ For each data item:
-   │   ├─ Dedupe by taskUUID (idempotency)
+   │   ├─ Skip if taskUUID in receivedTaskUUIDs (idempotency)
+   │   ├─ Add taskUUID to receivedTaskUUIDs
    │   ├─ Fetch image from URL or decode base64
-   │   ├─ Add to receivedOutputs with rawWebhook
+   │   ├─ Determine index (receivedTaskUUIDs.size - 1)
+   │   ├─ PUT to R2: outputs/{id}/{index}
+   │   ├─ INSERT into D1 outputs table
    │   └─ Broadcast progress to WebSocket clients
-   ├─ If receivedOutputs.length >= expectedCount:
-   │   └─ complete()
-   └─ Persist state
+   ├─ If receivedTaskUUIDs.size >= expectedCount:
+   │   ├─ UPDATE D1: status='ready', completed_at
+   │   └─ Broadcast completion
+   └─ Persist DO state
 
-4. COMPLETE (in DO)
-   ├─ For each output:
-   │   └─ PUT to R2: outputs/{generation_id}/{index}
-   ├─ Write generation record to D1
-   ├─ Write output records to D1
-   ├─ Update status: processing → ready
-   ├─ Broadcast completion to WebSocket clients
-   └─ Schedule cleanup alarm
+4. TIMEOUT (via DO alarm)
+   ├─ Triggered after 5 minutes of no webhook activity
+   ├─ If receivedTaskUUIDs.size == 0:
+   │   └─ UPDATE D1: status='failed', error='TIMEOUT'
+   ├─ If receivedTaskUUIDs.size > 0:
+   │   └─ UPDATE D1: status='ready', completed_at (partial success)
+   └─ Broadcast completion/error
 
 5. HIBERNATION
    ├─ After completion, DO can hibernate
    ├─ WebSocket connections maintained via hibernation API
-   └─ State persisted, memory released
+   └─ Minimal state persisted to DO storage
 ```
+
+### Key Differences from Original Proposal
+
+1. **D1 record created before DO** - Generation is queryable immediately
+2. **Outputs written as they arrive** - Not batched at completion
+3. **DO state is minimal** - Just coordination, D1 has the data
+4. **No validation in DO** - API layer handles all input processing
+5. **Partial success is success** - 3 of 4 outputs = ready with 3 outputs
 
 ### WebSocket Protocol
 
@@ -535,41 +609,68 @@ await r2.put(`outputs/${generationId}/${index}`, data, {
 })
 ```
 
-## Error Handling
+## Failure Semantics
+
+A generation **fails** only in these cases:
+
+1. **Submission rejected** - Runware API returns an error on the initial request
+2. **Error webhook** - Runware explicitly reports the task failed
+3. **Timeout with zero outputs** - No webhooks received after 5 minutes
+
+A generation **succeeds** (status: ready) when:
+
+- At least one output is received, regardless of `expectedCount`
+- All expected outputs are received
+- Timeout occurs but some outputs were received (partial success)
+
+**Important:** If you request 4 images (`numberResults: 4`) and receive 3, that's a **successful** generation with 3 outputs. The `expectedCount` vs actual output count is informational, not a failure condition. There's no concept of a "failed output" within a successful generation.
 
 ### Error Categories
 
 1. **Submission errors**: Runware API rejects the request
-   - Store error in `raw_response`
-   - Set status to `failed`, populate error fields
-   - No DO persistence needed
+   - UPDATE D1: status='failed', raw_response contains error
+   - Generation exists in D1 for debugging
+   - No R2 artifacts
 
-2. **Webhook errors**: Runware reports failure via webhook
-   - Store error webhook in `raw_webhook`
-   - Set status to `failed`
-   - Persist for debugging
+2. **Error webhook**: Runware reports failure via webhook
+   - UPDATE D1: status='failed', error_code, error_message
+   - Store error details for debugging
+   - No R2 artifacts
 
-3. **Partial failures**: Some outputs fail in a batch
-   - Each output has its own success/failure status
-   - Generation completes with partial results
-   - Failed outputs have null `r2_key` and populated error fields
+3. **Timeout with zero outputs**: Nothing arrived
+   - UPDATE D1: status='failed', error_code='TIMEOUT'
+   - Generation exists in D1 for debugging
+   - No R2 artifacts
 
-4. **Timeout**: Expected outputs never arrive
-   - DO alarm after 5 minutes of inactivity
-   - Mark as failed with `TIMEOUT` error code
-   - Store whatever outputs were received
+4. **Timeout with partial outputs**: Some arrived, some didn't
+   - UPDATE D1: status='ready', completed_at (this is a success)
+   - `expectedCount: 4`, but only 3 rows in `outputs` table
+   - Consumer can compare counts if they care
 
 ### Error Response Format
 
 ```typescript
+// Failed generation
 {
   "id": "01HQXY...",
   "status": "failed",
-  "error": {
-    "code": "RUNWARE_ERROR",
-    "message": "Invalid model identifier"
-  },
-  "rawResponse": { ... }  // Full response for debugging
+  "errorCode": "RUNWARE_ERROR",
+  "errorMessage": "Invalid model identifier",
+  "expectedCount": 4,
+  "outputs": []  // Empty for failed generations
+}
+
+// Partial success (NOT a failure)
+{
+  "id": "01HQXY...",
+  "status": "ready",
+  "expectedCount": 4,
+  "outputs": [
+    { "index": 0, ... },
+    { "index": 1, ... },
+    { "index": 2, ... }
+    // Only 3 outputs, but generation succeeded
+  ]
 }
 ```
 
@@ -662,17 +763,39 @@ const server = await Worker('ig-server', {
 | WebSocket streaming | New | Real-time updates |
 | Wait mode | New | Sync completion option |
 
+## R2 Storage Lifecycle
+
+**Decision: No automatic cleanup.** Keep everything.
+
+Rationale:
+- R2 storage is cheap (~$0.015/GB/month)
+- Failed generations have no R2 artifacts anyway (only D1 records)
+- Partial results are still valuable artifacts
+- "Store everything, ask questions later" aligns with project philosophy
+
+**Cleanup via explicit API operations:**
+
+```typescript
+// Delete a generation and its outputs
+DELETE /api/generations/:id
+// Deletes: D1 generation record, D1 output records, R2 objects
+
+// Bulk cleanup (admin endpoint, if needed)
+DELETE /api/generations?status=failed&before=2024-01-01
+// Only deletes D1 records (failed generations have no R2 objects)
+```
+
+Consumers decide when to clean up, not the system.
+
 ## Open Questions
 
 1. **Presets**: Keep the presets table for storing common configurations? Or handle in consuming apps?
 
 2. **Auto aspect ratio**: The current system has a smart aspect ratio feature using Claude. Keep it? It's Runware-compatible.
 
-3. **R2 lifecycle**: Should we set object expiration for failed generations? Or keep everything?
+3. **Rate limiting**: Add rate limiting at the API layer? Currently trusting consumers.
 
-4. **Rate limiting**: Add rate limiting at the API layer? Currently trusting consumers.
-
-5. **Metrics**: Add structured logging for cost tracking, latency metrics? Currently just console.log.
+4. **Metrics**: Add structured logging for cost tracking, latency metrics? Currently just console.log.
 
 ## Implementation Plan
 
