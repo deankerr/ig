@@ -14,7 +14,7 @@ packages/env/    # Cloudflare binding types
 packages/infra/  # Alchemy infrastructure-as-code
 ```
 
-See `apps/server/src/CLAUDE.md` for server-specific patterns (Result type, error handling).
+See `apps/server/CLAUDE.md` for server-specific patterns (Result type, error handling).
 
 ## Commands
 
@@ -22,14 +22,15 @@ See `apps/server/src/CLAUDE.md` for server-specific patterns (Result type, error
 bun run dev           # Start full stack via Alchemy
 bun run dev:web       # Start only web frontend
 bun run dev:server    # Start only API server
-bun run check         # check-types + lint + format
+bun run check         # check-types + lint + format (with auto-fix)
+bun run clean         # Remove node_modules, build artifacts, caches
 bun run db:generate   # Generate Drizzle migrations
 bun run deploy        # Deploy to Cloudflare via Alchemy
 ```
 
 ## Workflow
 
-- Run `bun check` to verify your work.
+- Run `bun run check` to verify your work.
 - Do not deploy unless specifically asked.
 - Webhooks require a public URL, so local development uses the remote server.
 
@@ -66,9 +67,9 @@ Providers live in `apps/server/src/providers/`. Each has:
 
 ```
 generations.create({ provider: "fal", model, input })
-  → fal.queue.submit(model, { input, webhookUrl })
-  → webhook receives result
-  → resolve verifies signature, fetches URLs
+  -> fal.queue.submit(model, { input, webhookUrl })
+  -> webhook receives result
+  -> resolve verifies signature, fetches URLs
 ```
 
 - `model` is the fal endpoint path (e.g., `fal-ai/flux/schnell`)
@@ -79,9 +80,9 @@ generations.create({ provider: "fal", model, input })
 
 ```
 generations.create({ provider: "runware", model, input })
-  → POST https://api.runware.ai/v1 [authTask, inferenceTask]
-  → webhook receives result
-  → resolve validates with Zod, decodes base64/URLs
+  -> POST https://api.runware.ai/v1 [authTask, inferenceTask]
+  -> webhook receives result
+  -> resolve validates with Zod, decodes base64/URLs
 ```
 
 - `model` is an AIR identifier (e.g., `civitai:108@1`)
