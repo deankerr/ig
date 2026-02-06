@@ -10,27 +10,36 @@ import { apiKeyProcedure, publicProcedure } from "../orpc"
 const PROVIDERS = ["fal", "runware"] as const
 
 const MAX_TAGS = 20
-const SLUG_PREFIX_LENGTH = 8
+const SLUG_PREFIX_LENGTH = 12
 
-const tagSchema = z
-  .string()
-  .trim()
-  .min(1, "Tag cannot be empty")
-  .max(256, "Tag cannot exceed 256 characters")
+const idSchema = z.uuidv7().trim()
+const modelSchema = z.string().trim().min(1)
+const cursorSchema = z.string().refine((s) => !Number.isNaN(Date.parse(s)), "Invalid date format")
+
+const tagSchema = z.string().trim().max(256, "Tag cannot exceed 256 characters")
 
 export type Tag = z.infer<typeof tagSchema>
 
-const tagsSchema = z.array(tagSchema).max(MAX_TAGS, `Cannot exceed ${MAX_TAGS} tags`)
+// Trim tags, filter empties, dedupe
+const tagsSchema = z
+  .array(tagSchema)
+  .transform((tags) => [...new Set(tags.filter(Boolean))])
+  .refine((tags) => tags.length <= MAX_TAGS, `Cannot exceed ${MAX_TAGS} tags`)
 
-const slugSchema = z
-  .string()
-  .trim()
-  .min(1, "Slug cannot be empty")
-  .max(100, "Slug cannot exceed 100 characters")
-  .regex(
-    /^[a-z0-9_/-]+$/,
-    "Slug must be lowercase alphanumeric with hyphens, underscores, and slashes",
-  )
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove diacritics
+    .replace(/[^a-z0-9\s_/-]/g, "") // keep only allowed chars
+    .trim()
+    .replace(/\s+/g, "-") // spaces to hyphens
+    .replace(/-+/g, "-") // collapse multiple hyphens
+    .slice(0, 100)
+}
+
+// Accept any string, slugify it, return undefined if empty
+const slugSchema = z.string().transform((s) => slugify(s) || undefined)
 
 const providers = {
   fal: createFal,
@@ -50,7 +59,7 @@ export const generationsRouter = {
     .input(
       z.object({
         provider: z.enum(PROVIDERS),
-        model: z.string().min(1),
+        model: modelSchema,
         input: z.record(z.string(), z.unknown()),
         tags: tagsSchema.optional().default([]),
         slug: slugSchema.optional(),
@@ -73,10 +82,10 @@ export const generationsRouter = {
     .input(
       z.object({
         status: z.enum(["pending", "ready", "failed"]).optional(),
-        model: z.string().optional(),
+        model: modelSchema.optional(),
         tags: tagsSchema.optional(),
         limit: z.number().int().min(1).max(100).optional().default(20),
-        cursor: z.string().optional(),
+        cursor: cursorSchema.optional(),
       }),
     )
     .handler(async ({ input }) => {
@@ -121,7 +130,7 @@ export const generationsRouter = {
 
   get: publicProcedure
     .route({ spec: { security: [] } })
-    .input(z.object({ id: z.string().min(1) }))
+    .input(z.object({ id: idSchema }))
     .handler(async ({ input: args }) => {
       const [generation] = await db
         .select()
@@ -135,7 +144,7 @@ export const generationsRouter = {
   update: apiKeyProcedure
     .input(
       z.object({
-        id: z.string().min(1),
+        id: idSchema,
         add: tagsSchema.optional().default([]),
         remove: tagsSchema.optional().default([]),
         slug: slugSchema.optional(),
@@ -190,7 +199,7 @@ export const generationsRouter = {
   }),
 
   delete: apiKeyProcedure
-    .input(z.object({ id: z.string().min(1) }))
+    .input(z.object({ id: idSchema }))
     .handler(async ({ input: args, context }) => {
       const [generation] = await db
         .select()
@@ -215,7 +224,7 @@ export const generationsRouter = {
   regenerate: apiKeyProcedure
     .input(
       z.object({
-        id: z.string().min(1),
+        id: idSchema,
         tags: tagsSchema.optional(),
         slug: slugSchema.optional(),
         autoAspectRatio: z.boolean().optional(),
@@ -233,7 +242,7 @@ export const generationsRouter = {
         throw new Error("Generation not found")
       }
 
-      const provider = (original.provider ?? "fal") as (typeof PROVIDERS)[number]
+      const provider = original.provider as (typeof PROVIDERS)[number]
       const createFn = providers[provider]
 
       // Merge tags with regenerate tracking
