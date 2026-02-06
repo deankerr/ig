@@ -6,7 +6,7 @@ import { v7 as uuidv7 } from "uuid"
 import type * as schema from "@ig/db/schema"
 import type { ProviderResult } from "../providers/types"
 
-const SLUG_PREFIX_LENGTH = 8
+const SLUG_PREFIX_LENGTH = 12
 
 function makeSlug(id: string, slugArg?: string) {
   return slugArg ? `${id.slice(0, SLUG_PREFIX_LENGTH)}-${slugArg}` : null
