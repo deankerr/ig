@@ -242,8 +242,11 @@ export const generationsRouter = {
         throw new Error("Generation not found")
       }
 
-      const provider = original.provider as (typeof PROVIDERS)[number]
-      const createFn = providers[provider]
+      const provider = original.provider as string
+      const createFn = providers[provider as keyof typeof providers]
+      if (!createFn) {
+        throw new Error(`Invalid provider: ${provider}`)
+      }
 
       // Merge tags with regenerate tracking
       const mergedTags = mergeTags(args.tags, original.tags, [`regenerate:${original.id}`])
