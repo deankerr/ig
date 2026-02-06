@@ -138,9 +138,6 @@ CREATE TABLE generations (
   error_code TEXT,
   error_message TEXT,
 
-  -- Organization
-  tags JSONB NOT NULL DEFAULT '[]',
-
   -- Raw payloads for debugging/auditing
   raw_request JSONB,                -- Exact payload sent to Runware
   raw_response JSONB,               -- Exact response from Runware (initial submission)
@@ -231,7 +228,6 @@ const createGenerationSchema = z.object({
     includeCost: input.includeCost ?? true,
     positivePrompt: input.positivePrompt ?? input.prompt,
   })),
-  tags: tagsSchema.default([]),
   slug: slugSchema.optional(),
 })
 ```
@@ -397,7 +393,6 @@ Request:
     "numberResults": 4,
     "outputFormat": "WEBP"
   },
-  "tags": ["landscape", "test"],
   "slug": "mountain-test"
 }
 
@@ -430,7 +425,6 @@ Response:
   "model": "civitai:108@1",
   "taskType": "imageInference",
   "input": { ... },
-  "tags": ["landscape", "test"],
   "expectedCount": 4,
   "outputs": [
     {
@@ -738,7 +732,7 @@ const server = await Worker('ig-server', {
 | D1 database | Keep | New schema, same tech |
 | Hono + oRPC | Keep | Solid foundation |
 | UUIDv7 IDs | Keep | Chronological ordering is useful |
-| Tags system | Keep | Flexible organization works |
+| Tags system | Redesign | Extracted to junction table, see notes/tags-design.md |
 | Slug system | Keep | Human-readable URLs valuable |
 | Service layer pattern | Keep | Clean separation of concerns |
 
@@ -750,7 +744,7 @@ const server = await Worker('ig-server', {
 | Provider abstraction | Drop | No need with single provider |
 | models table | Drop | Was fal-specific |
 | presets table | TBD | Could keep for convenience |
-| Batch tags | Drop | Replaced by outputs table |
+| Batch tags (JSON column) | Drop | Replaced by outputs table + tags junction table |
 | Direct webhook handler | Drop | Routed through DO |
 
 ## What's New
