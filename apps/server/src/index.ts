@@ -3,7 +3,7 @@ import { appRouter } from "./routers"
 import { createServices, type Services } from "./services"
 import { webhook as falWebhook } from "./providers/fal"
 import { webhook as runwareWebhook } from "./providers/runware"
-import { logError } from "./utils/error-logging"
+import { handleOrpcError, handleHonoError } from "./utils/error"
 import { OpenAPIHandler } from "@orpc/openapi/fetch"
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins"
 import { onError } from "@orpc/server"
@@ -21,6 +21,12 @@ type Variables = {
 }
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>()
+
+// Global error handler for webhook routes and any unhandled errors
+app.onError((error, c) => {
+  const { status, body } = handleHonoError(error)
+  return c.json(body, status)
+})
 
 app.use(
   "/*",
@@ -59,11 +65,11 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
       },
     }),
   ],
-  interceptors: [onError(logError)],
+  interceptors: [onError(handleOrpcError)],
 })
 
 export const rpcHandler = new RPCHandler(appRouter, {
-  interceptors: [onError(logError)],
+  interceptors: [onError(handleOrpcError)],
 })
 
 app.use("/*", async (c, next) => {
