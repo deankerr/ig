@@ -66,9 +66,6 @@ jobs:
           FAL_KEY: ${{ secrets.FAL_KEY }}
           RUNWARE_KEY: ${{ secrets.RUNWARE_KEY }}
           API_KEY: ${{ secrets.API_KEY }}
-          PROD_SERVER_DOMAIN: ${{ secrets.PROD_SERVER_DOMAIN }}
-          PROD_WEB_DOMAIN: ${{ secrets.PROD_WEB_DOMAIN }}
-          CF_WORKERS_SUBDOMAIN: ${{ secrets.CF_WORKERS_SUBDOMAIN }}
           VITE_BUILD_ID: ${{ github.sha }}
         timeout-minutes: 10
 
@@ -103,4 +100,3 @@ jobs:
         run: bun run destroy
         env:
           ALCHEMY_STAGE: ${{ steps.stage.outputs.stage }}
-          CF_WORKERS_SUBDOMAIN: ${{ secrets.CF_WORKERS_SUBDOMAIN }}
