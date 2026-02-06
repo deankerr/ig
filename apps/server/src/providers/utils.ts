@@ -2,23 +2,24 @@
  * Shared utilities for provider implementations.
  */
 
+import type { Result } from "../utils/result"
+import { getErrorMessage } from "../utils/error"
+
+type FetchResult = Result<{ data: ArrayBuffer; contentType: string | null }>
+
 /**
  * Fetch data from a URL with error handling.
  */
-export async function fetchUrl(
-  url: string,
-): Promise<
-  { ok: true; data: ArrayBuffer; contentType: string | null } | { ok: false; error: string }
-> {
+export async function fetchUrl(url: string): Promise<FetchResult> {
   try {
     const response = await fetch(url)
     if (!response.ok) {
-      return { ok: false, error: `HTTP ${response.status}` }
+      return { ok: false, message: `HTTP ${response.status}` }
     }
     const contentType = response.headers.get("content-type")
-    return { ok: true, data: await response.arrayBuffer(), contentType }
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    return { ok: true, value: { data: await response.arrayBuffer(), contentType } }
+  } catch (err) {
+    return { ok: false, message: getErrorMessage(err) }
   }
 }
 

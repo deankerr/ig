@@ -109,21 +109,23 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
       if (!result.ok) {
         await this.fail({
           id: args.id,
-          error: { code: result.code, message: result.message },
+          error: { code: result.error?.code ?? "UNKNOWN", message: result.message },
         })
-        console.log("generation_failed", { generationId: args.id, code: result.code })
+        console.log("generation_failed", { generationId: args.id, code: result.error?.code })
         return
       }
+
+      const { outputs, requestId, metadata: resultMetadata } = result.value
 
       const generation = await this.get({ id: args.id })
       if (!generation) {
         throw new Error(`Generation not found: ${args.id}`)
       }
 
-      const batchTag = result.outputs.length > 1 ? `batch:${args.id}` : null
+      const batchTag = outputs.length > 1 ? `batch:${args.id}` : null
 
-      for (let i = 0; i < result.outputs.length; i++) {
-        const output = result.outputs[i]
+      for (let i = 0; i < outputs.length; i++) {
+        const output = outputs[i]
         if (!output) continue
 
         const isFirst = i === 0
@@ -132,21 +134,22 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
         // Merge metadata (used for both success and failure)
         const mergedMetadata = {
           ...generation.providerMetadata,
-          ...result.metadata,
+          ...resultMetadata,
         }
 
         // Handle per-output failure
         if (!output.ok) {
+          const code = output.error?.code ?? "UNKNOWN"
           if (isFirst) {
             // Update original generation to failed
             await db
               .update(generations)
               .set({
                 status: "failed",
-                errorCode: output.code,
+                errorCode: code,
                 errorMessage: output.message,
                 completedAt: new Date(),
-                providerRequestId: result.requestId,
+                providerRequestId: requestId,
                 providerMetadata: mergedMetadata,
               })
               .where(eq(generations.id, genId))
@@ -159,9 +162,9 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
               model: generation.model,
               input: generation.input,
               tags: batchTag ? [...generation.tags, batchTag] : generation.tags,
-              errorCode: output.code,
+              errorCode: code,
               errorMessage: output.message,
-              providerRequestId: result.requestId,
+              providerRequestId: requestId,
               providerMetadata: mergedMetadata,
               createdAt: generation.createdAt,
               completedAt: new Date(),
@@ -170,20 +173,22 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
 
           console.log("generation_output_failed", {
             generationId: genId,
-            code: output.code,
+            code,
             batch: !isFirst,
           })
           continue
         }
 
+        const { data, contentType, metadata: outputMeta } = output.value
+
         // Store to R2
         const r2Key = `generations/${genId}`
-        await bucket.put(r2Key, output.data, {
-          httpMetadata: { contentType: output.contentType },
+        await bucket.put(r2Key, data, {
+          httpMetadata: { contentType },
         })
 
         // Add per-output metadata
-        const outputMetadata = { ...mergedMetadata, ...output.metadata }
+        const outputMetadata = { ...mergedMetadata, ...outputMeta }
 
         if (isFirst) {
           // Update the original generation
@@ -191,9 +196,9 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
             .update(generations)
             .set({
               status: "ready",
-              contentType: output.contentType,
+              contentType,
               completedAt: new Date(),
-              providerRequestId: result.requestId,
+              providerRequestId: requestId,
               providerMetadata: outputMetadata,
             })
             .where(eq(generations.id, genId))
@@ -206,8 +211,8 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
             model: generation.model,
             input: generation.input,
             tags: batchTag ? [...generation.tags, batchTag] : generation.tags,
-            contentType: output.contentType,
-            providerRequestId: result.requestId,
+            contentType,
+            providerRequestId: requestId,
             providerMetadata: outputMetadata,
             createdAt: generation.createdAt,
             completedAt: new Date(),
@@ -216,7 +221,7 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
 
         console.log("generation_ready", {
           generationId: genId,
-          contentType: output.contentType,
+          contentType,
           batch: !isFirst,
         })
       }

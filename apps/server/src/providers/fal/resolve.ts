@@ -34,7 +34,7 @@ export async function resolveFalWebhook(
   // Verify signature
   const verification = await verifyWebhook(headers, rawBody)
   if (!verification.valid) {
-    return { ok: false, code: "SIGNATURE_INVALID", message: verification.error }
+    return { ok: false, message: verification.error, error: { code: "SIGNATURE_INVALID" } }
   }
 
   // Parse JSON
@@ -42,7 +42,7 @@ export async function resolveFalWebhook(
   try {
     body = JSON.parse(new TextDecoder().decode(rawBody)) as WebHookResponse
   } catch {
-    return { ok: false, code: "INVALID_JSON", message: "Failed to parse webhook body" }
+    return { ok: false, message: "Failed to parse webhook body", error: { code: "INVALID_JSON" } }
   }
   console.log("fal_webhook", body)
 
@@ -50,7 +50,7 @@ export async function resolveFalWebhook(
 
   // Check for fal errors
   if (body.status === "ERROR") {
-    return { ok: false, code: "FAL_ERROR", message: body.error ?? "Unknown error" }
+    return { ok: false, message: body.error ?? "Unknown error", error: { code: "FAL_ERROR" } }
   }
 
   // Extract metadata
@@ -67,16 +67,14 @@ export async function resolveFalWebhook(
   if (outputs.length === 0) {
     return {
       ok: false,
-      code: "NO_OUTPUTS",
       message: `No outputs found in payload. Fields: ${Object.keys(payload).join(", ")}`,
+      error: { code: "NO_OUTPUTS" },
     }
   }
 
   return {
     ok: true,
-    outputs,
-    requestId: body.request_id,
-    metadata,
+    value: { outputs, requestId: body.request_id, metadata },
   }
 }
 
@@ -114,8 +112,10 @@ async function resolveOutputs(payload: Record<string, unknown>): Promise<Resolve
       return [
         {
           ok: true,
-          data: new TextEncoder().encode(value),
-          contentType: "text/plain; charset=utf-8",
+          value: {
+            data: new TextEncoder().encode(value),
+            contentType: "text/plain; charset=utf-8",
+          },
         },
       ]
     }
@@ -130,11 +130,13 @@ async function resolveOutputs(payload: Record<string, unknown>): Promise<Resolve
 async function resolveUrl(url: string, hintContentType?: string): Promise<ResolvedOutput> {
   const result = await fetchUrl(url)
   if (!result.ok) {
-    return { ok: false, code: "FETCH_FAILED", message: result.error }
+    return { ok: false, message: result.message, error: { code: "FETCH_FAILED" } }
   }
   return {
     ok: true,
-    data: result.data,
-    contentType: result.contentType ?? hintContentType ?? "application/octet-stream",
+    value: {
+      data: result.value.data,
+      contentType: result.value.contentType ?? hintContentType ?? "application/octet-stream",
+    },
   }
 }

@@ -6,40 +6,12 @@
 
 import { fal } from "@fal-ai/client"
 
-type AspectRatio = "landscape_16_9" | "landscape_4_3" | "square" | "portrait_4_3" | "portrait_16_9"
-
-type AutoAspectRatioResult =
-  | {
-      ok: true
-      data: { aspectRatio: AspectRatio; reasoning: string; model: string }
-      error: undefined
-    }
-  | {
-      ok: false
-      data: undefined
-      error: { error: Record<string, unknown>; model: string }
-    }
-
-type GenerationService = {
-  create(args: {
-    provider: string
-    model: string
-    input: Record<string, unknown>
-    tags: string[]
-    slug?: string
-    providerMetadata?: Record<string, unknown>
-  }): Promise<{ id: string; slug: string | null }>
-  markSubmitted(args: {
-    id: string
-    requestId: string
-    providerMetadata?: Record<string, unknown>
-  }): Promise<void>
-}
+import type { AutoAspectRatioResult, GenerationService } from "../../services"
 
 export type CreateContext = {
   env: { FAL_KEY: string; PUBLIC_URL: string }
   services: {
-    generations: GenerationService
+    generations: Pick<GenerationService, "create" | "markSubmitted">
     autoAspectRatio: (prompt: string) => Promise<AutoAspectRatioResult>
   }
 }
@@ -61,13 +33,11 @@ export async function create(ctx: CreateContext, request: CreateRequest) {
     const result = await ctx.services.autoAspectRatio(input.prompt as string)
 
     if (result.ok) {
-      input.image_size = result.data.aspectRatio
-      providerMetadata = { ig_preprocessing: { autoAspectRatio: result.data } }
-      console.log("auto_aspect_ratio_created", result.data)
-    } else {
-      console.log("auto_aspect_ratio_error", result.error)
-      providerMetadata = { ig_preprocessing: { autoAspectRatio: { error: result.error } } }
+      input.image_size = result.value.aspectRatio
     }
+
+    // store result data
+    providerMetadata = { ig_preprocessing: { autoAspectRatio: result } }
   }
 
   // Create record with metadata included
