@@ -10,7 +10,7 @@ Consumers include traditional web apps, Discord bots, CLI tools - anything I bui
 
 ## What It Does
 
-- **Inference orchestration** via fal.ai - text-to-image, image-to-image, image-to-video, vision models, anything fal supports
+- **Inference orchestration** via fal.ai (now also Runware) - text-to-image, image-to-image, image-to-video, vision models, anything fal supports
 - **Artifact storage** - outputs stored in R2, inputs and metadata in D1
 - **Full provenance** - every artifact retains its input parameters, endpoint, timing, metrics
 - **Flexible tagging** - consumers define their own organization schemes
