@@ -30,7 +30,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { formatFalEndpointId } from "@/lib/format-endpoint"
-import { client } from "@/utils/orpc"
+import {
+  generationModelsQueryOptions,
+  generationTagsQueryOptions,
+  generationsInfiniteOptions,
+} from "@/queries/generations"
 
 const searchSchema = z.object({
   status: z.enum(["all", "pending", "ready", "failed"]).optional(),
@@ -183,11 +187,7 @@ function GenerationsPage() {
     setModelInput(modelFilter ?? "")
   }, [modelFilter])
 
-  const modelsQuery = useQuery({
-    queryKey: ["generations", "listModels"],
-    queryFn: () => client.generations.listModels({}),
-    staleTime: 60_000,
-  })
+  const modelsQuery = useQuery(generationModelsQueryOptions())
 
   const filteredModels = useMemo(() => {
     const all = modelsQuery.data?.models ?? []
@@ -196,11 +196,7 @@ function GenerationsPage() {
     return all.filter((m: string) => m.toLowerCase().includes(lower))
   }, [modelsQuery.data?.models, modelInput])
 
-  const tagsQuery = useQuery({
-    queryKey: ["generations", "listTags"],
-    queryFn: () => client.generations.listTags({}),
-    staleTime: 60_000,
-  })
+  const tagsQuery = useQuery(generationTagsQueryOptions())
 
   const availableTags = useMemo(() => {
     const all = tagsQuery.data?.tags ?? []
@@ -213,25 +209,13 @@ function GenerationsPage() {
     return availableTags.filter((t) => t.toLowerCase().includes(lower))
   }, [availableTags, tagInput])
 
-  const generationsQuery = useInfiniteQuery({
-    queryKey: [
-      "generations",
-      "list",
-      { status: statusFilter, model: modelFilter, tags: tagFilters },
-    ],
-    queryFn: async ({ pageParam }) => {
-      return client.generations.list({
-        status: statusFilter === "all" ? undefined : (statusFilter as GenerationStatus),
-        model: modelFilter,
-        tags: tagFilters.length > 0 ? tagFilters : undefined,
-        limit: 24,
-        cursor: pageParam,
-      })
-    },
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
-    refetchInterval: statusFilter === "pending" || statusFilter === "all" ? 5000 : false,
-  })
+  const generationsQuery = useInfiniteQuery(
+    generationsInfiniteOptions({
+      status: statusFilter,
+      model: modelFilter,
+      tags: tagFilters,
+    }),
+  )
 
   const allGenerations = generationsQuery.data?.pages.flatMap((page) => page.items ?? []) ?? []
 

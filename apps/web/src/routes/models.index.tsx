@@ -36,7 +36,7 @@ import { useAllModels, type Model } from "@/hooks/use-all-models"
 import { useSortable } from "@/hooks/use-sortable"
 import { formatFalEndpointId } from "@/lib/format-endpoint"
 import { filterModels } from "@/lib/fuzzy-search"
-import { client } from "@/utils/orpc"
+import { startSyncOptions } from "@/queries/models"
 
 export const Route = createFileRoute("/models/")({
   component: ModelsPage,
@@ -73,7 +73,7 @@ function ModelsPage() {
   const { models, isLoading } = useAllModels()
 
   const syncMutation = useMutation({
-    mutationFn: (params: { all?: boolean }) => client.models.startSync(params),
+    ...startSyncOptions(),
     onSuccess: (data) => {
       if (data.started) {
         toast.success("Model sync started")

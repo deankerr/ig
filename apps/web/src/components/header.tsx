@@ -4,41 +4,18 @@ import { CircleIcon, RefreshCwIcon } from "lucide-react"
 
 import { ApiKeySettings } from "./api-key-settings"
 import { PulsingDot } from "./pulsing-dot"
-import { client } from "@/utils/orpc"
+import { healthQueryOptions } from "@/queries/health"
+import { pendingCountQueryOptions } from "@/queries/generations"
+import { syncStatusQueryOptions } from "@/queries/models"
 import { cn } from "@/lib/utils"
 import { env } from "@ig/env/web"
 
 export default function Header() {
   const location = useLocation()
 
-  const healthQuery = useQuery({
-    queryKey: ["health"],
-    queryFn: () => client.healthCheck(),
-    refetchInterval: 30000,
-    retry: 1,
-  })
-
-  const pendingQuery = useQuery({
-    queryKey: ["generations", "pending-count"],
-    queryFn: () => client.generations.list({ status: "pending", limit: 1 }),
-    refetchInterval: 5000,
-  })
-
-  const syncStatusQuery = useQuery({
-    queryKey: ["models", "syncStatus"],
-    queryFn: () => client.models.getSyncStatus(),
-    refetchInterval: (query) => {
-      const data = query.state.data
-      const activeStatuses = ["running", "queued", "waiting"]
-      if (
-        activeStatuses.includes(data?.standard ?? "") ||
-        activeStatuses.includes(data?.all ?? "")
-      ) {
-        return 2000
-      }
-      return 30000
-    },
-  })
+  const healthQuery = useQuery(healthQueryOptions())
+  const pendingQuery = useQuery(pendingCountQueryOptions())
+  const syncStatusQuery = useQuery(syncStatusQueryOptions())
 
   const isConnected = healthQuery.isSuccess
   const pendingCount = pendingQuery.data?.items.length ?? 0

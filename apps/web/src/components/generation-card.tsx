@@ -22,7 +22,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { formatFalEndpointId } from "@/lib/format-endpoint"
-import { client, queryClient } from "@/utils/orpc"
+import {
+  deleteGenerationOptions,
+  regenerateGenerationOptions,
+  invalidateGenerations,
+} from "@/queries/generations"
 
 type Generation = {
   id: string
@@ -56,9 +60,9 @@ export function GenerationCard({
   const prompt = getPrompt(generation.input)
 
   const deleteMutation = useMutation({
-    mutationFn: () => client.generations.delete({ id: generation.id }),
+    ...deleteGenerationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["generations"] })
+      invalidateGenerations()
       setShowDeleteDialog(false)
     },
     onError: (error) => {
@@ -67,9 +71,9 @@ export function GenerationCard({
   })
 
   const regenerateMutation = useMutation({
-    mutationFn: () => client.generations.regenerate({ id: generation.id }),
+    ...regenerateGenerationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["generations"] })
+      invalidateGenerations()
       toast.success("Regeneration submitted")
     },
     onError: (error) => {
@@ -125,7 +129,7 @@ export function GenerationCard({
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.preventDefault()
-                    regenerateMutation.mutate()
+                    regenerateMutation.mutate({ id: generation.id })
                   }}
                   disabled={regenerateMutation.isPending}
                 >
@@ -223,7 +227,7 @@ export function GenerationCard({
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => deleteMutation.mutate()}
+              onClick={() => deleteMutation.mutate({ id: generation.id })}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "deleting..." : "delete"}

@@ -5,7 +5,7 @@ import ReactDOM from "react-dom/client"
 
 import Loader from "./components/loader"
 import { routeTree } from "./routeTree.gen"
-import { orpc, queryClient } from "./utils/orpc"
+import { queryClient } from "./utils/orpc"
 
 const persister = createSyncStoragePersister({
   storage: window.localStorage,
@@ -16,7 +16,7 @@ const router = createRouter({
   routeTree,
   defaultPreload: "intent",
   defaultPendingComponent: () => <Loader />,
-  context: { orpc, queryClient },
+  context: { queryClient },
   Wrap: function WrapComponent({ children }: { children: React.ReactNode }) {
     return (
       <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>

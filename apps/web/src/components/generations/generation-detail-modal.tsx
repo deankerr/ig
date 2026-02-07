@@ -35,7 +35,14 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { formatFalEndpointId } from "@/lib/format-endpoint"
-import { client, queryClient } from "@/utils/orpc"
+import {
+  generationQueryOptions,
+  deleteGenerationOptions,
+  regenerateGenerationOptions,
+  updateGenerationOptions,
+  invalidateGenerations,
+  invalidateGeneration,
+} from "@/queries/generations"
 import { env } from "@ig/env/web"
 
 type GenerationDetailModalProps = {
@@ -130,17 +137,12 @@ export function GenerationDetailModal({
     return () => window.removeEventListener("keydown", handleKeyDown, { capture: true })
   }, [generationId, hasPrev, hasNext, onPrev, onNext])
 
-  const generationQuery = useQuery({
-    queryKey: ["generations", "get", { id: generationId }],
-    queryFn: () => client.generations.get({ id: generationId! }),
-    enabled: !!generationId,
-    refetchInterval: (query) => (query.state.data?.status === "pending" ? 2000 : false),
-  })
+  const generationQuery = useQuery(generationQueryOptions(generationId))
 
   const deleteMutation = useMutation({
-    mutationFn: () => client.generations.delete({ id: generationId! }),
+    ...deleteGenerationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["generations"] })
+      invalidateGenerations()
       onClose()
     },
     onError: (error) => {
@@ -149,9 +151,9 @@ export function GenerationDetailModal({
   })
 
   const regenerateMutation = useMutation({
-    mutationFn: () => client.generations.regenerate({ id: generationId! }),
+    ...regenerateGenerationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["generations"] })
+      invalidateGenerations()
       onClose()
       toast.success("Regeneration submitted")
     },
@@ -161,10 +163,9 @@ export function GenerationDetailModal({
   })
 
   const updateMutation = useMutation({
-    mutationFn: (args: { add?: string[]; remove?: string[]; slug?: string }) =>
-      client.generations.update({ id: generationId!, ...args }),
+    ...updateGenerationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["generations", "get", { id: generationId }] })
+      if (generationId) invalidateGeneration(generationId)
       setEditingSlug(false)
     },
     onError: (error) => {
@@ -181,7 +182,7 @@ export function GenerationDetailModal({
   const prompt = typeof generation?.input.prompt === "string" ? generation.input.prompt : null
 
   function handleRemoveTag(tag: string) {
-    updateMutation.mutate({ remove: [tag] })
+    if (generationId) updateMutation.mutate({ id: generationId, remove: [tag] })
   }
 
   async function copyFileUrl() {
@@ -340,7 +341,9 @@ export function GenerationDetailModal({
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => regenerateMutation.mutate()}
+                              onClick={() =>
+                                generationId && regenerateMutation.mutate({ id: generationId })
+                              }
                               disabled={regenerateMutation.isPending}
                             >
                               <RefreshCwIcon data-icon="inline-start" />
@@ -392,8 +395,8 @@ export function GenerationDetailModal({
                               setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-/]/g, ""))
                             }
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                updateMutation.mutate({ slug: slugInput })
+                              if (e.key === "Enter" && generationId) {
+                                updateMutation.mutate({ id: generationId, slug: slugInput })
                               } else if (e.key === "Escape") {
                                 setEditingSlug(false)
                               }
@@ -404,7 +407,10 @@ export function GenerationDetailModal({
                           />
                           <InputGroupAddon align="inline-end">
                             <InputGroupButton
-                              onClick={() => updateMutation.mutate({ slug: slugInput })}
+                              onClick={() =>
+                                generationId &&
+                                updateMutation.mutate({ id: generationId, slug: slugInput })
+                              }
                               disabled={updateMutation.isPending}
                             >
                               {updateMutation.isPending ? "..." : "save"}
@@ -486,7 +492,7 @@ export function GenerationDetailModal({
                   <div className="p-4">
                     <h3 className="text-xs text-muted-foreground mb-2">tags</h3>
                     <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                      {generation.tags.map((tag) => (
+                      {generation.tags.map((tag: string) => (
                         <Tag key={tag} onRemove={() => handleRemoveTag(tag)}>
                           {tag}
                         </Tag>
@@ -494,8 +500,8 @@ export function GenerationDetailModal({
                     </div>
                     <TagInput
                       onAdd={(tag) => {
-                        if (!generation.tags.includes(tag)) {
-                          updateMutation.mutate({ add: [tag] })
+                        if (!generation.tags.includes(tag) && generationId) {
+                          updateMutation.mutate({ id: generationId, add: [tag] })
                         }
                       }}
                     />
@@ -523,7 +529,7 @@ export function GenerationDetailModal({
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => deleteMutation.mutate()}
+              onClick={() => generationId && deleteMutation.mutate({ id: generationId })}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "deleting..." : "delete"}

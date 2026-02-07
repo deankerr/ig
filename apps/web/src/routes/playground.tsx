@@ -19,7 +19,7 @@ import {
   AutocompleteEmpty,
 } from "@/components/ui/autocomplete"
 import { filterModelForAutocomplete } from "@/lib/fuzzy-search"
-import { client, queryClient } from "@/utils/orpc"
+import { createGenerationOptions, invalidateGenerations } from "@/queries/generations"
 
 export const Route = createFileRoute("/playground")({
   component: PlaygroundPage,
@@ -40,26 +40,9 @@ function PlaygroundPage() {
   const [jsonError, setJsonError] = useState<string | null>(null)
 
   const createMutation = useMutation({
-    mutationFn: async () => {
-      let parsedInput: Record<string, unknown>
-      try {
-        parsedInput = JSON.parse(inputJson)
-        setJsonError(null)
-      } catch {
-        throw new Error("Invalid JSON input")
-      }
-
-      return client.generations.create({
-        provider: model.includes("@") ? "runware" : "fal",
-        model,
-        input: parsedInput,
-        tags,
-        slug: slug.trim() || undefined,
-        autoAspectRatio: autoAspectRatio || undefined,
-      })
-    },
+    ...createGenerationOptions(),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["generations"] })
+      invalidateGenerations()
       toast.success("Generation submitted")
       navigate({ to: "/generations", search: { selected: data.id } })
     },
@@ -71,6 +54,26 @@ function PlaygroundPage() {
       }
     },
   })
+
+  function handleSubmit() {
+    let parsedInput: Record<string, unknown>
+    try {
+      parsedInput = JSON.parse(inputJson)
+      setJsonError(null)
+    } catch {
+      setJsonError("Invalid JSON format")
+      return
+    }
+
+    createMutation.mutate({
+      provider: model.includes("@") ? "runware" : "fal",
+      model,
+      input: parsedInput,
+      tags,
+      slug: slug.trim() || undefined,
+      autoAspectRatio: autoAspectRatio || undefined,
+    })
+  }
 
   function handleRemoveTag(tag: string) {
     setTags(tags.filter((t) => t !== tag))
@@ -99,7 +102,7 @@ function PlaygroundPage() {
                 </div>
                 <Button
                   size="sm"
-                  onClick={() => createMutation.mutate()}
+                  onClick={handleSubmit}
                   disabled={createMutation.isPending || !!jsonError || !model.trim()}
                   className="h-7 text-xs"
                 >

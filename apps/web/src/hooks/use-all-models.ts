@@ -1,24 +1,13 @@
 import { useEffect, useMemo } from "react"
 import { useInfiniteQuery } from "@tanstack/react-query"
 
-import { env } from "@ig/env/web"
-import { client } from "@/utils/orpc"
+import { allModelsInfiniteOptions } from "@/queries/models"
+import { orpc } from "@/utils/orpc"
 
-const PAGE_SIZE = 100
-
-export type Model = Awaited<ReturnType<typeof client.models.list>>["items"][number]
+export type Model = Awaited<ReturnType<typeof orpc.models.list.call>>["items"][number]
 
 export function useAllModels() {
-  const query = useInfiniteQuery({
-    queryKey: ["models", "all", env.VITE_BUILD_ID],
-    queryFn: async ({ pageParam = 0 }) => {
-      return client.models.list({ offset: pageParam, limit: PAGE_SIZE })
-    },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
-      return lastPage.hasMore ? lastPageParam + PAGE_SIZE : undefined
-    },
-  })
+  const query = useInfiniteQuery(allModelsInfiniteOptions())
 
   // Auto-fetch all pages when there are more to fetch
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = query

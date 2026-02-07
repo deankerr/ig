@@ -15,7 +15,7 @@
     "@hookform/resolvers": "^5.1.1",
     "@ig/env": "workspace:*",
     "@orpc/client": "catalog:",
-    "@orpc/tanstack-query": "^1.12.2",
+    "@orpc/tanstack-query": "^1.13.4",
     "@tailwindcss/vite": "^4.0.15",
     "@tanstack/query-sync-storage-persister": "^5.90.22",
     "@tanstack/react-form": "^1.12.3",
@@ -38,7 +38,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@ig/config": "workspace:*",
-    "@tanstack/react-query-devtools": "^5.91.1",
+    "@tanstack/react-query-devtools": "^5.91.3",
     "@tanstack/react-router-devtools": "^1.157.5",
     "@tanstack/router-plugin": "^1.157.5",
     "@types/node": "catalog:",

@@ -7,12 +7,10 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
 import { RouteError } from "@/components/route-error"
 import Header from "@/components/header"
 import { Toaster } from "@/components/ui/sonner"
-import { orpc } from "@/utils/orpc"
 
 import "../index.css"
 
 export interface RouterAppContext {
-  orpc: typeof orpc
   queryClient: QueryClient
 }
 
