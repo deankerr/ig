@@ -10,11 +10,11 @@ const RUNWARE_API_URL = "https://api.runware.ai/v1"
 
 // Map provider-agnostic aspect ratios to Runware pixel dimensions
 const ASPECT_RATIO_DIMENSIONS: Record<AspectRatio, { width: number; height: number }> = {
-  landscape_16_9: { width: 1344, height: 768 },
-  landscape_4_3: { width: 1152, height: 896 },
-  square: { width: 1024, height: 1024 },
-  portrait_4_3: { width: 896, height: 1152 },
-  portrait_16_9: { width: 768, height: 1344 },
+  landscape_16_9: { width: 1920, height: 1088 },
+  landscape_4_3: { width: 1536, height: 1152 },
+  square: { width: 1280, height: 1280 },
+  portrait_4_3: { width: 1152, height: 1536 },
+  portrait_16_9: { width: 1088, height: 1920 },
 }
 
 export type CreateContext = {
