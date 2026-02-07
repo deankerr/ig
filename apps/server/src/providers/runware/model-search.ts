@@ -7,7 +7,7 @@
  * @see https://runware.ai/docs/utilities/model-search
  */
 
-const RUNWARE_API_URL = "https://api.runware.ai/v1"
+const RUNWARE_API_URL = 'https://api.runware.ai/v1'
 
 // -- Types --
 
@@ -64,11 +64,11 @@ export async function searchModels(
   const taskUUID = crypto.randomUUID()
 
   const response = await fetch(RUNWARE_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify([
-      { taskType: "authentication", apiKey },
-      { taskType: "modelSearch", taskUUID, ...params },
+      { taskType: 'authentication', apiKey },
+      { taskType: 'modelSearch', taskUUID, ...params },
     ]),
   })
 
@@ -80,7 +80,7 @@ export async function searchModels(
     data?: Array<{ taskType: string; results?: Model[]; totalResults?: number }>
   }
 
-  const searchResult = body.data?.find((d) => d.taskType === "modelSearch")
+  const searchResult = body.data?.find((d) => d.taskType === 'modelSearch')
   return {
     results: searchResult?.results ?? [],
     totalResults: searchResult?.totalResults ?? 0,

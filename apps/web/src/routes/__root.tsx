@@ -1,14 +1,13 @@
-import type { QueryClient } from "@tanstack/react-query"
+import type { QueryClient } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { HeadContent, Outlet, createRootRouteWithContext } from '@tanstack/react-router'
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
-import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router"
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
+import Header from '@/components/header'
+import { RouteError } from '@/components/route-error'
+import { Toaster } from '@/components/ui/sonner'
 
-import { RouteError } from "@/components/route-error"
-import Header from "@/components/header"
-import { Toaster } from "@/components/ui/sonner"
-
-import "../index.css"
+import '../index.css'
 
 export interface RouterAppContext {
   queryClient: QueryClient
@@ -20,17 +19,17 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({
     meta: [
       {
-        title: "ig-console",
+        title: 'ig-console',
       },
       {
-        name: "description",
-        content: "Developer console for ig generative AI infrastructure",
+        name: 'description',
+        content: 'Developer console for ig generative AI infrastructure',
       },
     ],
     links: [
       {
-        rel: "icon",
-        href: "/favicon.ico",
+        rel: 'icon',
+        href: '/favicon.ico',
       },
     ],
   }),
@@ -40,7 +39,7 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <div className="flex h-svh flex-col overflow-hidden bg-background text-foreground">
+      <div className="bg-background text-foreground flex h-svh flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-hidden">
           <Outlet />
@@ -49,7 +48,7 @@ function RootComponent() {
       <Toaster
         position="bottom-right"
         toastOptions={{
-          className: "font-mono text-sm border-border bg-card",
+          className: 'font-mono text-sm border-border bg-card',
         }}
       />
       <TanStackRouterDevtools position="bottom-left" />

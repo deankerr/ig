@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from "react"
-import { Film, FileAudio, FileQuestion, Image as ImageIcon } from "lucide-react"
+import { Film, FileAudio, FileQuestion, Image as ImageIcon } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 
-import { serverUrl } from "@/lib/server-url"
-import { cn } from "@/lib/utils"
+import { serverUrl } from '@/lib/server-url'
+import { cn } from '@/lib/utils'
 
 /**
  * Max thumbnail dimension in pixels.
@@ -25,7 +25,7 @@ export function ThumbnailGrid({
 }) {
   return (
     <div
-      className={cn("grid gap-3 justify-center", className)}
+      className={cn('grid justify-center gap-3', className)}
       style={{
         gridTemplateColumns: `repeat(auto-fill, minmax(200px, ${THUMBNAIL_SIZE}px))`,
       }}
@@ -48,22 +48,22 @@ export function Thumbnail({
 }: {
   generationId: string
   contentType: string | null
-  status: "pending" | "ready" | "failed"
+  status: 'pending' | 'ready' | 'failed'
   className?: string
   size?: number
 }) {
   const [error, setError] = useState(false)
 
-  const isImage = contentType?.startsWith("image/")
-  const isVideo = contentType?.startsWith("video/")
-  const isAudio = contentType?.startsWith("audio/")
+  const isImage = contentType?.startsWith('image/')
+  const isVideo = contentType?.startsWith('video/')
+  const isAudio = contentType?.startsWith('audio/')
 
   // For ready images, use server-side image transforms (Cloudflare Images binding)
   // f=auto negotiates best format (avif/webp) based on browser Accept header
-  if (status === "ready" && isImage && !error) {
+  if (status === 'ready' && isImage && !error) {
     const url = new URL(`/generations/${generationId}/file`, serverUrl)
-    url.searchParams.set("w", String(size))
-    url.searchParams.set("f", "auto")
+    url.searchParams.set('w', String(size))
+    url.searchParams.set('f', 'auto')
     const src = url.href
 
     return (
@@ -71,37 +71,37 @@ export function Thumbnail({
         src={src}
         alt=""
         onError={() => setError(true)}
-        className={cn("object-cover", className)}
+        className={cn('object-cover', className)}
       />
     )
   }
 
   // Pending state with animated scanlines
-  if (status === "pending") {
+  if (status === 'pending') {
     return (
-      <div className={cn("flex items-center justify-center bg-muted scanlines-pending", className)}>
-        <span className="text-xs text-status-pending animate-pulse">...</span>
+      <div className={cn('bg-muted scanlines-pending flex items-center justify-center', className)}>
+        <span className="text-status-pending animate-pulse text-xs">...</span>
       </div>
     )
   }
 
   // Failed state with red scanlines
-  if (status === "failed") {
+  if (status === 'failed') {
     return (
-      <div className={cn("flex items-center justify-center bg-muted scanlines-failed", className)}>
-        <span className="text-xs text-status-failed">err</span>
+      <div className={cn('bg-muted scanlines-failed flex items-center justify-center', className)}>
+        <span className="text-status-failed text-xs">err</span>
       </div>
     )
   }
 
   // Ready non-image fallback (video, audio, unknown)
   const Icon = isVideo ? Film : isAudio ? FileAudio : isImage ? ImageIcon : FileQuestion
-  const label = isVideo ? "video" : isAudio ? "audio" : (contentType?.split("/")[1] ?? "file")
+  const label = isVideo ? 'video' : isAudio ? 'audio' : (contentType?.split('/')[1] ?? 'file')
 
   return (
-    <div className={cn("flex flex-col items-center justify-center gap-1 bg-muted", className)}>
-      <Icon className="h-5 w-5 text-muted-foreground" />
-      <span className="text-[10px] text-muted-foreground">{label}</span>
+    <div className={cn('bg-muted flex flex-col items-center justify-center gap-1', className)}>
+      <Icon className="text-muted-foreground h-5 w-5" />
+      <span className="text-muted-foreground text-[10px]">{label}</span>
     </div>
   )
 }

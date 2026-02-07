@@ -1,25 +1,26 @@
-import { useMutation } from "@tanstack/react-query"
-import { BracesIcon, MoreHorizontalIcon, RefreshCwIcon, Trash2Icon } from "lucide-react"
-import { useState } from "react"
-import { toast } from "sonner"
-import { DeleteGenerationDialog } from "@/components/generations/delete-generation-dialog"
-import { Tag } from "@/components/tag"
-import { Thumbnail, THUMBNAIL_SIZE } from "@/components/thumbnail"
-import { TimeAgo } from "@/components/time-ago"
-import { Button } from "@/components/ui/button"
+import { useMutation } from '@tanstack/react-query'
+import { BracesIcon, MoreHorizontalIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
+
+import { DeleteGenerationDialog } from '@/components/generations/delete-generation-dialog'
+import { Tag } from '@/components/tag'
+import { Thumbnail, THUMBNAIL_SIZE } from '@/components/thumbnail'
+import { TimeAgo } from '@/components/time-ago'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { formatDuration } from "@/lib/format"
-import { formatFalEndpointId } from "@/lib/format-endpoint"
-import { regenerateGenerationOptions, invalidateGenerations } from "@/queries/generations"
-import type { Generation } from "@/types"
+} from '@/components/ui/dropdown-menu'
+import { formatDuration } from '@/lib/format'
+import { formatFalEndpointId } from '@/lib/format-endpoint'
+import { regenerateGenerationOptions, invalidateGenerations } from '@/queries/generations'
+import type { Generation } from '@/types'
 
 function getPrompt(input: Record<string, unknown>): string | null {
-  if (typeof input.prompt === "string") return input.prompt
+  if (typeof input.prompt === 'string') return input.prompt
   return null
 }
 
@@ -41,30 +42,30 @@ export function GenerationCard({
     ...regenerateGenerationOptions(),
     onSuccess: () => {
       invalidateGenerations()
-      toast.success("Regeneration submitted")
+      toast.success('Regeneration submitted')
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to regenerate")
+      toast.error(error.message || 'Failed to regenerate')
     },
   })
 
   const cardClassName =
-    "group border border-border bg-card hover:border-muted-foreground/50 transition-colors block cursor-pointer"
+    'group border border-border bg-card hover:border-muted-foreground/50 transition-colors block cursor-pointer'
 
   const cardContent = (
     <>
-      <div className="aspect-square overflow-hidden bg-muted">
+      <div className="bg-muted aspect-square overflow-hidden">
         <Thumbnail
           generationId={generation.id}
           contentType={generation.contentType}
           status={generation.status}
-          className="w-full h-full"
+          className="h-full w-full"
         />
       </div>
 
-      <div className="p-2 space-y-1.5 border-t border-border">
+      <div className="border-border space-y-1.5 border-t p-2">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-xs text-muted-foreground truncate">
+          <span className="text-muted-foreground truncate font-mono text-xs">
             {generation.slug ?? generation.id}
           </span>
           <DropdownMenu>
@@ -92,7 +93,7 @@ export function GenerationCard({
                   view json
                 </DropdownMenuItem>
               )}
-              {generation.status === "failed" && (
+              {generation.status === 'failed' && (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.preventDefault()
@@ -119,11 +120,11 @@ export function GenerationCard({
         </div>
 
         {prompt && (
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{prompt}</p>
+          <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">{prompt}</p>
         )}
 
-        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-          <span className="truncate max-w-[120px]">{formatFalEndpointId(generation.model)}</span>
+        <div className="text-muted-foreground flex items-center gap-2 text-[10px]">
+          <span className="max-w-[120px] truncate">{formatFalEndpointId(generation.model)}</span>
           <span>·</span>
           <TimeAgo date={new Date(generation.createdAt)} />
           {generation.completedAt && (
@@ -139,7 +140,7 @@ export function GenerationCard({
               </Tag>
             ))}
             {generation.tags.length > 3 && (
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-muted-foreground text-[10px]">
                 +{generation.tags.length - 3}
               </span>
             )}
@@ -158,14 +159,14 @@ export function GenerationCard({
         onKeyDown={
           onSelect
             ? (e) => {
-                if (e.key === "Enter" || e.key === " ") {
+                if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
                   onSelect(generation.id)
                 }
               }
             : undefined
         }
-        role={onSelect ? "button" : undefined}
+        role={onSelect ? 'button' : undefined}
         tabIndex={onSelect ? 0 : undefined}
       >
         {cardContent}

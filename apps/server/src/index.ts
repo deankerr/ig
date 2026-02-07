@@ -1,17 +1,18 @@
-import { createContext } from "./context"
-import { appRouter } from "./routers"
-import { createServices, type Services } from "./services"
-import { webhook as falWebhook } from "./providers/fal"
-import { webhook as runwareWebhook } from "./providers/runware"
-import { handleOrpcError, handleHonoError } from "./utils/error"
-import { OpenAPIHandler } from "@orpc/openapi/fetch"
-import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins"
-import { onError } from "@orpc/server"
-import { RPCHandler } from "@orpc/server/fetch"
-import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4"
-import { Hono } from "hono"
-import { cors } from "hono/cors"
-import { fileRoutes } from "./routes/file"
+import { OpenAPIHandler } from '@orpc/openapi/fetch'
+import { OpenAPIReferencePlugin } from '@orpc/openapi/plugins'
+import { onError } from '@orpc/server'
+import { RPCHandler } from '@orpc/server/fetch'
+import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4'
+import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+
+import { createContext } from './context'
+import { webhook as falWebhook } from './providers/fal'
+import { webhook as runwareWebhook } from './providers/runware'
+import { appRouter } from './routers'
+import { fileRoutes } from './routes/file'
+import { createServices, type Services } from './services'
+import { handleOrpcError, handleHonoError } from './utils/error'
 
 type Variables = {
   services: Services
@@ -26,23 +27,23 @@ app.onError((error, c) => {
 })
 
 app.use(
-  "/*",
+  '/*',
   cors({
-    origin: "*",
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "x-api-key"],
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
   }),
 )
 
 // Inject services into context
-app.use("/*", async (c, next) => {
-  c.set("services", createServices(c.env))
+app.use('/*', async (c, next) => {
+  c.set('services', createServices(c.env))
   await next()
 })
 
-app.route("/webhooks/fal", falWebhook)
-app.route("/webhooks/runware", runwareWebhook)
-app.route("/", fileRoutes)
+app.route('/webhooks/fal', falWebhook)
+app.route('/webhooks/runware', runwareWebhook)
+app.route('/', fileRoutes)
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
   plugins: [
@@ -52,9 +53,9 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
         components: {
           securitySchemes: {
             ApiKeyAuth: {
-              type: "apiKey",
-              in: "header",
-              name: "x-api-key",
+              type: 'apiKey',
+              in: 'header',
+              name: 'x-api-key',
             },
           },
         },
@@ -69,11 +70,11 @@ export const rpcHandler = new RPCHandler(appRouter, {
   interceptors: [onError(handleOrpcError)],
 })
 
-app.use("/*", async (c, next) => {
-  const context = await createContext({ context: c, services: c.get("services") })
+app.use('/*', async (c, next) => {
+  const context = await createContext({ context: c, services: c.get('services') })
 
   const rpcResult = await rpcHandler.handle(c.req.raw, {
-    prefix: "/rpc",
+    prefix: '/rpc',
     context: context,
   })
 
@@ -82,7 +83,7 @@ app.use("/*", async (c, next) => {
   }
 
   const apiResult = await apiHandler.handle(c.req.raw, {
-    prefix: "/api",
+    prefix: '/api',
     context: context,
   })
 
@@ -93,18 +94,18 @@ app.use("/*", async (c, next) => {
   await next()
 })
 
-app.get("/", (c) => {
-  return c.text("HELLO")
+app.get('/', (c) => {
+  return c.text('HELLO')
 })
 
-app.get("/favicon.ico", (c) => {
+app.get('/favicon.ico', (c) => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <rect width="32" height="32" fill="#171717"/>
   <text x="16" y="22" font-family="ui-monospace, monospace" font-size="14" font-weight="600" fill="#fb923c" text-anchor="middle">ig</text>
 </svg>`
   return c.body(svg, 200, {
-    "Content-Type": "image/svg+xml",
-    "Cache-Control": "public, max-age=31536000",
+    'Content-Type': 'image/svg+xml',
+    'Cache-Control': 'public, max-age=31536000',
   })
 })
 

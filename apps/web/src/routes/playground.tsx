@@ -1,7 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { GenerationCreator } from "@/components/playground/generation-creator"
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
-export const Route = createFileRoute("/playground")({
+import { GenerationCreator } from '@/components/playground/generation-creator'
+
+export const Route = createFileRoute('/playground')({
   component: PlaygroundPage,
 })
 
@@ -11,7 +12,7 @@ function PlaygroundPage() {
   return (
     <div className="h-full">
       <GenerationCreator
-        onSuccess={(g) => navigate({ to: "/generations", search: { selected: g.id } })}
+        onSuccess={(g) => navigate({ to: '/generations', search: { selected: g.id } })}
       />
     </div>
   )

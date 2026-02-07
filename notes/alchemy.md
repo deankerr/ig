@@ -18,9 +18,9 @@ bun alchemy destroy               # Delete all resources for current stage
 Every Cloudflare resource is an async function that returns a typed object:
 
 ```typescript
-const db = await D1Database("database", { migrationsDir: "..." })
-const bucket = await R2Bucket("generations")
-const server = await Worker("server", { bindings: { DB: db, BUCKET: bucket } })
+const db = await D1Database('database', { migrationsDir: '...' })
+const bucket = await R2Bucket('generations')
+const server = await Worker('server', { bindings: { DB: db, BUCKET: bucket } })
 ```
 
 Resources are **memoized** - calling the same resource twice returns the same instance.
@@ -92,9 +92,9 @@ Alchemy tracks what resources exist in **state**. State contains:
 ### CloudflareStateStore (What We Use)
 
 ```typescript
-import { CloudflareStateStore } from "alchemy/state"
+import { CloudflareStateStore } from 'alchemy/state'
 
-const app = await alchemy("ig", {
+const app = await alchemy('ig', {
   stage,
   stateStore: (scope) =>
     new CloudflareStateStore(scope, {
@@ -119,9 +119,9 @@ const app = await alchemy("ig", {
 If state is lost but resources exist, use `adopt: true`:
 
 ```typescript
-const db = await D1Database("database", {
+const db = await D1Database('database', {
   adopt: true, // Takes ownership of existing ig-database-dev
-  migrationsDir: "...",
+  migrationsDir: '...',
 })
 ```
 
@@ -134,7 +134,7 @@ This imports existing resources into state instead of trying to create duplicate
 Alchemy loads all env vars from a single file:
 
 ```typescript
-config({ path: "./.env" }) // packages/infra/.env
+config({ path: './.env' }) // packages/infra/.env
 ```
 
 Since Alchemy controls what bindings each worker receives, there's no need for separate `.env` files per app.
@@ -160,8 +160,8 @@ Secrets require `ALCHEMY_PASSWORD` env var for encryption/decryption.
 Instead of per-environment `.env` files, we derive URLs from stage and environment variables:
 
 ```typescript
-const stage = process.env.ALCHEMY_STAGE ?? "dev"
-const isProd = stage.startsWith("prod")
+const stage = process.env.ALCHEMY_STAGE ?? 'dev'
+const isProd = stage.startsWith('prod')
 
 // Dev: use workers.dev subdomain
 const cfWorkersSubdomain = process.env.CF_WORKERS_SUBDOMAIN // e.g., "dean-kerr"
@@ -182,9 +182,9 @@ const serverPublicUrl = isProd
 ### D1Database
 
 ```typescript
-const db = await D1Database("database", {
+const db = await D1Database('database', {
   adopt: true,
-  migrationsDir: "../../packages/db/src/migrations",
+  migrationsDir: '../../packages/db/src/migrations',
 })
 ```
 
@@ -195,9 +195,9 @@ const db = await D1Database("database", {
 ### R2Bucket
 
 ```typescript
-const bucket = await R2Bucket("generations", {
+const bucket = await R2Bucket('generations', {
   adopt: true,
-  location: "OC", // Optional: geographic hint (APAC, ENAM, WEUR, etc.)
+  location: 'OC', // Optional: geographic hint (APAC, ENAM, WEUR, etc.)
 })
 ```
 
@@ -207,11 +207,11 @@ const bucket = await R2Bucket("generations", {
 ### Worker
 
 ```typescript
-const server = await Worker("server", {
+const server = await Worker('server', {
   adopt: true,
-  cwd: "../../apps/server",
-  entrypoint: "src/index.ts",
-  compatibility: "node",
+  cwd: '../../apps/server',
+  entrypoint: 'src/index.ts',
+  compatibility: 'node',
   observability: { enabled: true, headSamplingRate: 1 },
   bindings: {
     DB: db, // D1 binding
@@ -226,10 +226,10 @@ const server = await Worker("server", {
 ### Vite (Static Sites)
 
 ```typescript
-const web = await Vite("web", {
+const web = await Vite('web', {
   adopt: true,
-  cwd: "../../apps/web",
-  assets: "dist",
+  cwd: '../../apps/web',
+  assets: 'dist',
   bindings: {
     VITE_SERVER_URL: serverUrl,
   },
@@ -247,11 +247,11 @@ Types flow from `alchemy.run.ts` to your Worker code:
 **packages/env/env.d.ts:**
 
 ```typescript
-import { type server } from "@ig/infra/alchemy.run"
+import { type server } from '@ig/infra/alchemy.run'
 
 export type CloudflareEnv = typeof server.Env
 
-declare module "cloudflare:workers" {
+declare module 'cloudflare:workers' {
   namespace Cloudflare {
     export interface Env extends CloudflareEnv {}
   }
@@ -261,7 +261,7 @@ declare module "cloudflare:workers" {
 **In your Worker:**
 
 ```typescript
-import { env } from "cloudflare:workers"
+import { env } from 'cloudflare:workers'
 
 env.DB // Typed as D1Database
 env.GENERATIONS_BUCKET // Typed as R2Bucket
@@ -283,7 +283,7 @@ bun run dev  # Starts local environment with Cloudflare tunnel
 Local dev uses Alchemy's built-in Cloudflare tunnel support to enable webhooks:
 
 ```typescript
-const server = await Worker("server", {
+const server = await Worker('server', {
   // ...
   dev: {
     port: 3000,
@@ -304,7 +304,7 @@ const serverPublicUrl = isProd
   ? `https://${prodServerDomain}`
   : `https://ig-server-${stage}.${cfWorkersSubdomain}.workers.dev`
 
-const server = await Worker("server", {
+const server = await Worker('server', {
   bindings: {
     PUBLIC_URL: serverPublicUrl,
     // ...
@@ -329,14 +329,14 @@ const webhookUrl = `${new URL(request.url).origin}/webhooks/fal`
 Production deployments use custom domains instead of `workers.dev` subdomains:
 
 ```typescript
-const isProd = stage.startsWith("prod")
+const isProd = stage.startsWith('prod')
 
-const server = await Worker("server", {
+const server = await Worker('server', {
   url: !isProd, // workers.dev URL only for non-prod
   domains: isProd ? [{ domainName: prodServerDomain!, adopt: true }] : undefined,
 })
 
-const web = await Vite("web", {
+const web = await Vite('web', {
   url: !isProd,
   domains: isProd ? [{ domainName: prodWebDomain!, adopt: true }] : undefined,
 })
@@ -356,7 +356,7 @@ The deploy script validates these are set for production:
 
 ```typescript
 if (isProd && (!prodServerDomain || !prodWebDomain)) {
-  throw new Error("PROD_SERVER_DOMAIN and PROD_WEB_DOMAIN must be set")
+  throw new Error('PROD_SERVER_DOMAIN and PROD_WEB_DOMAIN must be set')
 }
 ```
 
@@ -371,14 +371,14 @@ function getWorkerUrl(worker: Awaited<ReturnType<typeof Worker>>): string {
     return `https://${worker.domains[0].name}`
   }
   // Fall back to workers.dev URL
-  return worker.url.replace(/\/$/, "") // Strip trailing slash
+  return worker.url.replace(/\/$/, '') // Strip trailing slash
 }
 ```
 
 This ensures the web app receives the correct server URL in all environments:
 
 ```typescript
-const web = await Vite("web", {
+const web = await Vite('web', {
   bindings: {
     VITE_SERVER_URL: getWorkerUrl(server),
   },

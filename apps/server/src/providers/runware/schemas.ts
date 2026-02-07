@@ -7,7 +7,7 @@
  * export type IAudioOutputFormat = "MP3"
  */
 
-import { z } from "zod"
+import { z } from 'zod'
 
 export const RunwareDataSchema = z.looseObject({
   taskUUID: z.string(),
@@ -29,7 +29,7 @@ export const RunwareWebhookSchema = z.union([
   }),
   z.object({
     error: z.looseObject({
-      message: z.string().default("[Unknown Error]"),
+      message: z.string().default('[Unknown Error]'),
     }),
   }),
 ])

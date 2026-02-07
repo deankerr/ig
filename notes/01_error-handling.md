@@ -138,7 +138,7 @@ function getRootCause(error) {
 
 function logError(error) {
   const rootCause = getRootCause(error)
-  console.error("request_error", {
+  console.error('request_error', {
     message: error.message,
     cause: rootCause?.message,
     code: rootCause?.code,

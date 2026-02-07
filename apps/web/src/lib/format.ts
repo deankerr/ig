@@ -1,7 +1,7 @@
 /** Format a unit price with dynamic decimal precision (minimum 2). */
 export function formatPrice(unitPrice: number | null, unit?: string | null): string {
-  if (unitPrice == null) return "\u2014"
-  const decimals = Math.max(2, unitPrice.toString().split(".")[1]?.length ?? 0)
+  if (unitPrice == null) return '\u2014'
+  const decimals = Math.max(2, unitPrice.toString().split('.')[1]?.length ?? 0)
   const price = `$${unitPrice.toFixed(decimals)}`
   return unit ? `${price}/${unit}` : price
 }
@@ -20,5 +20,5 @@ export function parseDate(value: string | Date | null | undefined): Date | null 
 
 /** Normalize slug input: lowercase, alphanumeric + dash + slash only. */
 export function normalizeSlug(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9-/]/g, "")
+  return value.toLowerCase().replace(/[^a-z0-9-/]/g, '')
 }

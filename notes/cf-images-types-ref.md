@@ -1,7 +1,7 @@
 ```ts
 type ImageInfoResponse =
   | {
-      format: "image/svg+xml"
+      format: 'image/svg+xml'
     }
   | {
       format: string
@@ -27,29 +27,29 @@ type ImageTransform = {
       }
   brightness?: number
   contrast?: number
-  fit?: "scale-down" | "contain" | "pad" | "squeeze" | "cover" | "crop"
-  flip?: "h" | "v" | "hv"
+  fit?: 'scale-down' | 'contain' | 'pad' | 'squeeze' | 'cover' | 'crop'
+  flip?: 'h' | 'v' | 'hv'
   gamma?: number
-  segment?: "foreground"
+  segment?: 'foreground'
   gravity?:
-    | "face"
-    | "left"
-    | "right"
-    | "top"
-    | "bottom"
-    | "center"
-    | "auto"
-    | "entropy"
+    | 'face'
+    | 'left'
+    | 'right'
+    | 'top'
+    | 'bottom'
+    | 'center'
+    | 'auto'
+    | 'entropy'
     | {
         x?: number
         y?: number
-        mode: "remainder" | "box-center"
+        mode: 'remainder' | 'box-center'
       }
   rotate?: 0 | 90 | 180 | 270
   saturation?: number
   sharpen?: number
   trim?:
-    | "border"
+    | 'border'
     | {
         top?: number
         bottom?: number
@@ -75,10 +75,10 @@ type ImageDrawOptions = {
   right?: number
 }
 type ImageInputOptions = {
-  encoding?: "base64"
+  encoding?: 'base64'
 }
 type ImageOutputOptions = {
-  format: "image/jpeg" | "image/png" | "image/gif" | "image/webp" | "image/avif" | "rgb" | "rgba"
+  format: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' | 'image/avif' | 'rgb' | 'rgba'
   quality?: number
   background?: string
   anim?: boolean
@@ -122,7 +122,7 @@ interface ImageTransformer {
   output(options: ImageOutputOptions): Promise<ImageTransformationResult>
 }
 type ImageTransformationOutputOptions = {
-  encoding?: "base64"
+  encoding?: 'base64'
 }
 interface ImageTransformationResult {
   /**

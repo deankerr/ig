@@ -1,24 +1,24 @@
-import { generateText, Output } from "ai"
-import { createWorkersAI } from "workers-ai-provider"
-import { z } from "zod"
+import { generateText, Output } from 'ai'
+import { createWorkersAI } from 'workers-ai-provider'
+import { z } from 'zod'
 
-import type { Result } from "../utils/result"
-import { getErrorMessage, serializeError } from "../utils/error"
+import { getErrorMessage, serializeError } from '../utils/error'
+import type { Result } from '../utils/result'
 
-const MODEL_ID = "@hf/nousresearch/hermes-2-pro-mistral-7b"
+const MODEL_ID = '@hf/nousresearch/hermes-2-pro-mistral-7b'
 const TIMEOUT_MS = 5000
 
 export type AspectRatio =
-  | "landscape_16_9"
-  | "landscape_4_3"
-  | "square"
-  | "portrait_4_3"
-  | "portrait_16_9"
+  | 'landscape_16_9'
+  | 'landscape_4_3'
+  | 'square'
+  | 'portrait_4_3'
+  | 'portrait_16_9'
 
 const ORIENTATION_TO_ASPECT_RATIO = {
-  landscape: "landscape_4_3",
-  square: "square",
-  portrait: "portrait_4_3",
+  landscape: 'landscape_4_3',
+  square: 'square',
+  portrait: 'portrait_4_3',
 } as const
 
 export type AutoAspectRatioData = {
@@ -40,15 +40,15 @@ export async function resolveAutoAspectRatio(prompt: string, ai: Ai<AiModelListT
     const { output } = await generateText({
       model: workersai(MODEL_ID),
       output: Output.object({
-        name: "aspect_ratio",
-        description: "Choose the best aspect ratio for an image generation prompt",
+        name: 'aspect_ratio',
+        description: 'Choose the best aspect ratio for an image generation prompt',
         schema: z.object({
           reasoning: z
             .string()
-            .describe("Brief explanation of why this orientation fits the prompt"),
+            .describe('Brief explanation of why this orientation fits the prompt'),
           orientation: z
-            .enum(["landscape", "square", "portrait"])
-            .describe("landscape=wide scenes, portrait=tall/people, square=balanced"),
+            .enum(['landscape', 'square', 'portrait'])
+            .describe('landscape=wide scenes, portrait=tall/people, square=balanced'),
         }),
       }),
       system: `You analyze image generation prompts to choose optimal aspect ratios.
@@ -77,7 +77,7 @@ Analyze the image prompt above and respond with the best aspect ratio.`,
       value: { aspectRatio, reasoning: output.reasoning as string, model: MODEL_ID },
     } satisfies AutoAspectRatioResult
 
-    console.log("auto_aspect_ratio", result.value)
+    console.log('auto_aspect_ratio', result.value)
     return result
   } catch (error) {
     const result = {
@@ -86,7 +86,7 @@ Analyze the image prompt above and respond with the best aspect ratio.`,
       error: { cause: serializeError(error), model: MODEL_ID },
     } satisfies AutoAspectRatioResult
 
-    console.log("auto_aspect_ratio", { ok: false, message: result.message, ...result.error })
+    console.log('auto_aspect_ratio', { ok: false, message: result.message, ...result.error })
     return result
   }
 }

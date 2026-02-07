@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 
 type Props = {
   main: React.ReactNode
@@ -6,11 +6,11 @@ type Props = {
   sidebarWidth?: string
 }
 
-export function SidebarLayout({ main, sidebar, sidebarWidth = "w-80" }: Props) {
+export function SidebarLayout({ main, sidebar, sidebarWidth = 'w-80' }: Props) {
   return (
     <div className="flex h-full">
-      <div className="flex-1 flex flex-col min-w-0">{main}</div>
-      <aside className={cn("overflow-y-auto border-l border-border bg-card", sidebarWidth)}>
+      <div className="flex min-w-0 flex-1 flex-col">{main}</div>
+      <aside className={cn('border-border bg-card overflow-y-auto border-l', sidebarWidth)}>
         {sidebar}
       </aside>
     </div>

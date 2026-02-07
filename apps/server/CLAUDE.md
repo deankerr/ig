@@ -35,8 +35,8 @@ type Result<T, E = unknown> = { ok: true; value: T } | { ok: false; message: str
 return { ok: true, value: { data, contentType } }
 
 // Failure - message is required, error context is optional
-return { ok: false, message: "HTTP 404" }
-return { ok: false, message: "Decode failed", error: { code: "DECODE_FAILED" } }
+return { ok: false, message: 'HTTP 404' }
+return { ok: false, message: 'Decode failed', error: { code: 'DECODE_FAILED' } }
 ```
 
 ### Consuming Results
@@ -96,7 +96,7 @@ This prevents field collisions when spreading.
 ## Error Utilities
 
 ```typescript
-import { getErrorMessage, serializeError } from "./utils/error"
+import { getErrorMessage, serializeError } from './utils/error'
 
 // Extract message from unknown error
 const message = getErrorMessage(error) // error instanceof Error ? error.message : String(error)

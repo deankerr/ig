@@ -30,15 +30,15 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "turbo -F @ig/infra dev",
-    "check-types": "turbo check-types",
-    "dev:web": "turbo -F web dev",
-    "dev:server": "turbo -F server dev",
-    "db:generate": "turbo -F @ig/db db:generate",
-    "clean": "rm -rf node_modules .turbo apps/*/node_modules packages/*/node_modules packages/*/dist apps/*/dist && find . -name '*.tsbuildinfo' -not -path '*/node_modules/*' -delete",
     "check": "bun run check-types && oxlint --fix && oxfmt --write",
+    "check-types": "turbo check-types",
+    "clean": "rm -rf node_modules .turbo apps/*/node_modules packages/*/node_modules packages/*/dist apps/*/dist && find . -name '*.tsbuildinfo' -not -path '*/node_modules/*' -delete",
+    "db:generate": "turbo -F @ig/db db:generate",
     "deploy": "turbo deploy",
-    "destroy": "turbo -F @ig/infra destroy"
+    "destroy": "turbo -F @ig/infra destroy",
+    "dev": "turbo -F @ig/infra dev",
+    "dev:server": "turbo -F server dev",
+    "dev:web": "turbo -F web dev"
   },
   "dependencies": {
     "@ig/env": "workspace:*",

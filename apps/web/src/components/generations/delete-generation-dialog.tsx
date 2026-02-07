@@ -1,7 +1,7 @@
-import { useMutation } from "@tanstack/react-query"
-import { toast } from "sonner"
+import { useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -9,8 +9,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { deleteGenerationOptions, invalidateGenerations } from "@/queries/generations"
+} from '@/components/ui/dialog'
+import { deleteGenerationOptions, invalidateGenerations } from '@/queries/generations'
 
 export function DeleteGenerationDialog({
   generationId,
@@ -31,7 +31,7 @@ export function DeleteGenerationDialog({
       onDeleted?.()
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to delete generation")
+      toast.error(error.message || 'Failed to delete generation')
     },
   })
 
@@ -54,7 +54,7 @@ export function DeleteGenerationDialog({
             onClick={() => deleteMutation.mutate({ id: generationId })}
             disabled={deleteMutation.isPending}
           >
-            {deleteMutation.isPending ? "deleting..." : "delete"}
+            {deleteMutation.isPending ? 'deleting...' : 'delete'}
           </Button>
         </DialogFooter>
       </DialogContent>

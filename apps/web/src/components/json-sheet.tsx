@@ -1,7 +1,8 @@
-import { CheckIcon, CopyIcon } from "lucide-react"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { CheckIcon, CopyIcon } from 'lucide-react'
+import { useState } from 'react'
+
+import { Button } from '@/components/ui/button'
+import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 
 type JsonSheetProps = {
   data: unknown
@@ -24,7 +25,7 @@ export function JsonSheet({ data, title, open, onOpenChange }: JsonSheetProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="max-w-xl">
         <SheetHeader className="flex-row items-center justify-between gap-2 pr-12">
-          <SheetTitle className="font-mono truncate">{title ?? "JSON"}</SheetTitle>
+          <SheetTitle className="truncate font-mono">{title ?? 'JSON'}</SheetTitle>
           <Button variant="ghost" size="sm" onClick={handleCopy} className="shrink-0">
             {copied ? (
               <>
@@ -40,7 +41,7 @@ export function JsonSheet({ data, title, open, onOpenChange }: JsonSheetProps) {
           </Button>
         </SheetHeader>
         <SheetBody>
-          <pre className="text-xs font-mono whitespace-pre-wrap break-all">{json}</pre>
+          <pre className="font-mono text-xs break-all whitespace-pre-wrap">{json}</pre>
         </SheetBody>
       </SheetContent>
     </Sheet>

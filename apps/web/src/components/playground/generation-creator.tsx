@@ -1,14 +1,15 @@
-import { useMutation } from "@tanstack/react-query"
-import { SendIcon } from "lucide-react"
-import { useState } from "react"
-import { toast } from "sonner"
-import { SidebarLayout, PageHeader, PageContent } from "@/components/layout"
-import { Tag } from "@/components/tag"
-import { TagInput } from "@/components/tag-input"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { normalizeSlug } from "@/lib/format"
-import { createGenerationOptions, invalidateGenerations } from "@/queries/generations"
+import { useMutation } from '@tanstack/react-query'
+import { SendIcon } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
+
+import { SidebarLayout, PageHeader, PageContent } from '@/components/layout'
+import { Tag } from '@/components/tag'
+import { TagInput } from '@/components/tag-input'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { normalizeSlug } from '@/lib/format'
+import { createGenerationOptions, invalidateGenerations } from '@/queries/generations'
 
 const DEFAULT_INPUT = `{
   "prompt": ""
@@ -19,10 +20,10 @@ export function GenerationCreator({
 }: {
   onSuccess?: (generation: { id: string }) => void
 }) {
-  const [model, setModel] = useState("fal-ai/flux/schnell")
+  const [model, setModel] = useState('fal-ai/flux/schnell')
   const [inputJson, setInputJson] = useState(DEFAULT_INPUT)
   const [tags, setTags] = useState<string[]>([])
-  const [slug, setSlug] = useState("")
+  const [slug, setSlug] = useState('')
   const [autoAspectRatio, setAutoAspectRatio] = useState(false)
   const [jsonError, setJsonError] = useState<string | null>(null)
 
@@ -30,14 +31,14 @@ export function GenerationCreator({
     ...createGenerationOptions(),
     onSuccess: (data) => {
       invalidateGenerations()
-      toast.success("Generation submitted")
+      toast.success('Generation submitted')
       onSuccess?.(data)
     },
     onError: (error) => {
-      if (error.message === "Invalid JSON input") {
-        setJsonError("Invalid JSON format")
+      if (error.message === 'Invalid JSON input') {
+        setJsonError('Invalid JSON format')
       } else {
-        toast.error(error.message || "Failed to submit generation")
+        toast.error(error.message || 'Failed to submit generation')
       }
     },
   })
@@ -48,12 +49,12 @@ export function GenerationCreator({
       parsedInput = JSON.parse(inputJson)
       setJsonError(null)
     } catch {
-      setJsonError("Invalid JSON format")
+      setJsonError('Invalid JSON format')
       return
     }
 
     createMutation.mutate({
-      provider: model.includes("@") ? "runware" : "fal",
+      provider: model.includes('@') ? 'runware' : 'fal',
       model,
       input: parsedInput,
       tags,
@@ -72,7 +73,7 @@ export function GenerationCreator({
       JSON.parse(value)
       setJsonError(null)
     } catch {
-      setJsonError("Invalid JSON")
+      setJsonError('Invalid JSON')
     }
   }
 
@@ -93,7 +94,7 @@ export function GenerationCreator({
                 className="h-7 text-xs"
               >
                 {createMutation.isPending ? (
-                  "submitting..."
+                  'submitting...'
                 ) : (
                   <>
                     <SendIcon data-icon="inline-start" />
@@ -104,11 +105,11 @@ export function GenerationCreator({
             </div>
           </PageHeader>
 
-          <PageContent className="p-0 flex-1 flex flex-col">
+          <PageContent className="flex flex-1 flex-col p-0">
             {/* Model selector */}
-            <div className="border-b border-border p-4">
+            <div className="border-border border-b p-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground w-16">model</span>
+                <span className="text-muted-foreground w-16 text-xs">model</span>
                 <div className="flex-1">
                   <Input
                     value={model}
@@ -121,15 +122,15 @@ export function GenerationCreator({
             </div>
 
             {/* JSON input */}
-            <div className="flex-1 flex flex-col min-h-[400px]">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
-                <span className="text-xs text-muted-foreground">input.json</span>
-                {jsonError && <span className="text-xs text-destructive">{jsonError}</span>}
+            <div className="flex min-h-[400px] flex-1 flex-col">
+              <div className="border-border bg-muted/30 flex items-center justify-between border-b px-4 py-2">
+                <span className="text-muted-foreground text-xs">input.json</span>
+                {jsonError && <span className="text-destructive text-xs">{jsonError}</span>}
               </div>
               <textarea
                 value={inputJson}
                 onChange={(e) => handleJsonChange(e.target.value)}
-                className="flex-1 w-full p-4 bg-transparent text-sm font-mono leading-relaxed resize-none focus:outline-none"
+                className="w-full flex-1 resize-none bg-transparent p-4 font-mono text-sm leading-relaxed focus:outline-none"
                 placeholder='{"prompt": "..."}'
                 spellCheck={false}
               />
@@ -138,36 +139,36 @@ export function GenerationCreator({
         </>
       }
       sidebar={
-        <div className="flex flex-col h-full">
+        <div className="flex h-full flex-col">
           {/* Slug */}
-          <div className="p-4 border-b border-border">
-            <h3 className="text-xs text-muted-foreground mb-2">slug</h3>
+          <div className="border-border border-b p-4">
+            <h3 className="text-muted-foreground mb-2 text-xs">slug</h3>
             <Input
               value={slug}
               onChange={(e) => setSlug(normalizeSlug(e.target.value))}
               placeholder="optional-url-slug"
-              className="h-7 text-xs font-mono"
+              className="h-7 font-mono text-xs"
             />
           </div>
 
           {/* Options */}
-          <div className="p-4 border-b border-border">
-            <label className="flex items-center gap-2 cursor-pointer">
+          <div className="border-border border-b p-4">
+            <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
                 checked={autoAspectRatio}
                 onChange={(e) => setAutoAspectRatio(e.target.checked)}
-                className="size-3.5 accent-primary"
+                className="accent-primary size-3.5"
               />
               <span className="text-xs">auto aspect ratio</span>
             </label>
           </div>
 
           {/* Tags */}
-          <div className="p-4 border-b border-border">
-            <h3 className="text-xs text-muted-foreground mb-2">tags</h3>
+          <div className="border-border border-b p-4">
+            <h3 className="text-muted-foreground mb-2 text-xs">tags</h3>
             {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
+              <div className="mb-2 flex flex-wrap gap-1.5">
                 {tags.map((tag) => (
                   <Tag key={tag} onRemove={() => handleRemoveTag(tag)}>
                     {tag}

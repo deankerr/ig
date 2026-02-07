@@ -1,10 +1,11 @@
-import type { AppRouterClient } from "server/src/routers"
-import { serverUrl } from "@/lib/server-url"
-import { createORPCClient } from "@orpc/client"
-import { RPCLink } from "@orpc/client/fetch"
-import { createTanstackQueryUtils } from "@orpc/tanstack-query"
-import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query"
-import { toast } from "sonner"
+import { createORPCClient } from '@orpc/client'
+import { RPCLink } from '@orpc/client/fetch'
+import { createTanstackQueryUtils } from '@orpc/tanstack-query'
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
+import type { AppRouterClient } from 'server/src/routers'
+import { toast } from 'sonner'
+
+import { serverUrl } from '@/lib/server-url'
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,18 +18,18 @@ export const queryClient = new QueryClient({
   },
   queryCache: new QueryCache({
     onError: (error, query) => {
-      console.error("[query error]", query.queryKey, error)
+      console.error('[query error]', query.queryKey, error)
       toast.error(`Error: ${error.message}`)
     },
   }),
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
-      console.error("[mutation error]", mutation.options.mutationKey, error)
+      console.error('[mutation error]', mutation.options.mutationKey, error)
     },
   }),
 })
 
-const API_KEY_STORAGE_KEY = "ig-api-key"
+const API_KEY_STORAGE_KEY = 'ig-api-key'
 
 export function getApiKey(): string | null {
   return localStorage.getItem(API_KEY_STORAGE_KEY)
@@ -43,10 +44,10 @@ export function clearApiKey(): void {
 }
 
 export const link = new RPCLink({
-  url: new URL("/rpc", serverUrl).href,
+  url: new URL('/rpc', serverUrl).href,
   headers() {
     const apiKey = getApiKey()
-    return apiKey ? { "x-api-key": apiKey } : {}
+    return apiKey ? { 'x-api-key': apiKey } : {}
   },
   fetch(url, options) {
     return fetch(url, {

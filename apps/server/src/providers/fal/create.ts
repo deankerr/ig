@@ -4,14 +4,14 @@
  * Owns the complete generation flow for fal.ai provider.
  */
 
-import { fal } from "@fal-ai/client"
+import { fal } from '@fal-ai/client'
 
-import type { AutoAspectRatioResult, GenerationService } from "../../services"
+import type { AutoAspectRatioResult, GenerationService } from '../../services'
 
 export type CreateContext = {
   env: { FAL_KEY: string; PUBLIC_URL: string }
   services: {
-    generations: Pick<GenerationService, "create" | "markSubmitted">
+    generations: Pick<GenerationService, 'create' | 'markSubmitted'>
     autoAspectRatio: (prompt: string) => Promise<AutoAspectRatioResult>
   }
 }
@@ -42,7 +42,7 @@ export async function create(ctx: CreateContext, request: CreateRequest) {
 
   // Create record with metadata included
   const { id, slug } = await ctx.services.generations.create({
-    provider: "fal",
+    provider: 'fal',
     model: request.model,
     input,
     tags: request.tags ?? [],
@@ -58,10 +58,10 @@ export async function create(ctx: CreateContext, request: CreateRequest) {
 
   await ctx.services.generations.markSubmitted({ id, requestId })
 
-  console.log("generation_created", {
+  console.log('generation_created', {
     id,
     slug,
-    provider: "fal",
+    provider: 'fal',
     model: request.model,
     requestId,
   })

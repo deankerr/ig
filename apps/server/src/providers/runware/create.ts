@@ -4,9 +4,9 @@
  * Owns the complete generation flow for Runware provider.
  */
 
-import type { AspectRatio, AutoAspectRatioResult, GenerationService } from "../../services"
+import type { AspectRatio, AutoAspectRatioResult, GenerationService } from '../../services'
 
-const RUNWARE_API_URL = "https://api.runware.ai/v1"
+const RUNWARE_API_URL = 'https://api.runware.ai/v1'
 
 // Map provider-agnostic aspect ratios to Runware pixel dimensions
 const ASPECT_RATIO_DIMENSIONS: Record<AspectRatio, { width: number; height: number }> = {
@@ -20,7 +20,7 @@ const ASPECT_RATIO_DIMENSIONS: Record<AspectRatio, { width: number; height: numb
 export type CreateContext = {
   env: { RUNWARE_KEY: string; PUBLIC_URL: string }
   services: {
-    generations: Pick<GenerationService, "create" | "markSubmitted">
+    generations: Pick<GenerationService, 'create' | 'markSubmitted'>
     autoAspectRatio: (prompt: string) => Promise<AutoAspectRatioResult>
   }
 }
@@ -62,14 +62,14 @@ export async function create(ctx: CreateContext, request: CreateRequest) {
   }
 
   // Apply reasonable defaults
-  input.taskType ??= "imageInference"
+  input.taskType ??= 'imageInference'
   input.includeCost ??= true
   input.width ??= 1024
   input.height ??= 1024
 
   // Create record with metadata included
   const { id, slug } = await ctx.services.generations.create({
-    provider: "runware",
+    provider: 'runware',
     model: request.model,
     input,
     tags: request.tags ?? [],
@@ -80,10 +80,10 @@ export async function create(ctx: CreateContext, request: CreateRequest) {
   // Submit to Runware API
   const webhookUrl = `${ctx.env.PUBLIC_URL}/webhooks/runware?generation_id=${id}`
   const response = await fetch(RUNWARE_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify([
-      { taskType: "authentication", apiKey: ctx.env.RUNWARE_KEY },
+      { taskType: 'authentication', apiKey: ctx.env.RUNWARE_KEY },
       { ...input, model: request.model, taskUUID: id, webhookURL: webhookUrl },
     ]),
   })
@@ -101,10 +101,10 @@ export async function create(ctx: CreateContext, request: CreateRequest) {
   // For Runware, the taskUUID is the request ID
   await ctx.services.generations.markSubmitted({ id, requestId: id })
 
-  console.log("generation_created", {
+  console.log('generation_created', {
     id,
     slug,
-    provider: "runware",
+    provider: 'runware',
     model: request.model,
     requestId: id,
   })

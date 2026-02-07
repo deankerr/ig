@@ -3,6 +3,6 @@
  * Partner models without the prefix are returned unchanged.
  */
 export function formatFalEndpointId(endpointId: string): string {
-  if (!endpointId) return "unknown"
-  return endpointId.replace(/^fal-ai\//, "")
+  if (!endpointId) return 'unknown'
+  return endpointId.replace(/^fal-ai\//, '')
 }

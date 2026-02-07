@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo } from 'react'
 
-type SortDirection = "asc" | "desc"
+type SortDirection = 'asc' | 'desc'
 type SortConfig<T> = { key: keyof T; direction: SortDirection }
 
 export function useSortable<T>(items: T[], defaultSort?: SortConfig<T>) {
@@ -19,14 +19,14 @@ export function useSortable<T>(items: T[], defaultSort?: SortConfig<T>) {
       if (bVal == null) return -1
 
       const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0
-      return sortConfig.direction === "asc" ? comparison : -comparison
+      return sortConfig.direction === 'asc' ? comparison : -comparison
     })
   }, [items, sortConfig])
 
   const toggleSort = (key: keyof T) => {
     setSortConfig((current) => {
-      if (current?.key !== key) return { key, direction: "asc" }
-      if (current.direction === "asc") return { key, direction: "desc" }
+      if (current?.key !== key) return { key, direction: 'asc' }
+      if (current.direction === 'asc') return { key, direction: 'desc' }
       return null // Remove sort on third click
     })
   }

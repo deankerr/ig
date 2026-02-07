@@ -92,7 +92,7 @@ generations.create({ provider: "runware", model, input })
 **Automatic defaults:**
 
 ```typescript
-input.taskType ??= "imageInference"
+input.taskType ??= 'imageInference'
 input.positivePrompt ??= input.prompt
 input.width ??= 1024
 input.height ??= 1024

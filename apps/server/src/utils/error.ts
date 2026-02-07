@@ -2,7 +2,7 @@
  * Error utilities for serialization and framework error handlers.
  */
 
-import { ORPCError } from "@orpc/server"
+import { ORPCError } from '@orpc/server'
 
 type SerializedError = Record<string, unknown>
 
@@ -28,9 +28,9 @@ export function serializeError(error: unknown): SerializedError {
   }
 
   for (const key of Object.keys(error)) {
-    if (key === "cause") continue
+    if (key === 'cause') continue
     const value = (error as unknown as Record<string, unknown>)[key]
-    if (typeof value === "function" || typeof value === "symbol") continue
+    if (typeof value === 'function' || typeof value === 'symbol') continue
     serialized[key] = value
   }
 
@@ -49,17 +49,17 @@ function extractMessage(serialized: SerializedError): string {
   let current: SerializedError | undefined = serialized
   while (current) {
     const message = current.message
-    if (typeof message === "string" && message.startsWith("D1_ERROR")) {
+    if (typeof message === 'string' && message.startsWith('D1_ERROR')) {
       return message
     }
     current = current.cause as SerializedError | undefined
   }
 
-  if (typeof serialized.message === "string") {
+  if (typeof serialized.message === 'string') {
     return serialized.message
   }
 
-  return "Unknown error"
+  return 'Unknown error'
 }
 
 /**
@@ -69,7 +69,7 @@ function toErrorResponse(error: unknown) {
   const serialized = serializeError(error)
   const message = extractMessage(serialized)
 
-  console.error("request_error", serialized)
+  console.error('request_error', serialized)
 
   return { message, error: serialized }
 }
@@ -81,7 +81,7 @@ function toErrorResponse(error: unknown) {
 export function handleOrpcError(error: unknown): never {
   const { message, error: serialized } = toErrorResponse(error)
 
-  throw new ORPCError("BAD_REQUEST", {
+  throw new ORPCError('BAD_REQUEST', {
     message,
     data: { error: serialized },
   })

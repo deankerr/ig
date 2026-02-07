@@ -1,1 +1,1 @@
-export * from "./generations"
+export * from './generations'

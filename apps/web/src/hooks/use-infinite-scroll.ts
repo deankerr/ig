@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef } from 'react'
 
 export function useInfiniteScroll({
   hasNextPage,
@@ -22,7 +22,7 @@ export function useInfiniteScroll({
           fetchNextPage()
         }
       },
-      { rootMargin: "200px" },
+      { rootMargin: '200px' },
     )
 
     observer.observe(sentinel)

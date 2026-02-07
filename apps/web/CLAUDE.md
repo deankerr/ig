@@ -304,10 +304,10 @@ Use the `Icon` suffix on lucide imports to avoid naming clashes with components 
 
 ```tsx
 // Preferred
-import { ExternalLinkIcon, InfoIcon, SearchIcon } from "lucide-react"
+import { ExternalLinkIcon, InfoIcon, SearchIcon } from 'lucide-react'
 
 // Avoid - can clash with component names
-import { ExternalLink, Info, Search } from "lucide-react"
+import { ExternalLink, Info, Search } from 'lucide-react'
 ```
 
 ## Registry Components

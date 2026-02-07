@@ -1,40 +1,41 @@
-import { useState } from "react"
-import { useInfiniteQuery } from "@tanstack/react-query"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { z } from "zod"
-import { GenerationCard } from "@/components/generations/generation-card"
-import { GenerationDetailModal } from "@/components/generations/generation-detail-modal"
-import { GenerationFilters } from "@/components/generations/generation-filters"
-import { GenerationListItem } from "@/components/generations/generation-list-item"
-import { PageContent } from "@/components/layout"
-import { ThumbnailGrid } from "@/components/thumbnail"
-import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
-import { generationsInfiniteOptions } from "@/queries/generations"
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
+import { z } from 'zod'
+
+import { GenerationCard } from '@/components/generations/generation-card'
+import { GenerationDetailModal } from '@/components/generations/generation-detail-modal'
+import { GenerationFilters } from '@/components/generations/generation-filters'
+import { GenerationListItem } from '@/components/generations/generation-list-item'
+import { PageContent } from '@/components/layout'
+import { ThumbnailGrid } from '@/components/thumbnail'
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
+import { generationsInfiniteOptions } from '@/queries/generations'
 
 const searchSchema = z.object({
-  status: z.enum(["all", "pending", "ready", "failed"]).optional(),
+  status: z.enum(['all', 'pending', 'ready', 'failed']).optional(),
   model: z.string().optional(),
   tags: z.array(z.string()).optional(),
   selected: z.string().optional(),
 })
 
-export const Route = createFileRoute("/generations/")({
+export const Route = createFileRoute('/generations/')({
   component: GenerationsPage,
   validateSearch: searchSchema,
 })
 
 function GenerationsPage() {
   const search = Route.useSearch()
-  const statusFilter = search.status ?? "all"
+  const statusFilter = search.status ?? 'all'
   const modelFilter = search.model
   const tagFilters = search.tags ?? []
   const selectedId = search.selected
   const navigate = useNavigate()
 
-  const setStatusFilter = (status: "all" | "pending" | "ready" | "failed") => {
+  const setStatusFilter = (status: 'all' | 'pending' | 'ready' | 'failed') => {
     navigate({
       from: Route.fullPath,
-      search: (prev) => ({ ...prev, status: status === "all" ? undefined : status }),
+      search: (prev) => ({ ...prev, status: status === 'all' ? undefined : status }),
     })
   }
 
@@ -59,9 +60,9 @@ function GenerationsPage() {
     })
   }
 
-  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
-    if (typeof window === "undefined") return "grid"
-    return (localStorage.getItem("generations-view-mode") as "grid" | "list") || "grid"
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    if (typeof window === 'undefined') return 'grid'
+    return (localStorage.getItem('generations-view-mode') as 'grid' | 'list') || 'grid'
   })
 
   const generationsQuery = useInfiniteQuery(
@@ -82,7 +83,7 @@ function GenerationsPage() {
   })
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col">
       <GenerationFilters
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -97,12 +98,12 @@ function GenerationsPage() {
 
       <PageContent>
         {allGenerations.length === 0 && !generationsQuery.isLoading && (
-          <div className="text-center py-12 text-muted-foreground text-sm">
+          <div className="text-muted-foreground py-12 text-center text-sm">
             no generations found
           </div>
         )}
 
-        {viewMode === "grid" ? (
+        {viewMode === 'grid' ? (
           <ThumbnailGrid>
             {allGenerations.map((generation) => (
               <GenerationCard
@@ -113,7 +114,7 @@ function GenerationsPage() {
             ))}
           </ThumbnailGrid>
         ) : (
-          <div className="flex flex-col gap-2 max-w-4xl mx-auto">
+          <div className="mx-auto flex max-w-4xl flex-col gap-2">
             {allGenerations.map((generation) => (
               <GenerationListItem
                 key={generation.id}
@@ -126,7 +127,7 @@ function GenerationsPage() {
 
         <div ref={sentinelRef} className="h-px" />
         {generationsQuery.isFetchingNextPage && (
-          <div className="py-4 text-center text-xs text-muted-foreground">loading...</div>
+          <div className="text-muted-foreground py-4 text-center text-xs">loading...</div>
         )}
       </PageContent>
 

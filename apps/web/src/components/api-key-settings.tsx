@@ -1,8 +1,8 @@
-import { KeyIcon } from "lucide-react"
-import { useState } from "react"
-import { toast } from "sonner"
+import { KeyIcon } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -11,31 +11,31 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { clearApiKey, getApiKey, setApiKey } from "@/lib/orpc"
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { clearApiKey, getApiKey, setApiKey } from '@/lib/orpc'
 
 export function ApiKeySettings() {
   const [open, setOpen] = useState(false)
-  const [key, setKey] = useState("")
+  const [key, setKey] = useState('')
   const hasKey = !!getApiKey()
 
   function handleSave() {
     if (!key.trim()) {
-      toast.error("API key cannot be empty")
+      toast.error('API key cannot be empty')
       return
     }
     setApiKey(key.trim())
-    setKey("")
+    setKey('')
     setOpen(false)
-    toast.success("API key saved")
+    toast.success('API key saved')
   }
 
   function handleClear() {
     clearApiKey()
-    setKey("")
+    setKey('')
     setOpen(false)
-    toast.success("API key cleared")
+    toast.success('API key cleared')
   }
 
   return (
@@ -45,8 +45,8 @@ export function ApiKeySettings() {
           <Button
             size="icon-xs"
             variant="ghost"
-            className={hasKey ? "text-status-ready hover:text-status-ready/80" : ""}
-            title={hasKey ? "API key set" : "No API key"}
+            className={hasKey ? 'text-status-ready hover:text-status-ready/80' : ''}
+            title={hasKey ? 'API key set' : 'No API key'}
           >
             <KeyIcon />
           </Button>
@@ -62,10 +62,10 @@ export function ApiKeySettings() {
         <div className="py-4">
           <Input
             type="password"
-            placeholder={hasKey ? "••••••••" : "paste api key"}
+            placeholder={hasKey ? '••••••••' : 'paste api key'}
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSave()}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             className="font-mono text-sm"
           />
         </div>

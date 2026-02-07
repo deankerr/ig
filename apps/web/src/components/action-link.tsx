@@ -10,14 +10,14 @@ export function ActionLink({
   children: React.ReactNode
 }) {
   const className =
-    "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border hover:bg-muted transition-colors"
+    'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border hover:bg-muted transition-colors'
 
   if (href) {
     return (
       <a
         href={href}
-        target={download ? undefined : "_blank"}
-        rel={download ? undefined : "noopener noreferrer"}
+        target={download ? undefined : '_blank'}
+        rel={download ? undefined : 'noopener noreferrer'}
         download={download}
         className={className}
       >

@@ -1,18 +1,18 @@
-import { orpc, queryClient } from "@/lib/orpc"
+import { orpc, queryClient } from '@/lib/orpc'
 
 // --- Query option factories ---
 
 export function generationQueryOptions(id: string | null) {
   return orpc.generations.get.queryOptions({
-    input: { id: id ?? "" },
+    input: { id: id ?? '' },
     enabled: !!id,
-    refetchInterval: (query) => (query.state.data?.status === "pending" ? 2000 : false),
+    refetchInterval: (query) => (query.state.data?.status === 'pending' ? 2000 : false),
   })
 }
 
 export function pendingCountQueryOptions() {
   return orpc.generations.list.queryOptions({
-    input: { status: "pending" as const, limit: 1 },
+    input: { status: 'pending' as const, limit: 1 },
     refetchInterval: 5000,
   })
 }
@@ -23,7 +23,7 @@ export function generationTagsQueryOptions() {
   })
 }
 
-type GenerationStatus = "pending" | "ready" | "failed"
+type GenerationStatus = 'pending' | 'ready' | 'failed'
 
 export function generationsInfiniteOptions(filters: {
   status: string
@@ -32,7 +32,7 @@ export function generationsInfiniteOptions(filters: {
 }) {
   return orpc.generations.list.infiniteOptions({
     input: (pageParam: string | undefined) => ({
-      status: filters.status === "all" ? undefined : (filters.status as GenerationStatus),
+      status: filters.status === 'all' ? undefined : (filters.status as GenerationStatus),
       model: filters.model,
       tags: filters.tags.length > 0 ? filters.tags : undefined,
       limit: 24,
@@ -40,7 +40,7 @@ export function generationsInfiniteOptions(filters: {
     }),
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: undefined as string | undefined,
-    refetchInterval: filters.status === "pending" || filters.status === "all" ? 5000 : false,
+    refetchInterval: filters.status === 'pending' || filters.status === 'all' ? 5000 : false,
   })
 }
 

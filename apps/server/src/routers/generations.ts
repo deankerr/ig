@@ -1,22 +1,22 @@
-import { db } from "@ig/db"
-import { generations } from "@ig/db/schema"
-import { create as createFal } from "../providers/fal"
-import { create as createRunware } from "../providers/runware"
-import { and, desc, eq, lt, sql } from "drizzle-orm"
-import { z } from "zod"
+import { db } from '@ig/db'
+import { generations } from '@ig/db/schema'
+import { and, desc, eq, lt, sql } from 'drizzle-orm'
+import { z } from 'zod'
 
-import { apiKeyProcedure, publicProcedure } from "../orpc"
+import { apiKeyProcedure, publicProcedure } from '../orpc'
+import { create as createFal } from '../providers/fal'
+import { create as createRunware } from '../providers/runware'
 
-const PROVIDERS = ["fal", "runware"] as const
+const PROVIDERS = ['fal', 'runware'] as const
 
 const MAX_TAGS = 20
 const SLUG_PREFIX_LENGTH = 12
 
 const idSchema = z.uuidv7().trim()
 const modelSchema = z.string().trim().min(1)
-const cursorSchema = z.string().refine((s) => !Number.isNaN(Date.parse(s)), "Invalid date format")
+const cursorSchema = z.string().refine((s) => !Number.isNaN(Date.parse(s)), 'Invalid date format')
 
-const tagSchema = z.string().trim().max(256, "Tag cannot exceed 256 characters")
+const tagSchema = z.string().trim().max(256, 'Tag cannot exceed 256 characters')
 
 export type Tag = z.infer<typeof tagSchema>
 
@@ -29,12 +29,12 @@ const tagsSchema = z
 function slugify(input: string): string {
   return input
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // remove diacritics
-    .replace(/[^a-z0-9\s_/-]/g, "") // keep only allowed chars
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+    .replace(/[^a-z0-9\s_/-]/g, '') // keep only allowed chars
     .trim()
-    .replace(/\s+/g, "-") // spaces to hyphens
-    .replace(/-+/g, "-") // collapse multiple hyphens
+    .replace(/\s+/g, '-') // spaces to hyphens
+    .replace(/-+/g, '-') // collapse multiple hyphens
     .slice(0, 100)
 }
 
@@ -81,7 +81,7 @@ export const generationsRouter = {
     .route({ spec: { security: [] } })
     .input(
       z.object({
-        status: z.enum(["pending", "ready", "failed"]).optional(),
+        status: z.enum(['pending', 'ready', 'failed']).optional(),
         model: modelSchema.optional(),
         tags: tagsSchema.optional(),
         limit: z.number().int().min(1).max(100).optional().default(20),
@@ -159,7 +159,7 @@ export const generationsRouter = {
 
       const generation = existing[0]
       if (!generation) {
-        throw new Error("Generation not found")
+        throw new Error('Generation not found')
       }
 
       const withoutRemoved = generation.tags.filter((tag: string) => !args.remove.includes(tag))
@@ -176,7 +176,7 @@ export const generationsRouter = {
         .set({ tags, ...(slug && { slug }) })
         .where(eq(generations.id, args.id))
 
-      console.log("generation_updated", { id: args.id, tags, slug })
+      console.log('generation_updated', { id: args.id, tags, slug })
       return { id: args.id, tags, slug }
     }),
 
@@ -211,13 +211,13 @@ export const generationsRouter = {
         return { deleted: false }
       }
 
-      if (generation.status === "ready") {
+      if (generation.status === 'ready') {
         await context.env.GENERATIONS_BUCKET.delete(`generations/${args.id}`)
       }
 
       await db.delete(generations).where(eq(generations.id, args.id))
 
-      console.log("generation_deleted", { id: args.id })
+      console.log('generation_deleted', { id: args.id })
       return { deleted: true }
     }),
 
@@ -239,7 +239,7 @@ export const generationsRouter = {
 
       const original = existing[0]
       if (!original) {
-        throw new Error("Generation not found")
+        throw new Error('Generation not found')
       }
 
       const provider = original.provider as string
@@ -259,7 +259,7 @@ export const generationsRouter = {
         autoAspectRatio: args.autoAspectRatio,
       })
 
-      console.log("generation_regenerated", {
+      console.log('generation_regenerated', {
         id: result.id,
         originalId: args.id,
         provider,
