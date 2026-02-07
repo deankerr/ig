@@ -128,7 +128,7 @@ export async function verifyWebhook(
   try {
     publicKeys = await getPublicKeys()
   } catch (err) {
-    return { valid: false, error: `Failed to fetch JWKS: ${err}` }
+    return { valid: false, error: `Failed to fetch JWKS: ${String(err)}` }
   }
 
   if (publicKeys.length === 0) {

@@ -30,7 +30,7 @@ export function GenerationCreator({
   const createMutation = useMutation({
     ...createGenerationOptions(),
     onSuccess: (data) => {
-      invalidateGenerations()
+      void invalidateGenerations()
       toast.success('Generation submitted')
       onSuccess?.(data)
     },

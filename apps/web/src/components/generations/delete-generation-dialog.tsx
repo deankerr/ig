@@ -26,7 +26,7 @@ export function DeleteGenerationDialog({
   const deleteMutation = useMutation({
     ...deleteGenerationOptions(),
     onSuccess: () => {
-      invalidateGenerations()
+      void invalidateGenerations()
       onOpenChange(false)
       onDeleted?.()
     },

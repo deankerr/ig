@@ -41,7 +41,7 @@ export function GenerationCard({
   const regenerateMutation = useMutation({
     ...regenerateGenerationOptions(),
     onSuccess: () => {
-      invalidateGenerations()
+      void invalidateGenerations()
       toast.success('Regeneration submitted')
     },
     onError: (error) => {

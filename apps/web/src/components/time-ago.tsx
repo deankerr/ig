@@ -9,8 +9,8 @@ const INTERVALS = [
   { label: 's', seconds: 1 },
 ] as const
 
-function getTimeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+function getTimeAgo(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000)
 
   if (seconds < 5) return 'just now'
 
@@ -24,17 +24,17 @@ function getTimeAgo(date: Date): string {
   return 'just now'
 }
 
-export function TimeAgo({ date: input, className }: { date: Date; className?: string }) {
-  const date = new Date(input)
-  const [timeAgo, setTimeAgo] = useState(() => getTimeAgo(date))
+export function TimeAgo({ date, className }: { date: Date; className?: string }) {
+  const timestamp = date.getTime()
+  const [timeAgo, setTimeAgo] = useState(() => getTimeAgo(timestamp))
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeAgo(getTimeAgo(date))
+      setTimeAgo(getTimeAgo(timestamp))
     }, 10000)
 
     return () => clearInterval(timer)
-  }, [date])
+  }, [timestamp])
 
   return (
     <time dateTime={date.toISOString()} title={date.toLocaleString()} className={className}>

@@ -24,7 +24,7 @@ export function Copyable({ text, className, children, ...props }: CopyableProps)
       )}
       onClick={(e) => {
         e.stopPropagation()
-        handleCopy()
+        void handleCopy()
       }}
       {...props}
     >

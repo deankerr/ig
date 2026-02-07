@@ -59,11 +59,12 @@ export function GenerationDetailModal({
   }, [generationId, hasPrev, hasNext, onPrev, onNext])
 
   const generationQuery = useQuery(generationQueryOptions(generationId))
+  console.log(generationQuery.data)
 
   const regenerateMutation = useMutation({
     ...regenerateGenerationOptions(),
     onSuccess: () => {
-      invalidateGenerations()
+      void invalidateGenerations()
       onClose()
       toast.success('Regeneration submitted')
     },

@@ -37,7 +37,7 @@ export function GenerationSidebar({
   const updateMutation = useMutation({
     ...updateGenerationOptions(),
     onSuccess: () => {
-      invalidateGeneration(generationId)
+      void invalidateGeneration(generationId)
       setEditingSlug(false)
     },
     onError: (error) => {

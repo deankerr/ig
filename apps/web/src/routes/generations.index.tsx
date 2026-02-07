@@ -33,28 +33,28 @@ function GenerationsPage() {
   const navigate = useNavigate()
 
   const setStatusFilter = (status: 'all' | 'pending' | 'ready' | 'failed') => {
-    navigate({
+    void navigate({
       from: Route.fullPath,
       search: (prev) => ({ ...prev, status: status === 'all' ? undefined : status }),
     })
   }
 
   const setModelFilter = (model: string | undefined) => {
-    navigate({
+    void navigate({
       from: Route.fullPath,
       search: (prev) => ({ ...prev, model: model || undefined }),
     })
   }
 
   const setTagFilters = (tags: string[]) => {
-    navigate({
+    void navigate({
       from: Route.fullPath,
       search: (prev) => ({ ...prev, tags: tags.length > 0 ? tags : undefined }),
     })
   }
 
   const setSelectedId = (id: string | undefined) => {
-    navigate({
+    void navigate({
       from: Route.fullPath,
       search: (prev) => ({ ...prev, selected: id || undefined }),
     })
@@ -143,7 +143,7 @@ function GenerationsPage() {
           if (selectedIndex < allGenerations.length - 1) {
             setSelectedId(allGenerations[selectedIndex + 1]?.id)
           } else if (generationsQuery.hasNextPage && !generationsQuery.isFetchingNextPage) {
-            generationsQuery.fetchNextPage()
+            void generationsQuery.fetchNextPage()
           }
         }}
         hasPrev={selectedIndex > 0}
