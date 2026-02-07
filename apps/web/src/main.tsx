@@ -1,4 +1,4 @@
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister"
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { RouterProvider, createRouter } from "@tanstack/react-router"
 import ReactDOM from "react-dom/client"
@@ -7,7 +7,7 @@ import Loader from "./components/loader"
 import { routeTree } from "./routeTree.gen"
 import { queryClient } from "./lib/orpc"
 
-const persister = createSyncStoragePersister({
+const persister = createAsyncStoragePersister({
   storage: window.localStorage,
   key: "ig-query-cache",
 })

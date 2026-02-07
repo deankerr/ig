@@ -25,9 +25,7 @@ src/
 All fallible operations use `Result<T, E>` from `utils/result.ts`:
 
 ```typescript
-type Result<T, E = unknown> =
-  | { ok: true; value: T }
-  | { ok: false; message: string; error?: E }
+type Result<T, E = unknown> = { ok: true; value: T } | { ok: false; message: string; error?: E }
 ```
 
 ### Returning Results
@@ -65,7 +63,7 @@ Provider types in `providers/types.ts` are specialized Results:
 // ResolvedOutput - single output from a provider
 type ResolvedOutput = Result<
   { data: ArrayBuffer | Uint8Array; contentType: string; metadata?: Record<string, unknown> },
-  { code: string }  // code stored in DB errorCode column
+  { code: string } // code stored in DB errorCode column
 >
 
 // ProviderResult - overall webhook resolution
@@ -101,8 +99,8 @@ This prevents field collisions when spreading.
 import { getErrorMessage, serializeError } from "./utils/error"
 
 // Extract message from unknown error
-const message = getErrorMessage(error)  // error instanceof Error ? error.message : String(error)
+const message = getErrorMessage(error) // error instanceof Error ? error.message : String(error)
 
 // Serialize error for storage (preserves cause chain, custom properties)
-const serialized = serializeError(error)  // { name, message, cause?, ...customProps }
+const serialized = serializeError(error) // { name, message, cause?, ...customProps }
 ```

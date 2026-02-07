@@ -12,14 +12,14 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
-    "ai": "^6.0.57",
+    "ai": "^6.0.77",
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "catalog:",
     "remeda": "catalog:",
     "up-fetch": "catalog:",
     "uuid": "catalog:",
-    "workers-ai-provider": "^3.0.3",
+    "workers-ai-provider": "^3.0.4",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -29,6 +29,6 @@
     "@types/uuid": "catalog:",
     "alchemy": "catalog:",
     "typescript": "catalog:",
-    "wrangler": "^4.60.0"
+    "wrangler": "^4.63.0"
   }
 }
