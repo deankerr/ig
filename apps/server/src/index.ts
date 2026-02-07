@@ -13,9 +13,6 @@ import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { fileRoutes } from "./routes/file"
 
-// Export workflow class for Cloudflare
-export { ModelSyncWorkflow } from "./providers/fal/model-sync"
-
 type Variables = {
   services: Services
 }
@@ -113,43 +110,4 @@ app.get("/favicon.ico", (c) => {
 
 export default {
   fetch: app.fetch,
-
-  // Scheduled handler: daily model sync at 4 AM UTC
-  async scheduled(controller: ScheduledController, env: Env) {
-    console.log("scheduled_model_sync_started", { cron: controller.cron })
-
-    const workflow = env.MODEL_SYNC_WORKFLOW
-    const instanceId = "model-sync"
-
-    // Check if any sync is already running
-    for (const id of ["model-sync", "model-sync-all"]) {
-      try {
-        const instance = await workflow.get(id)
-        const { status } = await instance.status()
-        if (status === "running" || status === "queued" || status === "waiting") {
-          console.log("scheduled_model_sync_skipped", { reason: "sync in progress", activeId: id })
-          return
-        }
-      } catch {
-        // Instance doesn't exist
-      }
-    }
-
-    // Create or restart the workflow
-    try {
-      await workflow.create({ id: instanceId, params: {} })
-      console.log("scheduled_model_sync_workflow_created", { instanceId })
-    } catch {
-      // Instance already exists in completed/errored state, restart it
-      try {
-        const instance = await workflow.get(instanceId)
-        await instance.restart()
-        console.log("scheduled_model_sync_workflow_restarted", { instanceId })
-      } catch (error) {
-        console.log("scheduled_model_sync_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        })
-      }
-    }
-  },
 }

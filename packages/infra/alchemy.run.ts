@@ -1,5 +1,5 @@
 import alchemy from "alchemy"
-import { Ai, D1Database, Images, R2Bucket, Vite, Worker, Workflow } from "alchemy/cloudflare"
+import { Ai, D1Database, Images, R2Bucket, Vite, Worker } from "alchemy/cloudflare"
 import { CloudflareStateStore } from "alchemy/state"
 import { config } from "dotenv"
 import stageConfig from "./config"
@@ -36,10 +36,6 @@ const images = Images()
 
 const ai = Ai()
 
-const modelSyncWorkflow = Workflow("model-sync-workflow", {
-  className: "ModelSyncWorkflow",
-})
-
 export const server = await Worker("server", {
   cwd: "../../apps/server",
   entrypoint: "src/index.ts",
@@ -53,14 +49,12 @@ export const server = await Worker("server", {
     DB: db,
     GENERATIONS_BUCKET: generationsBucket,
     IMAGES: images,
-    MODEL_SYNC_WORKFLOW: modelSyncWorkflow,
 
     API_KEY: alchemy.secret.env.API_KEY!,
     FAL_KEY: alchemy.secret.env.FAL_KEY!,
     PUBLIC_URL: `https://${domain("server")}`,
     RUNWARE_KEY: alchemy.secret.env.RUNWARE_KEY!,
   },
-  crons: productionStages.has(app.stage) ? ["0 4 * * *"] : undefined,
   dev: {
     port: 3220,
   },

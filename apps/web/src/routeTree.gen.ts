@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PlaygroundRouteImport } from './routes/playground'
 import { Route as GenerationsRouteImport } from './routes/generations'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ModelsIndexRouteImport } from './routes/models.index'
 import { Route as GenerationsIndexRouteImport } from './routes/generations.index'
 
 const PlaygroundRoute = PlaygroundRouteImport.update({
@@ -30,11 +29,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ModelsIndexRoute = ModelsIndexRouteImport.update({
-  id: '/models/',
-  path: '/models/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const GenerationsIndexRoute = GenerationsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -46,13 +40,11 @@ export interface FileRoutesByFullPath {
   '/generations': typeof GenerationsRouteWithChildren
   '/playground': typeof PlaygroundRoute
   '/generations/': typeof GenerationsIndexRoute
-  '/models/': typeof ModelsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/playground': typeof PlaygroundRoute
   '/generations': typeof GenerationsIndexRoute
-  '/models': typeof ModelsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -60,27 +52,19 @@ export interface FileRoutesById {
   '/generations': typeof GenerationsRouteWithChildren
   '/playground': typeof PlaygroundRoute
   '/generations/': typeof GenerationsIndexRoute
-  '/models/': typeof ModelsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/generations' | '/playground' | '/generations/' | '/models/'
+  fullPaths: '/' | '/generations' | '/playground' | '/generations/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/playground' | '/generations' | '/models'
-  id:
-    | '__root__'
-    | '/'
-    | '/generations'
-    | '/playground'
-    | '/generations/'
-    | '/models/'
+  to: '/' | '/playground' | '/generations'
+  id: '__root__' | '/' | '/generations' | '/playground' | '/generations/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GenerationsRoute: typeof GenerationsRouteWithChildren
   PlaygroundRoute: typeof PlaygroundRoute
-  ModelsIndexRoute: typeof ModelsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -104,13 +88,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/models/': {
-      id: '/models/'
-      path: '/models'
-      fullPath: '/models/'
-      preLoaderRoute: typeof ModelsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/generations/': {
@@ -139,7 +116,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GenerationsRoute: GenerationsRouteWithChildren,
   PlaygroundRoute: PlaygroundRoute,
-  ModelsIndexRoute: ModelsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

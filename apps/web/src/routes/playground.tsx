@@ -3,22 +3,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { SendIcon } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
-import { useAllModels } from "@/hooks/use-all-models"
 import { SidebarLayout, PageHeader, PageContent } from "@/components/layout"
-import { ModelItem } from "@/components/model-item"
 import { Tag } from "@/components/tag"
 import { TagInput } from "@/components/tag-input"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Autocomplete,
-  AutocompleteInput,
-  AutocompletePopup,
-  AutocompleteList,
-  AutocompleteItem,
-  AutocompleteEmpty,
-} from "@/components/ui/autocomplete"
-import { filterModelForAutocomplete } from "@/lib/fuzzy-search"
+import { normalizeSlug } from "@/lib/format"
 import { createGenerationOptions, invalidateGenerations } from "@/queries/generations"
 
 export const Route = createFileRoute("/playground")({
@@ -31,7 +21,6 @@ const DEFAULT_INPUT = `{
 
 function PlaygroundPage() {
   const navigate = useNavigate()
-  const { models } = useAllModels()
   const [model, setModel] = useState("fal-ai/flux/schnell")
   const [inputJson, setInputJson] = useState(DEFAULT_INPUT)
   const [tags, setTags] = useState<string[]>([])
@@ -124,25 +113,12 @@ function PlaygroundPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground w-16">model</span>
                   <div className="flex-1">
-                    <Autocomplete
-                      items={models}
+                    <Input
                       value={model}
-                      onValueChange={setModel}
-                      itemToStringValue={(m) => m.endpointId}
-                      filter={filterModelForAutocomplete}
-                    >
-                      <AutocompleteInput placeholder="fal-ai/..." className="font-mono text-sm" />
-                      <AutocompletePopup>
-                        <AutocompleteList>
-                          {(model) => (
-                            <AutocompleteItem value={model} key={model.endpointId}>
-                              <ModelItem model={model} />
-                            </AutocompleteItem>
-                          )}
-                        </AutocompleteList>
-                        <AutocompleteEmpty />
-                      </AutocompletePopup>
-                    </Autocomplete>
+                      onChange={(e) => setModel(e.target.value)}
+                      placeholder="fal-ai/... or civitai:...@..."
+                      className="font-mono text-sm"
+                    />
                   </div>
                 </div>
               </div>
@@ -171,7 +147,7 @@ function PlaygroundPage() {
               <h3 className="text-xs text-muted-foreground mb-2">slug</h3>
               <Input
                 value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-/]/g, ""))}
+                onChange={(e) => setSlug(normalizeSlug(e.target.value))}
                 placeholder="optional-url-slug"
                 className="h-7 text-xs font-mono"
               />

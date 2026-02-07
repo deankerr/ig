@@ -21,6 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { formatDuration } from "@/lib/format"
 import { formatFalEndpointId } from "@/lib/format-endpoint"
 import {
   deleteGenerationOptions,
@@ -160,15 +161,7 @@ export function GenerationCard({
           <span>·</span>
           <TimeAgo date={new Date(generation.createdAt)} />
           {generation.completedAt && (
-            <span>
-              (
-              {(
-                (new Date(generation.completedAt).getTime() -
-                  new Date(generation.createdAt).getTime()) /
-                1000
-              ).toFixed(1)}
-              s)
-            </span>
+            <span>({formatDuration(generation.createdAt, generation.completedAt)}s)</span>
           )}
         </div>
 

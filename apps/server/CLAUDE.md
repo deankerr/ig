@@ -7,11 +7,11 @@ src/
 ├── index.ts              # Hono app, routes, middleware
 ├── context.ts            # oRPC context creation
 ├── orpc.ts               # Procedure definitions (public, apiKey-protected)
-├── routers/              # oRPC routers (generations, models)
+├── routers/              # oRPC routers (generations, runware)
 ├── routes/               # Hono routes (file serving)
 ├── services/             # Business logic (generations, auto-aspect-ratio)
 ├── providers/            # External provider integrations
-│   ├── fal/              # fal.ai (create, webhook, resolve, verify, model-sync)
+│   ├── fal/              # fal.ai (create, webhook, resolve, verify)
 │   ├── runware/          # Runware (create, webhook, resolve, schemas)
 │   ├── types.ts          # ProviderResult, ResolvedOutput
 │   └── utils.ts          # fetchUrl, decodeBase64, parseDataURI

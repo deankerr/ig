@@ -17,12 +17,6 @@ export function pendingCountQueryOptions() {
   })
 }
 
-export function generationModelsQueryOptions() {
-  return orpc.generations.listModels.queryOptions({
-    staleTime: 60_000,
-  })
-}
-
 export function generationTagsQueryOptions() {
   return orpc.generations.listTags.queryOptions({
     staleTime: 60_000,

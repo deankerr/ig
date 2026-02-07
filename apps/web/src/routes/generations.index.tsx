@@ -21,6 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
+import { Input } from "@/components/ui/input"
 import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item"
 import {
   Select,
@@ -29,12 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { formatDuration } from "@/lib/format"
 import { formatFalEndpointId } from "@/lib/format-endpoint"
-import {
-  generationModelsQueryOptions,
-  generationTagsQueryOptions,
-  generationsInfiniteOptions,
-} from "@/queries/generations"
+import { generationTagsQueryOptions, generationsInfiniteOptions } from "@/queries/generations"
 
 const searchSchema = z.object({
   status: z.enum(["all", "pending", "ready", "failed"]).optional(),
@@ -104,13 +102,7 @@ function GenerationListItem({
           <TimeAgo date={generation.createdAt} className=" text-muted-foreground" />
           {generation.completedAt && (
             <span className="text-muted-foreground">
-              (
-              {(
-                (new Date(generation.completedAt).getTime() -
-                  new Date(generation.createdAt).getTime()) /
-                1000
-              ).toFixed(1)}
-              s)
+              ({formatDuration(generation.createdAt, generation.completedAt)}s)
             </span>
           )}
         </div>
@@ -186,15 +178,6 @@ function GenerationsPage() {
   useEffect(() => {
     setModelInput(modelFilter ?? "")
   }, [modelFilter])
-
-  const modelsQuery = useQuery(generationModelsQueryOptions())
-
-  const filteredModels = useMemo(() => {
-    const all = modelsQuery.data?.models ?? []
-    if (!modelInput) return all
-    const lower = modelInput.toLowerCase()
-    return all.filter((m: string) => m.toLowerCase().includes(lower))
-  }, [modelsQuery.data?.models, modelInput])
 
   const tagsQuery = useQuery(generationTagsQueryOptions())
 
@@ -272,37 +255,21 @@ function GenerationsPage() {
             </ButtonGroup>
           </div>
           <div className="flex items-center gap-2">
-            <Autocomplete>
-              <AutocompleteInput
-                placeholder="model"
-                className="w-[220px] h-7"
-                value={modelInput}
-                onChange={(e) => setModelInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && modelInput.trim()) {
-                    e.preventDefault()
-                    setModelFilter(modelInput.trim())
-                  }
-                }}
-              />
-              <AutocompletePopup>
-                <AutocompleteList>
-                  {filteredModels.map((model) => (
-                    <AutocompleteItem
-                      key={model}
-                      value={model}
-                      onClick={() => {
-                        setModelFilter(model)
-                        setModelInput(model)
-                      }}
-                    >
-                      {formatFalEndpointId(model)}
-                    </AutocompleteItem>
-                  ))}
-                </AutocompleteList>
-                <AutocompleteEmpty />
-              </AutocompletePopup>
-            </Autocomplete>
+            <Input
+              placeholder="model"
+              className="w-[220px] h-7 font-mono"
+              value={modelInput}
+              onChange={(e) => {
+                setModelInput(e.target.value)
+                if (!e.target.value.trim()) setModelFilter(undefined)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && modelInput.trim()) {
+                  e.preventDefault()
+                  setModelFilter(modelInput.trim())
+                }
+              }}
+            />
 
             <Autocomplete autoHighlight={false}>
               <AutocompleteInput

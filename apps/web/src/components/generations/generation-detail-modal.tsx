@@ -34,6 +34,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
+import { formatDuration, normalizeSlug } from "@/lib/format"
 import { formatFalEndpointId } from "@/lib/format-endpoint"
 import {
   generationQueryOptions,
@@ -193,10 +194,7 @@ export function GenerationDetailModal({
 
   const completionTime =
     generation?.completedAt && generation?.createdAt
-      ? (
-          (new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()) /
-          1000
-        ).toFixed(1)
+      ? formatDuration(generation.createdAt, generation.completedAt)
       : null
 
   return (
@@ -391,9 +389,7 @@ export function GenerationDetailModal({
                         <InputGroup className="h-7">
                           <InputGroupInput
                             value={slugInput}
-                            onChange={(e) =>
-                              setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-/]/g, ""))
-                            }
+                            onChange={(e) => setSlugInput(normalizeSlug(e.target.value))}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && generationId) {
                                 updateMutation.mutate({ id: generationId, slug: slugInput })

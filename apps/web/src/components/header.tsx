@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link, useLocation } from "@tanstack/react-router"
-import { CircleIcon, RefreshCwIcon } from "lucide-react"
+import { CircleIcon } from "lucide-react"
 
 import { ApiKeySettings } from "./api-key-settings"
 import { PulsingDot } from "./pulsing-dot"
 import { healthQueryOptions } from "@/queries/health"
 import { pendingCountQueryOptions } from "@/queries/generations"
-import { syncStatusQueryOptions } from "@/queries/models"
 import { cn } from "@/lib/utils"
 import { env } from "@ig/env/web"
 
@@ -15,19 +14,12 @@ export default function Header() {
 
   const healthQuery = useQuery(healthQueryOptions())
   const pendingQuery = useQuery(pendingCountQueryOptions())
-  const syncStatusQuery = useQuery(syncStatusQueryOptions())
 
   const isConnected = healthQuery.isSuccess
   const pendingCount = pendingQuery.data?.items.length ?? 0
-  const syncStatus = syncStatusQuery.data
-  const activeStatuses = ["running", "queued", "waiting"]
-  const isSyncing =
-    activeStatuses.includes(syncStatus?.standard ?? "") ||
-    activeStatuses.includes(syncStatus?.all ?? "")
 
   const navItems = [
     { to: "/generations", label: "generations" },
-    { to: "/models", label: "models" },
     { to: "/playground", label: "playground" },
   ] as const
 
@@ -63,17 +55,6 @@ export default function Header() {
 
         {/* Right: Status indicators */}
         <div className="flex items-center gap-4">
-          {/* Model sync indicator */}
-          {isSyncing && (
-            <Link
-              to="/models"
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <RefreshCwIcon className="size-3 animate-spin" />
-              <span>syncing</span>
-            </Link>
-          )}
-
           {/* Pending jobs indicator */}
           {pendingCount > 0 && (
             <Link
