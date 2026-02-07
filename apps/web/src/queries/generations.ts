@@ -1,4 +1,4 @@
-import { orpc, queryClient } from "@/utils/orpc"
+import { orpc, queryClient } from "@/lib/orpc"
 
 // --- Query option factories ---
 

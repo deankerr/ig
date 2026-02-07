@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { clearApiKey, getApiKey, setApiKey } from "@/utils/orpc"
+import { clearApiKey, getApiKey, setApiKey } from "@/lib/orpc"
 
 export function ApiKeySettings() {
   const [open, setOpen] = useState(false)

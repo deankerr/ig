@@ -1,4 +1,4 @@
-import { orpc } from "@/utils/orpc"
+import { orpc } from "@/lib/orpc"
 
 export function healthQueryOptions() {
   return orpc.healthCheck.queryOptions({

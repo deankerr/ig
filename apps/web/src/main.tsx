@@ -5,7 +5,7 @@ import ReactDOM from "react-dom/client"
 
 import Loader from "./components/loader"
 import { routeTree } from "./routeTree.gen"
-import { queryClient } from "./utils/orpc"
+import { queryClient } from "./lib/orpc"
 
 const persister = createSyncStoragePersister({
   storage: window.localStorage,
