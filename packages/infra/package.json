@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "alchemy dev",
+    "dev:local": "bun --env-file .env alchemy.run.ts --dev",
     "deploy": "alchemy deploy",
     "destroy": "alchemy destroy"
   },

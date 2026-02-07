@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react"
 import { Film, FileAudio, FileQuestion, Image as ImageIcon } from "lucide-react"
 
-import { env } from "@ig/env/web"
+import { serverUrl } from "@/lib/server-url"
 import { cn } from "@/lib/utils"
 
 /**
@@ -61,7 +61,10 @@ export function Thumbnail({
   // For ready images, use server-side image transforms (Cloudflare Images binding)
   // f=auto negotiates best format (avif/webp) based on browser Accept header
   if (status === "ready" && isImage && !error) {
-    const src = `${env.VITE_SERVER_URL}/generations/${generationId}/file?w=${size}&f=auto`
+    const url = new URL(`/generations/${generationId}/file`, serverUrl)
+    url.searchParams.set("w", String(size))
+    url.searchParams.set("f", "auto")
+    const src = url.href
 
     return (
       <img

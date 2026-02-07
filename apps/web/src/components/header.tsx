@@ -1,13 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link, useLocation } from "@tanstack/react-router"
 import { CircleIcon } from "lucide-react"
-
 import { ApiKeySettings } from "./api-key-settings"
 import { PulsingDot } from "./pulsing-dot"
 import { healthQueryOptions } from "@/queries/health"
 import { pendingCountQueryOptions } from "@/queries/generations"
+import { serverUrl } from "@/lib/server-url"
 import { cn } from "@/lib/utils"
-import { env } from "@ig/env/web"
 
 export default function Header() {
   const location = useLocation()
@@ -69,7 +68,7 @@ export default function Header() {
 
           {/* Connection status */}
           <a
-            href={`${env.VITE_SERVER_URL}/api`}
+            href={new URL("/api", serverUrl).href}
             target="_blank"
             rel="noopener"
             className="flex items-center gap-1.5 text-xs"
@@ -81,15 +80,7 @@ export default function Header() {
               )}
             />
             <span className={cn(isConnected ? "text-muted-foreground" : "text-status-failed")}>
-              {(() => {
-                try {
-                  const url = new URL(env.VITE_SERVER_URL)
-                  const match = url.hostname.match(/^ig-server-(\w+)\./)
-                  return match?.[1] ?? url.hostname
-                } catch {
-                  return "..."
-                }
-              })()}
+              {serverUrl.hostname}
             </span>
           </a>
 

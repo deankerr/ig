@@ -2,19 +2,11 @@ import { useMutation } from "@tanstack/react-query"
 import { BracesIcon, MoreHorizontalIcon, RefreshCwIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
-
+import { DeleteGenerationDialog } from "@/components/delete-generation-dialog"
 import { Tag } from "@/components/tag"
 import { Thumbnail, THUMBNAIL_SIZE } from "@/components/thumbnail"
 import { TimeAgo } from "@/components/time-ago"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,23 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { formatDuration } from "@/lib/format"
 import { formatFalEndpointId } from "@/lib/format-endpoint"
-import {
-  deleteGenerationOptions,
-  regenerateGenerationOptions,
-  invalidateGenerations,
-} from "@/queries/generations"
-
-type Generation = {
-  id: string
-  slug: string | null
-  model: string
-  status: "pending" | "ready" | "failed"
-  contentType: string | null
-  input: Record<string, unknown>
-  tags: string[]
-  createdAt: Date
-  completedAt: Date | null
-}
+import { regenerateGenerationOptions, invalidateGenerations } from "@/queries/generations"
+import type { Generation } from "@/types"
 
 function getPrompt(input: Record<string, unknown>): string | null {
   if (typeof input.prompt === "string") return input.prompt
@@ -59,17 +36,6 @@ export function GenerationCard({
 }) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const prompt = getPrompt(generation.input)
-
-  const deleteMutation = useMutation({
-    ...deleteGenerationOptions(),
-    onSuccess: () => {
-      invalidateGenerations()
-      setShowDeleteDialog(false)
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to delete generation")
-    },
-  })
 
   const regenerateMutation = useMutation({
     ...regenerateGenerationOptions(),
@@ -205,29 +171,11 @@ export function GenerationCard({
         {cardContent}
       </div>
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-mono text-base">delete generation</DialogTitle>
-            <DialogDescription className="text-xs">
-              This will permanently delete the generation and its output file.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(false)}>
-              cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => deleteMutation.mutate({ id: generation.id })}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? "deleting..." : "delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteGenerationDialog
+        generationId={generation.id}
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+      />
     </>
   )
 }

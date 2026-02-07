@@ -14,20 +14,14 @@ import {
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Copyable } from "@/components/copyable"
+import { DeleteGenerationDialog } from "@/components/delete-generation-dialog"
 import { JsonSheet } from "@/components/json-sheet"
 import { PulsingDot } from "@/components/pulsing-dot"
 import { Tag } from "@/components/tag"
 import { TagInput } from "@/components/tag-input"
 import { TimeAgo } from "@/components/time-ago"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import {
   InputGroup,
   InputGroupAddon,
@@ -38,13 +32,12 @@ import { formatDuration, normalizeSlug } from "@/lib/format"
 import { formatFalEndpointId } from "@/lib/format-endpoint"
 import {
   generationQueryOptions,
-  deleteGenerationOptions,
   regenerateGenerationOptions,
   updateGenerationOptions,
   invalidateGenerations,
   invalidateGeneration,
 } from "@/queries/generations"
-import { env } from "@ig/env/web"
+import { serverUrl } from "@/lib/server-url"
 
 type GenerationDetailModalProps = {
   generationId: string | null
@@ -140,17 +133,6 @@ export function GenerationDetailModal({
 
   const generationQuery = useQuery(generationQueryOptions(generationId))
 
-  const deleteMutation = useMutation({
-    ...deleteGenerationOptions(),
-    onSuccess: () => {
-      invalidateGenerations()
-      onClose()
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to delete generation")
-    },
-  })
-
   const regenerateMutation = useMutation({
     ...regenerateGenerationOptions(),
     onSuccess: () => {
@@ -176,7 +158,7 @@ export function GenerationDetailModal({
 
   const generation = generationQuery.data
 
-  const fileUrl = generationId ? `${env.VITE_SERVER_URL}/generations/${generationId}/file` : ""
+  const fileUrl = generationId ? new URL(`/generations/${generationId}/file`, serverUrl).href : ""
   const isImage = generation?.contentType?.startsWith("image/")
   const isVideo = generation?.contentType?.startsWith("video/")
   const isAudio = generation?.contentType?.startsWith("audio/")
@@ -510,29 +492,14 @@ export function GenerationDetailModal({
       </Dialog>
 
       {/* Delete dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-mono text-base">delete generation</DialogTitle>
-            <DialogDescription className="text-xs">
-              This will permanently delete the generation and its output file.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(false)}>
-              cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => generationId && deleteMutation.mutate({ id: generationId })}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? "deleting..." : "delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {generationId && (
+        <DeleteGenerationDialog
+          generationId={generationId}
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          onDeleted={onClose}
+        />
+      )}
 
       {/* JSON sheet */}
       {generation && (

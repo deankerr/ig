@@ -33,6 +33,7 @@ import {
 import { formatDuration } from "@/lib/format"
 import { formatFalEndpointId } from "@/lib/format-endpoint"
 import { generationTagsQueryOptions, generationsInfiniteOptions } from "@/queries/generations"
+import type { Generation } from "@/types"
 
 const searchSchema = z.object({
   status: z.enum(["all", "pending", "ready", "failed"]).optional(),
@@ -45,20 +46,6 @@ export const Route = createFileRoute("/generations/")({
   component: GenerationsPage,
   validateSearch: searchSchema,
 })
-
-type GenerationStatus = "pending" | "ready" | "failed"
-
-type Generation = {
-  id: string
-  slug: string | null
-  model: string
-  status: GenerationStatus
-  contentType: string | null
-  input: Record<string, unknown>
-  tags: string[]
-  createdAt: Date
-  completedAt: Date | null
-}
 
 function GenerationListItem({
   generation,
@@ -172,10 +159,6 @@ function GenerationsPage() {
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    localStorage.setItem("generations-view-mode", viewMode)
-  }, [viewMode])
-
-  useEffect(() => {
     setModelInput(modelFilter ?? "")
   }, [modelFilter])
 
@@ -201,6 +184,7 @@ function GenerationsPage() {
   )
 
   const allGenerations = generationsQuery.data?.pages.flatMap((page) => page.items ?? []) ?? []
+  const selectedIndex = selectedId ? allGenerations.findIndex((g) => g.id === selectedId) : -1
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -239,7 +223,10 @@ function GenerationsPage() {
               <Button
                 size="icon-sm"
                 variant={viewMode === "grid" ? "default" : "ghost"}
-                onClick={() => setViewMode("grid")}
+                onClick={() => {
+                  setViewMode("grid")
+                  localStorage.setItem("generations-view-mode", "grid")
+                }}
                 aria-label="Grid view"
               >
                 <LayoutGridIcon />
@@ -247,7 +234,10 @@ function GenerationsPage() {
               <Button
                 size="icon-sm"
                 variant={viewMode === "list" ? "default" : "ghost"}
-                onClick={() => setViewMode("list")}
+                onClick={() => {
+                  setViewMode("list")
+                  localStorage.setItem("generations-view-mode", "list")
+                }}
                 aria-label="List view"
               >
                 <ListIcon />
@@ -380,27 +370,19 @@ function GenerationsPage() {
         generationId={selectedId ?? null}
         onClose={() => setSelectedId(undefined)}
         onPrev={() => {
-          const currentIndex = allGenerations.findIndex((g) => g.id === selectedId)
-          if (currentIndex > 0) {
-            setSelectedId(allGenerations[currentIndex - 1]?.id)
+          if (selectedIndex > 0) {
+            setSelectedId(allGenerations[selectedIndex - 1]?.id)
           }
         }}
         onNext={() => {
-          const currentIndex = allGenerations.findIndex((g) => g.id === selectedId)
-          if (currentIndex < allGenerations.length - 1) {
-            setSelectedId(allGenerations[currentIndex + 1]?.id)
+          if (selectedIndex < allGenerations.length - 1) {
+            setSelectedId(allGenerations[selectedIndex + 1]?.id)
           } else if (generationsQuery.hasNextPage && !generationsQuery.isFetchingNextPage) {
             generationsQuery.fetchNextPage()
           }
         }}
-        hasPrev={(() => {
-          const currentIndex = allGenerations.findIndex((g) => g.id === selectedId)
-          return currentIndex > 0
-        })()}
-        hasNext={(() => {
-          const currentIndex = allGenerations.findIndex((g) => g.id === selectedId)
-          return currentIndex < allGenerations.length - 1 || generationsQuery.hasNextPage
-        })()}
+        hasPrev={selectedIndex > 0}
+        hasNext={selectedIndex < allGenerations.length - 1 || !!generationsQuery.hasNextPage}
       />
     </div>
   )

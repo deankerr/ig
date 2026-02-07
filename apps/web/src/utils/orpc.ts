@@ -1,6 +1,5 @@
 import type { AppRouterClient } from "server/src/routers"
-
-import { env } from "@ig/env/web"
+import { serverUrl } from "@/lib/server-url"
 import { createORPCClient } from "@orpc/client"
 import { RPCLink } from "@orpc/client/fetch"
 import { createTanstackQueryUtils } from "@orpc/tanstack-query"
@@ -44,7 +43,7 @@ export function clearApiKey(): void {
 }
 
 export const link = new RPCLink({
-  url: `${env.VITE_SERVER_URL}/rpc`,
+  url: new URL("/rpc", serverUrl).href,
   headers() {
     const apiKey = getApiKey()
     return apiKey ? { "x-api-key": apiKey } : {}

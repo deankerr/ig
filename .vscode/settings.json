@@ -4,5 +4,12 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "never",
     "source.fixAll.oxc": "explicit"
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.alchemy/**": true
+  },
+  "typescript.tsserver.watchOptions": {
+    "excludeDirectories": ["**/node_modules", "**/.alchemy"]
   }
 }
