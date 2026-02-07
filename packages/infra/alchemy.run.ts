@@ -38,6 +38,7 @@ const images = Images()
 const ai = Ai()
 
 export const server = await Worker('server', {
+  url: false,
   cwd: '../../apps/server',
   entrypoint: 'src/index.ts',
   compatibility: 'node',
@@ -67,6 +68,7 @@ const url = (worker: Awaited<ReturnType<typeof Worker>>) =>
   worker.url?.replace(/\/$/, '') ?? `https://${worker.domains?.[0]?.name}`
 
 export const web = await Vite('web', {
+  url: false,
   cwd: '../../apps/web',
   assets: 'dist',
   bindings: {
