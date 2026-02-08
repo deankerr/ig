@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -32,7 +32,7 @@
 }
 
 @theme inline {
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --color-status-ready: var(--status-ready);
   --color-status-pending: var(--status-pending);
   --color-status-failed: var(--status-failed);
@@ -79,7 +79,7 @@
 /* Add pointer cursor to buttons */
 @layer base {
   button:not(:disabled),
-  [role="button"]:not(:disabled) {
+  [role='button']:not(:disabled) {
     cursor: pointer;
   }
 }
@@ -144,7 +144,7 @@
     overflow: hidden;
   }
   .scanlines-pending::after {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -173,14 +173,14 @@
     overflow: hidden;
   }
   .scanlines-failed::before {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;
     background: oklch(0.65 0.2 25 / 0.15);
   }
   .scanlines-failed::after {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;

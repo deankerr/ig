@@ -1,11 +1,11 @@
-import type { AppRouterClient } from "server/src/routers"
+import { createORPCClient } from '@orpc/client'
+import { RPCLink } from '@orpc/client/fetch'
+import { createTanstackQueryUtils } from '@orpc/tanstack-query'
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
+import type { AppRouterClient } from 'server/src/routers'
+import { toast } from 'sonner'
 
-import { env } from "@ig/env/web"
-import { createORPCClient } from "@orpc/client"
-import { RPCLink } from "@orpc/client/fetch"
-import { createTanstackQueryUtils } from "@orpc/tanstack-query"
-import { QueryCache, QueryClient } from "@tanstack/react-query"
-import { toast } from "sonner"
+import { serverUrl } from '@/lib/server-url'
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,17 +18,18 @@ export const queryClient = new QueryClient({
   },
   queryCache: new QueryCache({
     onError: (error, query) => {
-      toast.error(`Error: ${error.message}`, {
-        action: {
-          label: "retry",
-          onClick: query.invalidate,
-        },
-      })
+      console.error('[query error]', query.queryKey, error)
+      toast.error(`Error: ${error.message}`)
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error, _variables, _context, mutation) => {
+      console.error('[mutation error]', mutation.options.mutationKey, error)
     },
   }),
 })
 
-const API_KEY_STORAGE_KEY = "ig-api-key"
+const API_KEY_STORAGE_KEY = 'ig-api-key'
 
 export function getApiKey(): string | null {
   return localStorage.getItem(API_KEY_STORAGE_KEY)
@@ -43,10 +44,10 @@ export function clearApiKey(): void {
 }
 
 export const link = new RPCLink({
-  url: `${env.VITE_SERVER_URL}/rpc`,
+  url: new URL('/rpc', serverUrl).href,
   headers() {
     const apiKey = getApiKey()
-    return apiKey ? { "x-api-key": apiKey } : {}
+    return apiKey ? { 'x-api-key': apiKey } : {}
   },
   fetch(url, options) {
     return fetch(url, {
@@ -55,6 +56,6 @@ export const link = new RPCLink({
   },
 })
 
-export const client: AppRouterClient = createORPCClient(link)
+const client: AppRouterClient = createORPCClient(link)
 
 export const orpc = createTanstackQueryUtils(client)

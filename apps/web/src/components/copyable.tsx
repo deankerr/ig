@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react"
-import { cn } from "@/lib/utils"
+import { useState, useCallback } from 'react'
 
-type CopyableProps = React.ComponentProps<"span"> & {
+import { cn } from '@/lib/utils'
+
+type CopyableProps = React.ComponentProps<'span'> & {
   text: string
 }
 
@@ -17,13 +18,13 @@ export function Copyable({ text, className, children, ...props }: CopyableProps)
   return (
     <span
       className={cn(
-        "cursor-pointer hover:brightness-110 transition-colors",
-        copied && "animate-copy-pulse",
+        'cursor-pointer transition-colors hover:brightness-110',
+        copied && 'animate-copy-pulse',
         className,
       )}
       onClick={(e) => {
         e.stopPropagation()
-        handleCopy()
+        void handleCopy()
       }}
       {...props}
     >

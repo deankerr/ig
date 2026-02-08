@@ -1,11 +1,11 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import { XIcon } from "lucide-react"
+import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
+import { XIcon } from 'lucide-react'
+import * as React from 'react'
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 function Sheet({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="sheet" {...props} />
@@ -28,7 +28,7 @@ function SheetOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
     <DialogPrimitive.Backdrop
       data-slot="sheet-overlay"
       className={cn(
-        "data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 bg-black/10 duration-200 supports-backdrop-filter:backdrop-blur-xs fixed inset-0 isolate z-50",
+        'data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 fixed inset-0 isolate z-50 bg-black/10 duration-200 supports-backdrop-filter:backdrop-blur-xs',
         className,
       )}
       {...props}
@@ -37,12 +37,12 @@ function SheetOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
 }
 
 type SheetContentProps = DialogPrimitive.Popup.Props & {
-  side?: "right" | "left"
+  side?: 'right' | 'left'
   showCloseButton?: boolean
 }
 
 function SheetContent({
-  side = "right",
+  side = 'right',
   className,
   children,
   showCloseButton = true,
@@ -54,12 +54,12 @@ function SheetContent({
       <DialogPrimitive.Popup
         data-slot="sheet-content"
         className={cn(
-          "bg-background ring-foreground/10 fixed z-50 flex h-full flex-col gap-4 ring-1 outline-none",
-          "data-open:animate-in data-closed:animate-out duration-200",
-          side === "right" &&
-            "data-closed:slide-out-to-right data-open:slide-in-from-right top-0 right-0 w-3/4 max-w-md border-l",
-          side === "left" &&
-            "data-closed:slide-out-to-left data-open:slide-in-from-left top-0 left-0 w-3/4 max-w-md border-r",
+          'bg-background ring-foreground/10 fixed z-50 flex h-full flex-col gap-4 ring-1 outline-none',
+          'data-open:animate-in data-closed:animate-out duration-200',
+          side === 'right' &&
+            'data-closed:slide-out-to-right data-open:slide-in-from-right top-0 right-0 w-3/4 max-w-md border-l',
+          side === 'left' &&
+            'data-closed:slide-out-to-left data-open:slide-in-from-left top-0 left-0 w-3/4 max-w-md border-r',
           className,
         )}
         {...props}
@@ -79,19 +79,19 @@ function SheetContent({
   )
 }
 
-function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
+function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-1 p-4 border-b border-border", className)}
+      className={cn('border-border flex flex-col gap-1 border-b p-4', className)}
       {...props}
     />
   )
 }
 
-function SheetBody({ className, ...props }: React.ComponentProps<"div">) {
+function SheetBody({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div data-slot="sheet-body" className={cn("flex-1 overflow-auto p-4", className)} {...props} />
+    <div data-slot="sheet-body" className={cn('flex-1 overflow-auto p-4', className)} {...props} />
   )
 }
 
@@ -99,7 +99,7 @@ function SheetTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="sheet-title"
-      className={cn("text-sm font-medium", className)}
+      className={cn('text-sm font-medium', className)}
       {...props}
     />
   )
@@ -109,7 +109,7 @@ function SheetDescription({ className, ...props }: DialogPrimitive.Description.P
   return (
     <DialogPrimitive.Description
       data-slot="sheet-description"
-      className={cn("text-muted-foreground text-xs", className)}
+      className={cn('text-muted-foreground text-xs', className)}
       {...props}
     />
   )

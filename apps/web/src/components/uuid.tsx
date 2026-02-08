@@ -1,6 +1,6 @@
-import { useState } from "react"
+import { useState } from 'react'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 
 /**
  * Displays the last segment of a UUID (most distinctive part in UUIDv7).
@@ -11,7 +11,7 @@ export function UUID({ value, className }: { value: string; className?: string }
 
   // UUIDv7 format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   // The last segment is the most distinctive part
-  const lastSegment = value.split("-").pop() ?? value.slice(-12)
+  const lastSegment = value.split('-').pop() ?? value.slice(-12)
 
   async function handleCopy() {
     await navigator.clipboard.writeText(value)
@@ -23,13 +23,13 @@ export function UUID({ value, className }: { value: string; className?: string }
     <button
       onClick={handleCopy}
       className={cn(
-        "font-mono text-sm tracking-[-0.02em] cursor-pointer hover:text-primary transition-colors",
-        copied && "text-status-ready",
+        'hover:text-primary cursor-pointer font-mono text-sm tracking-[-0.02em] transition-colors',
+        copied && 'text-status-ready',
         className,
       )}
-      title={copied ? "Copied!" : `Click to copy: ${value}`}
+      title={copied ? 'Copied!' : `Click to copy: ${value}`}
     >
-      {copied ? "copied" : lastSegment}
+      {copied ? 'copied' : lastSegment}
     </button>
   )
 }

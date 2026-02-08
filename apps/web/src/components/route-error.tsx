@@ -1,7 +1,7 @@
-import type { ErrorComponentProps } from "@tanstack/react-router"
-import { useRouter } from "@tanstack/react-router"
+import type { ErrorComponentProps } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
 
-import { ErrorBoundaryUi } from "./elements/devtools/error-boundary-ui"
+import { ErrorBoundaryUi } from './elements/devtools/error-boundary-ui'
 
 export function RouteError({ error, info }: ErrorComponentProps) {
   const router = useRouter()
@@ -12,7 +12,7 @@ export function RouteError({ error, info }: ErrorComponentProps) {
         error={error}
         componentStack={info?.componentStack}
         resetError={() => router.invalidate()}
-        className="max-w-3xl w-full"
+        className="w-full max-w-3xl"
       />
     </div>
   )

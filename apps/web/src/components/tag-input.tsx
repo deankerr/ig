@@ -1,26 +1,26 @@
-import { PlusIcon } from "lucide-react"
-import { useState } from "react"
+import { PlusIcon } from 'lucide-react'
+import { useState } from 'react'
 
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-} from "@/components/ui/input-group"
+} from '@/components/ui/input-group'
 
 type TagInputProps = {
   onAdd: (tag: string) => void
   placeholder?: string
 }
 
-export function TagInput({ onAdd, placeholder = "add tag" }: TagInputProps) {
-  const [value, setValue] = useState("")
+export function TagInput({ onAdd, placeholder = 'add tag' }: TagInputProps) {
+  const [value, setValue] = useState('')
 
   function handleAdd() {
     const trimmed = value.trim()
     if (trimmed) {
       onAdd(trimmed)
-      setValue("")
+      setValue('')
     }
   }
 
@@ -30,7 +30,7 @@ export function TagInput({ onAdd, placeholder = "add tag" }: TagInputProps) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
+          if (e.key === 'Enter') {
             e.preventDefault()
             handleAdd()
           }

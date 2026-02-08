@@ -5,7 +5,7 @@
  * See: https://docs.fal.ai/model-apis/model-endpoints/webhooks
  */
 
-const JWKS_URL = "https://rest.alpha.fal.ai/.well-known/jwks.json"
+const JWKS_URL = 'https://rest.alpha.fal.ai/.well-known/jwks.json'
 const TIMESTAMP_TOLERANCE_SECONDS = 300 // 5 minutes
 
 type JWK = {
@@ -42,21 +42,21 @@ async function getPublicKeys(): Promise<CryptoKey[]> {
   const keys: CryptoKey[] = []
 
   for (const jwk of jwks.keys) {
-    if (jwk.kty !== "OKP" || jwk.crv !== "Ed25519") {
+    if (jwk.kty !== 'OKP' || jwk.crv !== 'Ed25519') {
       continue
     }
 
     // Import the Ed25519 public key
     const key = await crypto.subtle.importKey(
-      "jwk",
+      'jwk',
       {
         kty: jwk.kty,
         crv: jwk.crv,
         x: jwk.x,
       },
-      { name: "Ed25519" },
+      { name: 'Ed25519' },
       false,
-      ["verify"],
+      ['verify'],
     )
     keys.push(key)
   }
@@ -81,8 +81,8 @@ function hexToBytes(hex: string): Uint8Array {
  */
 function bytesToHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 export type WebhookVerificationResult = { valid: true } | { valid: false; error: string }
@@ -95,13 +95,13 @@ export async function verifyWebhook(
   rawBody: ArrayBuffer,
 ): Promise<WebhookVerificationResult> {
   // Extract required headers
-  const requestId = headers.get("x-fal-webhook-request-id")
-  const userId = headers.get("x-fal-webhook-user-id")
-  const timestamp = headers.get("x-fal-webhook-timestamp")
-  const signature = headers.get("x-fal-webhook-signature")
+  const requestId = headers.get('x-fal-webhook-request-id')
+  const userId = headers.get('x-fal-webhook-user-id')
+  const timestamp = headers.get('x-fal-webhook-timestamp')
+  const signature = headers.get('x-fal-webhook-signature')
 
   if (!requestId || !userId || !timestamp || !signature) {
-    return { valid: false, error: "Missing required webhook headers" }
+    return { valid: false, error: 'Missing required webhook headers' }
   }
 
   // Validate timestamp (within 5 minutes)
@@ -114,7 +114,7 @@ export async function verifyWebhook(
   }
 
   // Compute SHA-256 hash of the raw body
-  const bodyHash = bytesToHex(await crypto.subtle.digest("SHA-256", rawBody))
+  const bodyHash = bytesToHex(await crypto.subtle.digest('SHA-256', rawBody))
 
   // Construct the message to verify
   const message = `${requestId}\n${userId}\n${timestamp}\n${bodyHash}`
@@ -128,18 +128,18 @@ export async function verifyWebhook(
   try {
     publicKeys = await getPublicKeys()
   } catch (err) {
-    return { valid: false, error: `Failed to fetch JWKS: ${err}` }
+    return { valid: false, error: `Failed to fetch JWKS: ${String(err)}` }
   }
 
   if (publicKeys.length === 0) {
-    return { valid: false, error: "No Ed25519 keys found in JWKS" }
+    return { valid: false, error: 'No Ed25519 keys found in JWKS' }
   }
 
   // Try each public key
   for (const key of publicKeys) {
     try {
       const isValid = await crypto.subtle.verify(
-        { name: "Ed25519" },
+        { name: 'Ed25519' },
         key,
         signatureBytes as BufferSource,
         messageBytes as BufferSource,
@@ -154,5 +154,5 @@ export async function verifyWebhook(
     }
   }
 
-  return { valid: false, error: "Signature verification failed" }
+  return { valid: false, error: 'Signature verification failed' }
 }

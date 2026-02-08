@@ -1,18 +1,18 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from 'react'
 
 const INTERVALS = [
-  { label: "y", seconds: 31536000 },
-  { label: "mo", seconds: 2592000 },
-  { label: "d", seconds: 86400 },
-  { label: "h", seconds: 3600 },
-  { label: "m", seconds: 60 },
-  { label: "s", seconds: 1 },
+  { label: 'y', seconds: 31536000 },
+  { label: 'mo', seconds: 2592000 },
+  { label: 'd', seconds: 86400 },
+  { label: 'h', seconds: 3600 },
+  { label: 'm', seconds: 60 },
+  { label: 's', seconds: 1 },
 ] as const
 
-function getTimeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+function getTimeAgo(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000)
 
-  if (seconds < 5) return "just now"
+  if (seconds < 5) return 'just now'
 
   for (const interval of INTERVALS) {
     const count = Math.floor(seconds / interval.seconds)
@@ -21,20 +21,20 @@ function getTimeAgo(date: Date): string {
     }
   }
 
-  return "just now"
+  return 'just now'
 }
 
-export function TimeAgo({ date: input, className }: { date: Date; className?: string }) {
-  const date = new Date(input)
-  const [timeAgo, setTimeAgo] = useState(() => getTimeAgo(date))
+export function TimeAgo({ date, className }: { date: Date; className?: string }) {
+  const timestamp = date.getTime()
+  const [timeAgo, setTimeAgo] = useState(() => getTimeAgo(timestamp))
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeAgo(getTimeAgo(date))
+      setTimeAgo(getTimeAgo(timestamp))
     }, 10000)
 
     return () => clearInterval(timer)
-  }, [date])
+  }, [timestamp])
 
   return (
     <time dateTime={date.toISOString()} title={date.toLocaleString()} className={className}>

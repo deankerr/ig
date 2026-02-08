@@ -2,7 +2,7 @@
  * Shared types for provider webhook resolution.
  */
 
-import type { Result } from "../utils/result"
+import type { Result } from '../utils/result'
 
 /**
  * A single resolved output from a provider.

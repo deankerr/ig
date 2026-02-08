@@ -1,6 +1,6 @@
-import { XIcon } from "lucide-react"
+import { XIcon } from 'lucide-react'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 
 /**
  * Tag component with text wrapping support for long tags.
@@ -17,13 +17,13 @@ export function Tag({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-secondary text-secondary-foreground break-all",
+        'bg-secondary text-secondary-foreground inline-flex items-center gap-1 px-1.5 py-0.5 text-xs break-all',
         className,
       )}
     >
       <span className="break-all">{children}</span>
       {onRemove && (
-        <button onClick={onRemove} className="shrink-0 hover:text-destructive transition-colors">
+        <button onClick={onRemove} className="hover:text-destructive shrink-0 transition-colors">
           <XIcon className="size-3" />
         </button>
       )}

@@ -304,10 +304,10 @@ Use the `Icon` suffix on lucide imports to avoid naming clashes with components 
 
 ```tsx
 // Preferred
-import { ExternalLinkIcon, InfoIcon, SearchIcon } from "lucide-react"
+import { ExternalLinkIcon, InfoIcon, SearchIcon } from 'lucide-react'
 
 // Avoid - can clash with component names
-import { ExternalLink, Info, Search } from "lucide-react"
+import { ExternalLink, Info, Search } from 'lucide-react'
 ```
 
 ## Registry Components
@@ -320,3 +320,25 @@ The shadcn registry system now allows anyone to easily create and distribute the
 
 - Just put them in the root `components/` directory.
 - If they have a logical group, create a directory for them.
+
+<claude-mem-context>
+# Recent Activity
+
+### Jan 16, 2026
+
+| ID    | Time     | T   | Title                                                | Read |
+| ----- | -------- | --- | ---------------------------------------------------- | ---- |
+| #3297 | 11:32 PM | 🔵  | Full-Stack TypeScript Monorepo Architecture Explored | ~751 |
+
+### Jan 22, 2026
+
+| ID    | Time    | T   | Title                                               | Read |
+| ----- | ------- | --- | --------------------------------------------------- | ---- |
+| #4664 | 7:35 PM | ✅  | Updated HTML with Dark Mode and JetBrains Mono Font | ~256 |
+| #4663 | "       | 🔵  | HTML Entry Point                                    | ~185 |
+| #4660 | 7:34 PM | 🔵  | shadcn/ui Configuration                             | ~233 |
+| #4642 | 7:31 PM | 🔵  | TypeScript Configuration with Strict Mode           | ~197 |
+| #4641 | "       | 🔵  | Vite Build Configuration                            | ~165 |
+| #4640 | "       | 🔵  | Frontend Technology Stack Configuration             | ~307 |
+
+</claude-mem-context>

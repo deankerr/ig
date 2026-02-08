@@ -1,6 +1,6 @@
-import type { Context as HonoContext } from "hono"
+import type { Context as HonoContext } from 'hono'
 
-import type { Services } from "./services"
+import type { Services } from './services'
 
 export type CreateContextOptions = {
   context: HonoContext

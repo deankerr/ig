@@ -1,10 +1,10 @@
-import { generations } from "@ig/db/schema"
-import { eq } from "drizzle-orm"
-import type { DrizzleD1Database } from "drizzle-orm/d1"
-import { v7 as uuidv7 } from "uuid"
+import { generations } from '@ig/db/schema'
+import type * as schema from '@ig/db/schema'
+import { eq } from 'drizzle-orm'
+import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import { v7 as uuidv7 } from 'uuid'
 
-import type * as schema from "@ig/db/schema"
-import type { ProviderResult } from "../providers/types"
+import type { ProviderResult } from '../providers/types'
 
 const SLUG_PREFIX_LENGTH = 12
 
@@ -49,7 +49,7 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
 
       await db.insert(generations).values({
         id,
-        status: "pending",
+        status: 'pending',
         provider: args.provider,
         model: args.model,
         input: args.input,
@@ -89,7 +89,7 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
       await updateWithMetadata(
         args.id,
         {
-          status: "failed",
+          status: 'failed',
           errorCode: args.error.code,
           errorMessage: args.error.message,
           completedAt: new Date(),
@@ -109,9 +109,9 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
       if (!result.ok) {
         await this.fail({
           id: args.id,
-          error: { code: result.error?.code ?? "UNKNOWN", message: result.message },
+          error: { code: result.error?.code ?? 'UNKNOWN', message: result.message },
         })
-        console.log("generation_failed", { generationId: args.id, code: result.error?.code })
+        console.log('generation_failed', { generationId: args.id, code: result.error?.code })
         return
       }
 
@@ -139,13 +139,13 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
 
         // Handle per-output failure
         if (!output.ok) {
-          const code = output.error?.code ?? "UNKNOWN"
+          const code = output.error?.code ?? 'UNKNOWN'
           if (isFirst) {
             // Update original generation to failed
             await db
               .update(generations)
               .set({
-                status: "failed",
+                status: 'failed',
                 errorCode: code,
                 errorMessage: output.message,
                 completedAt: new Date(),
@@ -157,7 +157,7 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
             // Create failed record for batch output
             await db.insert(generations).values({
               id: genId,
-              status: "failed",
+              status: 'failed',
               provider: args.provider,
               model: generation.model,
               input: generation.input,
@@ -171,7 +171,7 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
             })
           }
 
-          console.log("generation_output_failed", {
+          console.log('generation_output_failed', {
             generationId: genId,
             code,
             batch: !isFirst,
@@ -195,7 +195,7 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
           await db
             .update(generations)
             .set({
-              status: "ready",
+              status: 'ready',
               contentType,
               completedAt: new Date(),
               providerRequestId: requestId,
@@ -206,7 +206,7 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
           // Create new generation record for batch outputs
           await db.insert(generations).values({
             id: genId,
-            status: "ready",
+            status: 'ready',
             provider: args.provider,
             model: generation.model,
             input: generation.input,
@@ -219,7 +219,7 @@ export function createGenerationService(db: DrizzleD1Database<typeof schema>, bu
           })
         }
 
-        console.log("generation_ready", {
+        console.log('generation_ready', {
           generationId: genId,
           contentType,
           batch: !isFirst,

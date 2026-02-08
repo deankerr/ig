@@ -2,8 +2,8 @@
  * Shared utilities for provider implementations.
  */
 
-import type { Result } from "../utils/result"
-import { getErrorMessage } from "../utils/error"
+import { getErrorMessage } from '../utils/error'
+import type { Result } from '../utils/result'
 
 type FetchResult = Result<{ data: ArrayBuffer; contentType: string | null }>
 
@@ -16,7 +16,7 @@ export async function fetchUrl(url: string): Promise<FetchResult> {
     if (!response.ok) {
       return { ok: false, message: `HTTP ${response.status}` }
     }
-    const contentType = response.headers.get("content-type")
+    const contentType = response.headers.get('content-type')
     return { ok: true, value: { data: await response.arrayBuffer(), contentType } }
   } catch (err) {
     return { ok: false, message: getErrorMessage(err) }
@@ -47,8 +47,8 @@ export function parseDataURI(dataURI: string): { data: Uint8Array; contentType: 
   const match = dataURI.match(/^data:([^;]+);base64,(.+)$/)
   if (!match) return null
 
-  const contentType = match[1] ?? "application/octet-stream"
-  const base64Data = match[2] ?? ""
+  const contentType = match[1] ?? 'application/octet-stream'
+  const base64Data = match[2] ?? ''
 
   const data = decodeBase64(base64Data)
   if (!data) return null

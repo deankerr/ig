@@ -3,10 +3,11 @@
  * Parses payload, decodes base64/dataURI, fetches URLs if needed, returns resolved outputs.
  */
 
-import type { ProviderResult, ResolvedOutput } from "../types"
-import { decodeBase64, fetchUrl, parseDataURI } from "../utils"
-import { RunwareWebhookSchema, RunwareDataSchema } from "./schemas"
-import type { z } from "zod"
+import type { z } from 'zod'
+
+import type { ProviderResult, ResolvedOutput } from '../types'
+import { decodeBase64, fetchUrl, parseDataURI } from '../utils'
+import { RunwareWebhookSchema, RunwareDataSchema } from './schemas'
 
 type RunwareData = z.infer<typeof RunwareDataSchema>
 
@@ -17,12 +18,12 @@ type RunwareData = z.infer<typeof RunwareDataSchema>
 export async function resolveRunwareWebhook(rawPayload: unknown): Promise<ProviderResult> {
   const parsed = RunwareWebhookSchema.safeParse(rawPayload)
   if (!parsed.success) {
-    return { ok: false, message: parsed.error.message, error: { code: "INVALID_PAYLOAD" } }
+    return { ok: false, message: parsed.error.message, error: { code: 'INVALID_PAYLOAD' } }
   }
 
-  if ("error" in parsed.data) {
+  if ('error' in parsed.data) {
     const err = parsed.data.error as { message: string }
-    return { ok: false, message: err.message, error: { code: "RUNWARE_ERROR" } }
+    return { ok: false, message: err.message, error: { code: 'RUNWARE_ERROR' } }
   }
 
   const { data } = parsed.data
@@ -34,7 +35,7 @@ export async function resolveRunwareWebhook(rawPayload: unknown): Promise<Provid
     return {
       ok: false,
       message: `No outputs resolved from ${data.length} item(s)`,
-      error: { code: "NO_OUTPUTS" },
+      error: { code: 'NO_OUTPUTS' },
     }
   }
 
@@ -53,13 +54,13 @@ async function resolveOutput(item: RunwareData): Promise<ResolvedOutput | null> 
   if (item.imageURL) {
     const result = await fetchUrl(item.imageURL)
     if (!result.ok) {
-      return { ok: false, message: result.message, error: { code: "FETCH_FAILED" } }
+      return { ok: false, message: result.message, error: { code: 'FETCH_FAILED' } }
     }
     return {
       ok: true,
       value: {
         data: result.value.data,
-        contentType: result.value.contentType ?? "application/octet-stream",
+        contentType: result.value.contentType ?? 'application/octet-stream',
         metadata: item,
       },
     }
@@ -68,13 +69,13 @@ async function resolveOutput(item: RunwareData): Promise<ResolvedOutput | null> 
   if (item.videoURL) {
     const result = await fetchUrl(item.videoURL)
     if (!result.ok) {
-      return { ok: false, message: result.message, error: { code: "FETCH_FAILED" } }
+      return { ok: false, message: result.message, error: { code: 'FETCH_FAILED' } }
     }
     return {
       ok: true,
       value: {
         data: result.value.data,
-        contentType: result.value.contentType ?? "application/octet-stream",
+        contentType: result.value.contentType ?? 'application/octet-stream',
         metadata: item,
       },
     }
@@ -83,13 +84,13 @@ async function resolveOutput(item: RunwareData): Promise<ResolvedOutput | null> 
   if (item.audioURL) {
     const result = await fetchUrl(item.audioURL)
     if (!result.ok) {
-      return { ok: false, message: result.message, error: { code: "FETCH_FAILED" } }
+      return { ok: false, message: result.message, error: { code: 'FETCH_FAILED' } }
     }
     return {
       ok: true,
       value: {
         data: result.value.data,
-        contentType: result.value.contentType ?? "application/octet-stream",
+        contentType: result.value.contentType ?? 'application/octet-stream',
         metadata: item,
       },
     }
@@ -101,11 +102,11 @@ async function resolveOutput(item: RunwareData): Promise<ResolvedOutput | null> 
     if (!parsed) {
       return {
         ok: false,
-        message: "Failed to decode image data URI",
-        error: { code: "DECODE_FAILED" },
+        message: 'Failed to decode image data URI',
+        error: { code: 'DECODE_FAILED' },
       }
     }
-    item.imageDataURI = "[extracted]"
+    item.imageDataURI = '[extracted]'
     return {
       ok: true,
       value: { data: parsed.data, contentType: parsed.contentType, metadata: item },
@@ -117,11 +118,11 @@ async function resolveOutput(item: RunwareData): Promise<ResolvedOutput | null> 
     if (!parsed) {
       return {
         ok: false,
-        message: "Failed to decode audio data URI",
-        error: { code: "DECODE_FAILED" },
+        message: 'Failed to decode audio data URI',
+        error: { code: 'DECODE_FAILED' },
       }
     }
-    item.audioDataURI = "[extracted]"
+    item.audioDataURI = '[extracted]'
     return {
       ok: true,
       value: { data: parsed.data, contentType: parsed.contentType, metadata: item },
@@ -135,14 +136,14 @@ async function resolveOutput(item: RunwareData): Promise<ResolvedOutput | null> 
     if (!decoded) {
       return {
         ok: false,
-        message: "Failed to decode image base64",
-        error: { code: "DECODE_FAILED" },
+        message: 'Failed to decode image base64',
+        error: { code: 'DECODE_FAILED' },
       }
     }
-    item.imageBase64Data = "[extracted]"
+    item.imageBase64Data = '[extracted]'
     return {
       ok: true,
-      value: { data: decoded, contentType: "image/png", metadata: item },
+      value: { data: decoded, contentType: 'image/png', metadata: item },
     }
   }
 
@@ -151,14 +152,14 @@ async function resolveOutput(item: RunwareData): Promise<ResolvedOutput | null> 
     if (!decoded) {
       return {
         ok: false,
-        message: "Failed to decode audio base64",
-        error: { code: "DECODE_FAILED" },
+        message: 'Failed to decode audio base64',
+        error: { code: 'DECODE_FAILED' },
       }
     }
-    item.audioBase64Data = "[extracted]"
+    item.audioBase64Data = '[extracted]'
     return {
       ok: true,
-      value: { data: decoded, contentType: "audio/mpeg", metadata: item },
+      value: { data: decoded, contentType: 'audio/mpeg', metadata: item },
     }
   }
 
