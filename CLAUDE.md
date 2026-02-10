@@ -1,31 +1,22 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with code in this repository.
-
-Always read @VISION.md for a high level understanding of our project.
-
-## **MAJOR REFACTOR**
-
-- No backwards compat, no migrations. The current system lives on, safe in its own stage.
+Always read @VISION.md for a high level understanding of the project.
 
 ## Structure
 
 ```
 apps/server/     # Hono + oRPC on Cloudflare Workers (port 3220)
-apps/web/        # React 19 + TanStack Router + Vite (port 3221)
 packages/db/     # Drizzle ORM schema (SQLite/D1)
-packages/env/    # Cloudflare binding types
+packages/env/    # Cloudflare binding types (manual Env declaration)
 packages/infra/  # Alchemy infrastructure-as-code
 ```
 
-See `apps/server/CLAUDE.md` for server-specific patterns (Result type, error handling).
+See `apps/server/CLAUDE.md` for server patterns and `apps/server/src/providers/runware/CLAUDE.md` for the Runware generation system.
 
 ## Commands
 
 ```bash
-bun run dev           # Start full stack via Alchemy
-bun run dev:web       # Start only web frontend
-bun run dev:server    # Start only API server
+bun run dev           # Start server via Alchemy
 bun run check         # check-types + lint + format (with auto-fix)
 bun run clean         # Remove node_modules, build artifacts, caches
 bun run db:generate   # Generate Drizzle migrations
@@ -44,63 +35,27 @@ Experimental with low-traffic production deployment. Breaking changes are accept
 
 ## Stack
 
-- **Frontend**: React 19, TanStack Router/Query, Tailwind 4, shadcn/ui
 - **Backend**: Hono, oRPC (type-safe RPC with OpenAPI)
 - **Database**: SQLite via D1, Drizzle ORM
 - **Storage**: Cloudflare R2
-- **AI Providers**: fal.ai, Runware (queue-based async with webhooks)
-- **Infra**: Alchemy (TypeScript IaC for Cloudflare)
+- **AI Providers**: Runware (queue-based async with webhooks)
+- **Infra**: Alchemy (TypeScript IaC for Cloudflare), Durable Objects
 - **Tooling**: Turborepo, Bun, Oxlint, Oxfmt
+
+## Env Types
+
+The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. **Do not** use Alchemy's inferred `typeof server.Env` — its `Bound<T>` conditional type chain triggers TS2589 (excessively deep type instantiation). When adding a binding in `packages/infra/alchemy.run.ts`, add the corresponding property to `env.d.ts` using the Cloudflare runtime type (`D1Database`, `R2Bucket`, `DurableObjectNamespace`, etc).
+
+## Context
+
+`Context` from `apps/server/src/context.ts` is the standard context passed to internal functions. Contains `env: Env` and `headers: Headers`. Functions that need bindings accept `(ctx: Context, args)` — not individual bindings.
 
 ## API
 
-- **REST** (`/api/*`) - OpenAPI spec at `/api/.well-known/openapi.json`
-- **RPC** (`/rpc/*`) - oRPC endpoints, used by web UI
-- **Webhooks** (`/webhooks/fal`, `/webhooks/runware`) - provider callbacks
+- **REST** (`/api/*`) — OpenAPI spec at `/api/.well-known/openapi.json`
+- **RPC** (`/rpc/*`) — oRPC endpoints
+- **Webhooks** (`/webhooks/runware`) — provider callbacks
 - **Auth**: Mutations require `x-api-key` header. Queries are public.
-
-## Providers
-
-Providers live in `apps/server/src/providers/`. Each has:
-
-- `create.ts` - Submit generation to provider
-- `webhook.ts` - Handle provider callback
-- `resolve.ts` - Parse webhook payload into `ProviderResult`
-
-### fal.ai
-
-```
-generations.create({ provider: "fal", model, input })
-  -> fal.queue.submit(model, { input, webhookUrl })
-  -> webhook receives result
-  -> resolve verifies signature, fetches URLs
-```
-
-- `model` is the fal endpoint path (e.g., `fal-ai/flux/schnell`)
-- `input` passes through unchanged
-- Signature verification via Ed25519
-
-### Runware
-
-```
-generations.create({ provider: "runware", model, input })
-  -> POST https://api.runware.ai/v1 [authTask, inferenceTask]
-  -> webhook receives result
-  -> resolve validates with Zod, decodes base64/URLs
-```
-
-- `model` is an AIR identifier (e.g., `civitai:108@1`)
-- `taskUUID` is our generation ID
-- No signature verification (relies on URL secrecy)
-
-**Automatic defaults:**
-
-```typescript
-input.taskType ??= 'imageInference'
-input.positivePrompt ??= input.prompt
-input.width ??= 1024
-input.height ??= 1024
-```
 
 ## Database
 
@@ -113,6 +68,6 @@ Schema in `packages/db/src/schema/`. Migrations in `packages/db/src/migrations/`
 
 Alchemy (`packages/infra/alchemy.run.ts`) defines all Cloudflare resources:
 
-- D1Database, R2Bucket, Worker, Vite
+- D1Database, R2Bucket, Worker, DurableObjectNamespace, Ai, Images
 - State stored remotely (survives local deletion)
 - URLs derived from stage name

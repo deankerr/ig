@@ -52,8 +52,8 @@ temp
 *.local.*
 
 # claude-mem
-**/CLAUDE.md
-!/CLAUDE.md
-!/.claude/**/CLAUDE.md
-!/apps/*/CLAUDE.md
-!/packages/*/CLAUDE.md
+# **/CLAUDE.md
+# !/CLAUDE.md
+# !/.claude/**/CLAUDE.md
+# !/apps/*/CLAUDE.md
+# !/packages/*/CLAUDE.md

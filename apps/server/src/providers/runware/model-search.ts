@@ -7,6 +7,8 @@
  * @see https://runware.ai/docs/utilities/model-search
  */
 
+import type { Context } from '../../context'
+
 const RUNWARE_API_URL = 'https://api.runware.ai/v1'
 
 // -- Types --
@@ -51,15 +53,9 @@ export type ModelSearchResult = {
 
 // -- Client --
 
-/**
- * Search Runware's model catalog.
- *
- * Sends auth + modelSearch tasks in a single request.
- * Returns results and totalResults — no transformation.
- */
 export async function searchModels(
-  apiKey: string,
-  params: ModelSearchParams,
+  ctx: Context,
+  args: ModelSearchParams,
 ): Promise<ModelSearchResult> {
   const taskUUID = crypto.randomUUID()
 
@@ -67,8 +63,8 @@ export async function searchModels(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify([
-      { taskType: 'authentication', apiKey },
-      { taskType: 'modelSearch', taskUUID, ...params },
+      { taskType: 'authentication', apiKey: ctx.env.RUNWARE_KEY },
+      { taskType: 'modelSearch', taskUUID, ...args },
     ]),
   })
 
@@ -87,13 +83,7 @@ export async function searchModels(
   }
 }
 
-/**
- * Look up a single model by AIR ID.
- *
- * Searches by full AIR — works for all sources.
- * Returns null if the exact version isn't indexed on Runware.
- */
-export async function lookupModel(apiKey: string, air: string): Promise<Model | null> {
-  const result = await searchModels(apiKey, { search: air, limit: 1 })
+export async function lookupModel(ctx: Context, args: { air: string }): Promise<Model | null> {
+  const result = await searchModels(ctx, { search: args.air, limit: 1 })
   return result.results[0] ?? null
 }

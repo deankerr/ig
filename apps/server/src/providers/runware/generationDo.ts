@@ -11,98 +11,20 @@
 import { DurableObject } from 'cloudflare:workers'
 import { z } from 'zod'
 
-import type { SerializedError } from '../../utils/error'
-import { type ImageInferenceInput, type RunwareError, imageInferenceWebhook } from './schemas'
+import { timeoutError, validationError, webhookError, type GenerationError } from './errors'
+import { imageInferenceWebhook } from './schemas'
+import type {
+  ConfirmResult,
+  GenerationMeta,
+  GenerationState,
+  InitArgs,
+  Output,
+  OutputResult,
+  PendingItem,
+  RecordWebhookResult,
+} from './types'
 
 const TIMEOUT_MS = 5 * 60 * 1000
-
-// -- Generation-level errors --
-
-type HttpError = { code: 'http_error' | 'fetch_failed'; url: string; status: number; body: string }
-type ApiRejection = { code: 'api_rejected'; errors: RunwareError[] }
-type TimeoutError = { code: 'timeout'; received: number; expected: number }
-type DispatchError = HttpError | ApiRejection
-export type GenerationError = DispatchError | TimeoutError
-
-// -- Per-output errors --
-
-type FlatError = { formErrors: string[]; fieldErrors: Record<string, string[] | undefined> }
-type ValidationError = { code: 'validation'; issues: FlatError }
-type WebhookError = { code: 'webhook_error'; errors: RunwareError[] }
-type StorageError = { code: 'storage_failed'; r2Key: string; cause: SerializedError }
-type FetchError = { code: 'fetch_failed'; url: string; status: number; body: string }
-export type OutputErrorDetail = ValidationError | WebhookError | FetchError | StorageError
-
-// -- Output types --
-
-export type OutputSuccess = {
-  type: 'success'
-  id: string
-  r2Key: string
-  contentType: string
-  seed: number
-  cost?: number
-  metadata: Record<string, unknown>
-  createdAt: number
-}
-
-export type OutputError = {
-  type: 'error'
-  error: OutputErrorDetail
-  raw: unknown
-  createdAt: number
-}
-
-export type Output = OutputSuccess | OutputError
-
-// -- DO state stored in sync KV --
-
-export type GenerationMeta = {
-  id: string
-  model: string
-  input: Record<string, unknown>
-  outputFormat: ImageInferenceInput['outputFormat']
-  expectedCount: number
-  error?: GenerationError
-  createdAt: number
-  completedAt?: number
-}
-
-// -- RPC argument/return types --
-
-export type InitArgs = {
-  id: string
-  model: string
-  input: Record<string, unknown>
-  outputFormat: ImageInferenceInput['outputFormat']
-  expectedCount: number
-  error?: DispatchError
-}
-
-export type PendingItem = {
-  index: number
-  imageURL: string
-  seed: number
-  cost?: number
-  raw: Record<string, unknown>
-}
-
-export type RecordWebhookResult = {
-  items: PendingItem[]
-  meta: GenerationMeta
-}
-
-export type OutputResult = OutputSuccess | OutputError
-
-export type ConfirmResult = {
-  complete: boolean
-}
-
-export type GenerationState = GenerationMeta & {
-  outputs: Output[]
-}
-
-// -- Durable Object --
 
 export class GenerationDO extends DurableObject<Env> {
   // Sync KV — reads are synchronous, no constructor hydration needed.
@@ -156,16 +78,14 @@ export class GenerationDO extends DurableObject<Env> {
 
     // Validation failure — record error output inline
     if (!parsed.success) {
-      const error: ValidationError = { code: 'validation', issues: z.flattenError(parsed.error) }
-      outputs.push({ type: 'error', error, raw: payload, createdAt: now })
+      outputs.push(validationError(z.flattenError(parsed.error), payload, now))
       this.kv.put('outputs', outputs)
       return { items: [], meta }
     }
 
     // Runware reported an error for this task
     if ('errors' in parsed.data) {
-      const error: WebhookError = { code: 'webhook_error', errors: parsed.data.errors }
-      outputs.push({ type: 'error', error, raw: payload, createdAt: now })
+      outputs.push(webhookError(parsed.data.errors, payload, now))
       this.kv.put('outputs', outputs)
 
       // Check completion (error outputs count toward total)
@@ -207,6 +127,14 @@ export class GenerationDO extends DurableObject<Env> {
     return { complete: !!meta.completedAt }
   }
 
+  /** Record a generation-level error (e.g. D1 projection failure). */
+  setError(error: GenerationError) {
+    const meta = this.getMeta()
+    if (!meta) return
+    meta.error = error
+    this.kv.put('gen', meta)
+  }
+
   /** Read current state for client polling. */
   getState(): GenerationState | null {
     const meta = this.getMeta()
@@ -221,11 +149,7 @@ export class GenerationDO extends DurableObject<Env> {
 
     const outputs = this.getOutputs()
     meta.completedAt = Date.now()
-    meta.error = {
-      code: 'timeout',
-      received: outputs.length,
-      expected: meta.expectedCount,
-    }
+    meta.error = timeoutError(outputs.length, meta.expectedCount)
     this.kv.put('gen', meta)
   }
 }

@@ -10,7 +10,7 @@ Consumers include traditional web apps, Discord bots, CLI tools - anything I bui
 
 ## What It Does
 
-- **Inference orchestration** via fal.ai (now also Runware) - text-to-image, image-to-image, image-to-video, vision models, anything fal supports
+- **Inference orchestration** via Runware - text-to-image, image-to-image, image-to-video, vision models, anything Runware supports
 - **Artifact storage** - outputs stored in R2, inputs and metadata in D1
 - **Full provenance** - every artifact retains its input parameters, endpoint, timing, metrics
 - **Flexible tagging** - consumers define their own organization schemes
@@ -19,8 +19,6 @@ Consumers include traditional web apps, Discord bots, CLI tools - anything I bui
 ## Design Philosophy
 
 **Artifacts are the point.** The inference job is transient plumbing. What matters is the library of generated content you're building over time.
-
-**Fal's schema is our schema.** Input payloads pass through essentially untouched. We validate structure, not content. This keeps the API surface stable even as fal adds endpoints and parameters.
 
 **Store everything, ask questions later.** R2 is cheap. Keep inputs, outputs, errors, metrics. You'll want them eventually.
 
@@ -31,7 +29,6 @@ Consumers include traditional web apps, Discord bots, CLI tools - anything I bui
 - **Cloudflare Workers** - API, webhook handlers
 - **D1** - Artifact records, queries
 - **R2** - Blob storage for outputs
-- **fal.ai** - Inference provider
 
 ## Boundaries
 
@@ -46,17 +43,6 @@ ig is deliberately limited in scope:
 - **Semantic search** - Embeddings, vector storage, similarity queries
 - **Multi-User Generative AI App** - Handles all of the user management aspects
 - **Discord bot** - Uses tags to group by channel, user, etc.
-
-## fal.ai
-
-fal provides the inference. Key characteristics:
-
-- 500+ endpoints across modalities
-- Queue-based async API with webhooks
-- Detailed OpenAPI schemas per endpoint
-- Metrics (tokens, timing) in responses
-
-We don't need to support all endpoints at once. The passthrough design means adding new ones is trivial.
 
 **Resources:**
 

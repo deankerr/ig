@@ -6,18 +6,13 @@ import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
-import { createContext } from './context'
+import type { Context } from './context'
 import { webhook as runwareWebhook } from './providers/runware'
 import { appRouter } from './routers'
 import { fileRoutes } from './routes/file'
-import { createServices, type Services } from './services'
 import { handleOrpcError, handleHonoError } from './utils/error'
 
-type Variables = {
-  services: Services
-}
-
-const app = new Hono<{ Bindings: Env; Variables: Variables }>()
+const app = new Hono<{ Bindings: Env }>()
 
 // Global error handler for webhook routes and any unhandled errors
 app.onError((error, c) => {
@@ -33,12 +28,6 @@ app.use(
     allowHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
   }),
 )
-
-// Inject services into context
-app.use('/*', async (c, next) => {
-  c.set('services', createServices(c.env))
-  await next()
-})
 
 app.route('/webhooks/runware', runwareWebhook)
 app.route('/', fileRoutes)
@@ -69,7 +58,7 @@ export const rpcHandler = new RPCHandler(appRouter, {
 })
 
 app.use('/*', async (c, next) => {
-  const context = await createContext({ context: c, services: c.get('services') })
+  const context: Context = { env: c.env, headers: c.req.raw.headers }
 
   const rpcResult = await rpcHandler.handle(c.req.raw, {
     prefix: '/rpc',

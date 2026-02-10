@@ -1,16 +1,33 @@
-import { type server } from '@ig/infra/alchemy.run'
-
-// This file infers types for the cloudflare:workers environment from your Alchemy Worker.
-// @see https://alchemy.run/concepts/bindings/#type-safe-bindings
-
-export type CloudflareEnv = typeof server.Env
+// Manual Env declaration — Alchemy's inferred `typeof server.Env` triggers TS2589
+// (excessively deep type instantiation) due to its Bound<T> conditional type chain.
+// Keep this in sync with bindings in packages/infra/alchemy.run.ts.
 
 declare global {
-  type Env = CloudflareEnv
+  interface Env {
+    AI: Ai
+    DB: D1Database
+    GENERATIONS_BUCKET: R2Bucket
+    IMAGES: ImagesBinding
+    GENERATION_DO: DurableObjectNamespace
+    API_KEY: string
+    PUBLIC_URL: string
+    RUNWARE_KEY: string
+  }
 }
 
 declare module 'cloudflare:workers' {
   namespace Cloudflare {
-    export interface Env extends CloudflareEnv {}
+    export interface Env {
+      AI: Ai
+      DB: D1Database
+      GENERATIONS_BUCKET: R2Bucket
+      IMAGES: ImagesBinding
+      GENERATION_DO: DurableObjectNamespace
+      API_KEY: string
+      PUBLIC_URL: string
+      RUNWARE_KEY: string
+    }
   }
 }
+
+export {}
