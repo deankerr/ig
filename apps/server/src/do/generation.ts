@@ -1,4 +1,6 @@
+import * as schema from '@ig/db/schema'
 import { DurableObject } from 'cloudflare:workers'
+import { drizzle } from 'drizzle-orm/d1'
 import { v7 as uuidv7 } from 'uuid'
 import { z } from 'zod'
 
@@ -32,24 +34,22 @@ type OutputErrorDetail = ValidationError | WebhookError | HttpError | StorageErr
 
 // -- Output types --
 
-type OutputBase = {
-  raw: unknown
-  receivedAt: number
-}
-
-type OutputSuccess = OutputBase & {
+type OutputSuccess = {
   type: 'success'
   id: string
-  imageUUID: string
   r2Key: string
   contentType: string
   seed: number
   cost?: number
+  metadata: Record<string, unknown>
+  createdAt: number
 }
 
-type OutputError = OutputBase & {
+type OutputError = {
   type: 'error'
   error: OutputErrorDetail
+  raw: unknown
+  createdAt: number
 }
 
 type Output = OutputSuccess | OutputError
@@ -59,14 +59,23 @@ type GenerationState = {
   model: string
   input: Record<string, unknown>
   outputFormat: ImageInferenceInput['outputFormat']
-  count: number
+  expectedCount: number
   outputs: Output[]
-  status: 'active' | 'done' | 'failed'
   error?: GenerationError
   createdAt: number
+  completedAt?: number
 }
 
 export class GenerationDO extends DurableObject<Env> {
+  private state: GenerationState | undefined
+
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env)
+    void ctx.blockConcurrencyWhile(async () => {
+      this.state = await ctx.storage.get('state')
+    })
+  }
+
   // 1. Client calls create → dispatch to Runware, throw on rejection
   async create(request: CreateRequest) {
     const now = Date.now()
@@ -85,17 +94,16 @@ export class GenerationDO extends DurableObject<Env> {
     }
 
     // Persist state before dispatching
-    const state: GenerationState = {
+    this.state = {
       id: request.id,
       model: request.model,
       input: inferenceTask,
       outputFormat: request.outputFormat,
-      count: request.numberResults,
+      expectedCount: request.numberResults,
       outputs: [],
-      status: 'active',
       createdAt: now,
     }
-    await this.ctx.storage.put('state', state)
+    await this.ctx.storage.put('state', this.state)
     await this.ctx.storage.setAlarm(now + TIMEOUT_MS)
 
     // Send to Runware API
@@ -110,31 +118,32 @@ export class GenerationDO extends DurableObject<Env> {
 
     // HTTP-level failure
     if (!response.ok) {
-      state.status = 'failed'
-      state.error = {
+      this.state.completedAt = Date.now()
+      this.state.error = {
         code: 'http_error',
         url: RUNWARE_API_URL,
         status: response.status,
         body: await response.text(),
       }
-      await this.ctx.storage.put('state', state)
+      await this.ctx.storage.put('state', this.state)
+      await this.persistToD1(this.state)
       throw new Error(`Runware API error: ${response.status}`)
     }
 
     // Application-level rejection (e.g. invalid dimensions for model)
     const body = (await response.json()) as { data?: unknown[]; errors?: RunwareError[] }
     if (body.errors?.length) {
-      state.status = 'failed'
-      state.error = { code: 'api_rejected', errors: body.errors }
-      await this.ctx.storage.put('state', state)
+      this.state.completedAt = Date.now()
+      this.state.error = { code: 'api_rejected', errors: body.errors }
+      await this.ctx.storage.put('state', this.state)
+      await this.persistToD1(this.state)
       throw new Error(`Runware error: ${JSON.stringify(body.errors)}`)
     }
   }
 
   // 2. Runware calls webhook per completed image → validate, fetch, store
   async handleWebhook(payload: unknown) {
-    const state = await this.ctx.storage.get<GenerationState>('state')
-    if (!state) throw new Error('No generation state')
+    if (!this.state) throw new Error('No generation state')
 
     const now = Date.now()
     const parsed = imageInferenceWebhook.safeParse(payload)
@@ -142,22 +151,22 @@ export class GenerationDO extends DurableObject<Env> {
     // Payload didn't match any known shape
     if (!parsed.success) {
       const error: ValidationError = { code: 'validation', issues: z.flattenError(parsed.error) }
-      state.outputs.push({ type: 'error', error, raw: payload, receivedAt: now })
-      await this.ctx.storage.put('state', state)
+      this.state.outputs.push({ type: 'error', error, raw: payload, createdAt: now })
+      await this.ctx.storage.put('state', this.state)
       return
     }
 
     // Runware reported an error for this task
     if ('errors' in parsed.data) {
       const error: WebhookError = { code: 'webhook_error', errors: parsed.data.errors }
-      state.outputs.push({ type: 'error', error, raw: payload, receivedAt: now })
-      await this.ctx.storage.put('state', state)
+      this.state.outputs.push({ type: 'error', error, raw: payload, createdAt: now })
+      await this.ctx.storage.put('state', this.state)
       return
     }
 
     // Process each result in the webhook data
     const { data } = parsed.data
-    const contentType = getContentType(state.outputFormat)
+    const contentType = getContentType(this.state.outputFormat)
 
     for (const result of data) {
       // Fetch image from Runware CDN
@@ -169,7 +178,7 @@ export class GenerationDO extends DurableObject<Env> {
           status: response.status,
           body: await response.text(),
         }
-        state.outputs.push({ type: 'error', error, raw: result, receivedAt: now })
+        this.state.outputs.push({ type: 'error', error, raw: result, createdAt: now })
         continue
       }
 
@@ -183,51 +192,84 @@ export class GenerationDO extends DurableObject<Env> {
         })
       } catch (err) {
         const error: StorageError = { code: 'storage_failed', r2Key, cause: serializeError(err) }
-        state.outputs.push({ type: 'error', error, raw: result, receivedAt: now })
+        this.state.outputs.push({ type: 'error', error, raw: result, createdAt: now })
         continue
       }
 
       // Record success
-      const output: OutputSuccess = {
+      this.state.outputs.push({
         type: 'success',
         id,
-        imageUUID: result.imageUUID,
         r2Key,
         contentType,
         seed: result.seed,
         cost: result.cost,
-        raw: result,
-        receivedAt: now,
-      }
-      state.outputs.push(output)
-
-      await dummyDbInsert({ ...output, generationId: state.id, model: state.model })
+        metadata: result as Record<string, unknown>,
+        createdAt: now,
+      })
     }
 
     // Check completion
-    if (state.outputs.length >= state.count) {
-      state.status = 'done'
+    if (this.state.outputs.length >= this.state.expectedCount) {
+      this.state.completedAt = Date.now()
+      await this.ctx.storage.put('state', this.state)
+      await this.persistToD1(this.state)
+      return
     }
 
-    await this.ctx.storage.put('state', state)
+    await this.ctx.storage.put('state', this.state)
   }
 
   // 3. Client polls for current state
-  async getState() {
-    return this.ctx.storage.get<GenerationState>('state') ?? null
+  getState() {
+    return this.state ?? null
   }
 
   // 4. Timeout — mark failed if still waiting for webhooks
   override async alarm() {
-    const state = await this.ctx.storage.get<GenerationState>('state')
-    if (!state || state.status !== 'active') return
+    if (!this.state || this.state.completedAt) return
 
-    state.status = 'failed'
-    state.error = { code: 'timeout', received: state.outputs.length, expected: state.count }
-    await this.ctx.storage.put('state', state)
+    this.state.completedAt = Date.now()
+    this.state.error = {
+      code: 'timeout',
+      received: this.state.outputs.length,
+      expected: this.state.expectedCount,
+    }
+    await this.ctx.storage.put('state', this.state)
+    await this.persistToD1(this.state)
   }
-}
 
-async function dummyDbInsert(data: unknown) {
-  console.log('thanks for the data', data)
+  // 5. Project successful outputs into D1 as artifacts
+  private async persistToD1(state: GenerationState) {
+    const db = drizzle(this.env.DB, { schema })
+    const successes = state.outputs.filter((o): o is OutputSuccess => o.type === 'success')
+
+    try {
+      await db.insert(schema.runwareGenerations).values({
+        id: state.id,
+        model: state.model,
+        input: state.input,
+        artifactCount: successes.length,
+        createdAt: new Date(state.createdAt),
+        completedAt: new Date(state.completedAt!),
+      })
+
+      for (const output of successes) {
+        await db.insert(schema.runwareArtifacts).values({
+          id: output.id,
+          generationId: state.id,
+          model: state.model,
+          r2Key: output.r2Key,
+          contentType: output.contentType,
+          seed: output.seed,
+          cost: output.cost,
+          metadata: output.metadata,
+          createdAt: new Date(output.createdAt),
+        })
+      }
+    } catch (err) {
+      const cause = err instanceof Error ? err.cause : undefined
+      console.error('D1 projection failed', { generationId: state.id, error: err, cause })
+    }
+  }
 }

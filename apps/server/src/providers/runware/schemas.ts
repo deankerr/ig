@@ -57,6 +57,26 @@ export const imageInferenceWebhook = z.union([
   z.object({ errors: z.array(runwareError).min(1) }),
 ])
 
+// -- Legacy schemas (used by resolve.ts for the old webhook flow) --
+
+export const RunwareDataSchema = z.object({
+  taskUUID: z.string().optional(),
+  imageURL: z.string().optional(),
+  imageBase64Data: z.string().optional(),
+  imageDataURI: z.string().optional(),
+  videoURL: z.string().optional(),
+  audioURL: z.string().optional(),
+  audioBase64Data: z.string().optional(),
+  audioDataURI: z.string().optional(),
+  seed: z.number().optional(),
+  cost: z.number().optional(),
+})
+
+export const RunwareWebhookSchema = z.union([
+  z.object({ data: z.array(RunwareDataSchema).min(1) }),
+  z.object({ error: z.unknown() }),
+])
+
 // -- Helpers --
 
 const outputFormatContentType = {

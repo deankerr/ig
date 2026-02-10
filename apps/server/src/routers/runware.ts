@@ -13,6 +13,13 @@ async function dispatchGeneration(env: Env, id: string, input: ImageInferenceInp
   await stub.create({ id, ...input })
 }
 
+async function getGenerationState(env: Env, id: string) {
+  // biome-ignore lint: env type cast needed to break circular depth
+  const ns = (env as any).GENERATION_DO
+  const stub = ns.get(ns.idFromName(id))
+  return stub.getState()
+}
+
 const MAX_TAGS = 20
 const tagSchema = z.string().trim().max(256, 'Tag cannot exceed 256 characters')
 const tagsSchema = z
@@ -31,6 +38,13 @@ export const runwareRouter = {
     await dispatchGeneration(context.env, id, input.input)
     return { id }
   }),
+
+  getStatus: publicProcedure
+    .route({ spec: { security: [] } })
+    .input(z.object({ id: z.uuid() }))
+    .handler(async ({ input, context }) => {
+      return getGenerationState(context.env, input.id)
+    }),
 
   searchModels: publicProcedure
     .route({ spec: { security: [] } })
