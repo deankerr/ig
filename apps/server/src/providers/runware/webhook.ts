@@ -1,12 +1,8 @@
 import { Hono } from 'hono'
 
-import type { GenerationDO } from '../../do/generation'
+import { processWebhookResults } from './process'
 
-type WebhookBindings = {
-  GENERATION_DO: DurableObjectNamespace<GenerationDO>
-}
-
-export const webhook = new Hono<{ Bindings: WebhookBindings }>()
+export const webhook = new Hono<{ Bindings: Env }>()
 
 webhook.post('/', async (c) => {
   const generationId = c.req.query('generation_id')
@@ -23,8 +19,21 @@ webhook.post('/', async (c) => {
     return c.body(null, 400)
   }
 
-  const stub = c.env.GENERATION_DO.get(c.env.GENERATION_DO.idFromName(generationId))
-  await stub.handleWebhook(payload)
+  // biome-ignore lint: env type cast needed to break circular depth
+  const ns = (c.env as any).GENERATION_DO
+  const stub = ns.get(ns.idFromName(generationId))
+  const result = await stub.recordWebhook(payload)
+
+  // Process results in background — don't block Runware's webhook
+  if (result.items.length > 0) {
+    c.executionCtx.waitUntil(
+      processWebhookResults(c.env, {
+        generationId,
+        meta: result.meta,
+        items: result.items,
+      }),
+    )
+  }
 
   return c.body(null, 200)
 })

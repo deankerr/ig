@@ -1,5 +1,7 @@
 # Server Package
 
+**MAJOR REFACTOR, THIS IS OUTDATED**
+
 ## Structure
 
 ```

@@ -107,7 +107,7 @@ app.get('/favicon.ico', (c) => {
   })
 })
 
-export { GenerationDO } from './do/generation'
+export { GenerationDO } from './providers/runware/generationDo'
 
 export default {
   fetch: app.fetch,
