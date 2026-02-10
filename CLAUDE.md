@@ -4,6 +4,10 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 Always read @VISION.md for a high level understanding of our project.
 
+## **MAJOR REFACTOR**
+
+- No backwards compat, no migrations. The current system lives on, safe in its own stage.
+
 ## Structure
 
 ```

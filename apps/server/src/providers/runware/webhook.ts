@@ -1,17 +1,12 @@
-/**
- * Runware webhook handler
- *
- * Receives inference results from Runware and updates the generation record.
- */
-
 import { Hono } from 'hono'
 
-import type { Services } from '../../services'
-import { resolveRunwareWebhook } from './resolve'
+import type { GenerationDO } from '../../do/generation'
 
-type Variables = { services: Services }
+type WebhookBindings = {
+  GENERATION_DO: DurableObjectNamespace<GenerationDO>
+}
 
-export const webhook = new Hono<{ Bindings: Env; Variables: Variables }>()
+export const webhook = new Hono<{ Bindings: WebhookBindings }>()
 
 webhook.post('/', async (c) => {
   const generationId = c.req.query('generation_id')
@@ -20,36 +15,16 @@ webhook.post('/', async (c) => {
     return c.body(null, 400)
   }
 
-  const { generations } = c.var.services
-
-  const gen = await generations.get({ id: generationId })
-  if (!gen) {
-    console.error('runware_webhook_generation_not_found', { generationId })
-    return c.body(null, 404)
-  }
-
-  // Idempotency: already processed
-  if (gen.status === 'ready' || gen.status === 'failed') {
-    return c.body(null, 200)
-  }
-
-  let rawPayload: unknown
+  let payload: unknown
   try {
-    rawPayload = await c.req.json()
+    payload = await c.req.json()
   } catch {
     console.error('runware_webhook_invalid_json')
     return c.body(null, 400)
   }
 
-  const result = await resolveRunwareWebhook(rawPayload)
-
-  console.log('runware_webhook', {
-    generationId,
-    ok: result.ok,
-    outputCount: result.ok ? result.value.outputs.length : 0,
-  })
-
-  await generations.complete({ id: generationId, provider: 'runware', result })
+  const stub = c.env.GENERATION_DO.get(c.env.GENERATION_DO.idFromName(generationId))
+  await stub.handleWebhook(payload)
 
   return c.body(null, 200)
 })

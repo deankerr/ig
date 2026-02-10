@@ -6,7 +6,6 @@
     "check-types": "tsc -b"
   },
   "dependencies": {
-    "@fal-ai/client": "catalog:",
     "@ig/db": "workspace:*",
     "@ig/env": "workspace:*",
     "@orpc/openapi": "catalog:",

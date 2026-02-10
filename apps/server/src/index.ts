@@ -7,7 +7,6 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
 import { createContext } from './context'
-import { webhook as falWebhook } from './providers/fal'
 import { webhook as runwareWebhook } from './providers/runware'
 import { appRouter } from './routers'
 import { fileRoutes } from './routes/file'
@@ -41,7 +40,6 @@ app.use('/*', async (c, next) => {
   await next()
 })
 
-app.route('/webhooks/fal', falWebhook)
 app.route('/webhooks/runware', runwareWebhook)
 app.route('/', fileRoutes)
 
@@ -108,6 +106,8 @@ app.get('/favicon.ico', (c) => {
     'Cache-Control': 'public, max-age=31536000',
   })
 })
+
+export { GenerationDO } from './do/generation'
 
 export default {
   fetch: app.fetch,

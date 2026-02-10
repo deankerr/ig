@@ -1,5 +1,13 @@
 import alchemy from 'alchemy'
-import { Ai, D1Database, Images, R2Bucket, Vite, Worker } from 'alchemy/cloudflare'
+import {
+  Ai,
+  D1Database,
+  DurableObjectNamespace,
+  Images,
+  R2Bucket,
+  Vite,
+  Worker,
+} from 'alchemy/cloudflare'
 import { CloudflareStateStore } from 'alchemy/state'
 import { config } from 'dotenv'
 
@@ -37,6 +45,10 @@ const images = Images()
 
 const ai = Ai()
 
+const generationDO = DurableObjectNamespace('generation-do', {
+  className: 'GenerationDO',
+})
+
 export const server = await Worker('server', {
   url: false,
   cwd: '../../apps/server',
@@ -52,8 +64,9 @@ export const server = await Worker('server', {
     GENERATIONS_BUCKET: generationsBucket,
     IMAGES: images,
 
+    GENERATION_DO: generationDO,
+
     API_KEY: alchemy.secret.env.API_KEY!,
-    FAL_KEY: alchemy.secret.env.FAL_KEY!,
     PUBLIC_URL: `https://${domain('server')}`,
     RUNWARE_KEY: alchemy.secret.env.RUNWARE_KEY!,
   },

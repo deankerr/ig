@@ -4,10 +4,9 @@ import { and, desc, eq, lt, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { apiKeyProcedure, publicProcedure } from '../orpc'
-import { create as createFal } from '../providers/fal'
 import { create as createRunware } from '../providers/runware'
 
-const PROVIDERS = ['fal', 'runware'] as const
+const PROVIDERS = ['runware'] as const
 
 const MAX_TAGS = 20
 const SLUG_PREFIX_LENGTH = 12
@@ -42,7 +41,6 @@ function slugify(input: string): string {
 const slugSchema = z.string().transform((s) => slugify(s) || undefined)
 
 const providers = {
-  fal: createFal,
   runware: createRunware,
 } as const
 

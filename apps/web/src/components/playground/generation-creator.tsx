@@ -20,7 +20,7 @@ export function GenerationCreator({
 }: {
   onSuccess?: (generation: { id: string }) => void
 }) {
-  const [model, setModel] = useState('fal-ai/flux/schnell')
+  const [model, setModel] = useState('civitai:108@1')
   const [inputJson, setInputJson] = useState(DEFAULT_INPUT)
   const [tags, setTags] = useState<string[]>([])
   const [slug, setSlug] = useState('')
@@ -54,7 +54,7 @@ export function GenerationCreator({
     }
 
     createMutation.mutate({
-      provider: model.includes('@') ? 'runware' : 'fal',
+      provider: 'runware' as const,
       model,
       input: parsedInput,
       tags,
@@ -114,7 +114,7 @@ export function GenerationCreator({
                   <Input
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    placeholder="fal-ai/... or civitai:...@..."
+                    placeholder="civitai:...@..."
                     className="font-mono text-sm"
                   />
                 </div>

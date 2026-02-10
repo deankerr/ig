@@ -6,7 +6,7 @@ export const generations = sqliteTable(
   {
     id: text('id').primaryKey(), // UUIDv7
     status: text('status', { enum: ['pending', 'ready', 'failed'] }).notNull(),
-    provider: text('provider').notNull().default('fal'),
+    provider: text('provider').notNull().default('runware'),
     model: text('model').notNull(), // provider-specific model identifier
     input: text('input', { mode: 'json' }).notNull().$type<Record<string, unknown>>(),
     tags: text('tags', { mode: 'json' }).notNull().default([]).$type<string[]>(),
