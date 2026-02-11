@@ -49,6 +49,7 @@ export class GenerationDO extends DurableObject<Env> {
       input: args.input,
       outputFormat: args.outputFormat,
       expectedCount: args.expectedCount,
+      annotations: args.annotations ?? {},
       createdAt: now,
     }
 

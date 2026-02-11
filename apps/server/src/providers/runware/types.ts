@@ -31,6 +31,7 @@ export type GenerationMeta = {
   input: Record<string, unknown>
   outputFormat: ImageInferenceInput['outputFormat']
   expectedCount: number
+  annotations: Record<string, unknown>
   error?: GenerationError
   createdAt: number
   completedAt?: number
@@ -48,6 +49,7 @@ export type InitArgs = {
   input: Record<string, unknown>
   outputFormat: ImageInferenceInput['outputFormat']
   expectedCount: number
+  annotations: Record<string, unknown>
   error?: GenerationError
 }
 

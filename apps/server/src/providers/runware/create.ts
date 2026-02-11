@@ -1,6 +1,7 @@
 import { v7 as uuidv7 } from 'uuid'
 
 import type { Context } from '../../context'
+import { resolveAutoAspectRatio } from '../../services/auto-aspect-ratio'
 import type { Result } from '../../utils/result'
 import type { GenerationError } from './errors'
 import { httpError } from './errors'
@@ -9,7 +10,26 @@ import { getGenerationStub } from './stub'
 
 const RUNWARE_API_URL = 'https://api.runware.ai/v1'
 
+const aspectRatioDimensions = {
+  landscape: { width: 1536, height: 1024 },
+  portrait: { width: 1024, height: 1536 },
+  square: { width: 1280, height: 1280 },
+} as const
+
 export async function createGeneration(ctx: Context, args: { input: ImageInferenceInput }) {
+  const input = { ...args.input }
+  const annotations: Record<string, unknown> = {}
+
+  if (input.width === undefined && input.height === undefined) {
+    const ar = await resolveAutoAspectRatio(ctx, { prompt: input.positivePrompt })
+    annotations.autoAspectRatio = ar
+    if (ar.ok) {
+      const dims = aspectRatioDimensions[ar.value.aspectRatio]
+      input.width = dims.width
+      input.height = dims.height
+    }
+  }
+
   const id = uuidv7()
   const webhookURL = `${ctx.env.PUBLIC_URL}/webhooks/runware?generation_id=${id}`
 
@@ -17,16 +37,17 @@ export async function createGeneration(ctx: Context, args: { input: ImageInferen
     id,
     apiKey: ctx.env.RUNWARE_KEY,
     webhookURL,
-    input: args.input,
+    input,
   })
 
   const stub = getGenerationStub(ctx, id)
   await stub.init({
     id,
-    model: args.input.model,
+    model: input.model,
     input: result.ok ? result.value.inferenceTask : {},
-    outputFormat: args.input.outputFormat,
-    expectedCount: args.input.numberResults,
+    outputFormat: input.outputFormat,
+    expectedCount: input.numberResults,
+    annotations,
     error: result.ok ? undefined : result.error,
   })
 
@@ -53,8 +74,8 @@ async function dispatch(
     taskType: 'imageInference' as const,
     taskUUID: args.id,
     ...args.input,
-    width: args.input.width ?? 1024,
-    height: args.input.height ?? 1024,
+    width: args.input.width ?? 1280,
+    height: args.input.height ?? 1280,
     outputType: 'URL' as const,
     includeCost: true,
     webhookURL: args.webhookURL,
