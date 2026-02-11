@@ -7,7 +7,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
 import type { Context } from './context'
-import { webhook as runwareWebhook } from './providers/runware'
+import { webhook as runwareWebhook } from './inference'
 import { appRouter } from './routers'
 import { fileRoutes } from './routes/file'
 import { handleOrpcError, handleHonoError } from './utils/error'
@@ -96,7 +96,9 @@ app.get('/favicon.ico', (c) => {
   })
 })
 
-export { GenerationDO } from './providers/runware/generationDo'
+// Exported as GenerationDO to match the existing Cloudflare binding className.
+// Will rename when we migrate the infra config.
+export { InferenceDO as GenerationDO } from './inference/request'
 
 export default {
   fetch: app.fetch,

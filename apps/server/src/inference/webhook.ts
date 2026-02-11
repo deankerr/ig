@@ -1,5 +1,5 @@
 /**
- * Runware webhook handler + background result processing.
+ * Runware webhook handler + background artifact processing.
  * Owns the full webhook flow: parse request → call DO → fetch from CDN → store in R2 → write to D1.
  */
 
@@ -8,11 +8,17 @@ import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
 import { v7 as uuidv7 } from 'uuid'
 
-import type { Context } from '../../context'
-import { fetchError, projectionError, storageError } from './errors'
-import { getContentType } from './schemas'
-import { getGenerationStub } from './stub'
-import type { GenerationMeta, Output, OutputResult, OutputSuccess, PendingItem } from './types'
+import type { Context } from '@/context'
+
+import { getRequest, type PendingItem, type RequestMeta } from './request'
+import {
+  output,
+  projectionError,
+  type Output,
+  type OutputResult,
+  type OutputSuccess,
+} from './result'
+import { getContentType } from './schema'
 
 export const webhook = new Hono<{ Bindings: Env }>()
 
@@ -32,10 +38,9 @@ webhook.post('/', async (c) => {
   }
 
   const ctx: Context = { env: c.env, headers: c.req.raw.headers }
-  const stub = getGenerationStub(ctx, generationId)
-  const result = await stub.recordWebhook(payload)
+  const request = getRequest(ctx, generationId)
+  const result = await request.recordWebhook(payload)
 
-  // Process results in background — don't block Runware's webhook
   if (result.items.length > 0) {
     c.executionCtx.waitUntil(
       processWebhookResults(ctx, {
@@ -53,7 +58,7 @@ webhook.post('/', async (c) => {
 
 type ProcessArgs = {
   generationId: string
-  meta: GenerationMeta
+  meta: RequestMeta
   items: PendingItem[]
 }
 
@@ -68,13 +73,11 @@ async function processWebhookResults(ctx: Context, args: ProcessArgs) {
     results.push(result)
   }
 
-  // Report results back to the DO
-  const stub = getGenerationStub(ctx, generationId)
-  const { complete } = await stub.confirmOutputs(results)
+  const request = getRequest(ctx, generationId)
+  const { complete } = await request.confirmOutputs(results)
 
-  // If all outputs received, write to D1
   if (complete) {
-    const state = await stub.getState()
+    const state = await request.getState()
     if (state) await persistToD1(ctx, { generationId, meta, state })
   }
 }
@@ -85,13 +88,11 @@ async function processItem(
 ): Promise<OutputResult> {
   const { item, contentType, now } = args
 
-  // Fetch from Runware CDN
   const response = await fetch(item.imageURL)
   if (!response.ok) {
-    return fetchError(item.imageURL, response.status, await response.text(), item.raw, now)
+    return output.fetchError(item.imageURL, response.status, await response.text(), item.raw, now)
   }
 
-  // Stream to R2
   const id = uuidv7()
   const r2Key = `generations/${id}`
 
@@ -100,11 +101,10 @@ async function processItem(
       httpMetadata: { contentType },
     })
   } catch (err) {
-    return storageError(r2Key, err, item.raw, now)
+    return output.storageError(r2Key, err, item.raw, now)
   }
 
-  return {
-    type: 'success',
+  return output.success({
     id,
     r2Key,
     contentType,
@@ -112,7 +112,7 @@ async function processItem(
     cost: item.cost,
     metadata: item.raw,
     createdAt: now,
-  } satisfies OutputSuccess
+  })
 }
 
 /** Write completed generation and artifacts to D1. */
@@ -120,7 +120,7 @@ async function persistToD1(
   ctx: Context,
   args: {
     generationId: string
-    meta: GenerationMeta
+    meta: RequestMeta
     state: { outputs: Output[]; completedAt?: number }
   },
 ) {
@@ -138,22 +138,22 @@ async function persistToD1(
       completedAt: new Date(state.completedAt!),
     })
 
-    for (const output of successes) {
+    for (const artifact of successes) {
       await db.insert(schema.runwareArtifacts).values({
-        id: output.id,
+        id: artifact.id,
         generationId,
         model: meta.model,
-        r2Key: output.r2Key,
-        contentType: output.contentType,
-        seed: output.seed,
-        cost: output.cost,
-        metadata: output.metadata,
-        createdAt: new Date(output.createdAt),
+        r2Key: artifact.r2Key,
+        contentType: artifact.contentType,
+        seed: artifact.seed,
+        cost: artifact.cost,
+        metadata: artifact.metadata,
+        createdAt: new Date(artifact.createdAt),
       })
     }
   } catch (err) {
     console.error('D1 projection failed', { generationId, error: err })
-    const stub = getGenerationStub(ctx, generationId)
-    await stub.setError(projectionError(err))
+    const request = getRequest(ctx, generationId)
+    await request.setError(projectionError(err))
   }
 }

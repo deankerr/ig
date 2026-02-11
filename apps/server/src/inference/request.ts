@@ -1,5 +1,5 @@
 /**
- * GenerationDO — Coordination-only Durable Object for image generation requests.
+ * InferenceDO — Coordination-only Durable Object for inference requests.
  *
  * This DO is a state register. It tracks what happened (webhooks received, outputs processed)
  * but does no heavy I/O (no CDN fetches, no R2 uploads, no D1 writes).
@@ -11,28 +11,68 @@
 import { DurableObject } from 'cloudflare:workers'
 import { z } from 'zod'
 
-import { timeoutError, validationError, webhookError, type GenerationError } from './errors'
-import { imageInferenceWebhook } from './schemas'
-import type {
-  ConfirmResult,
-  GenerationMeta,
-  GenerationState,
-  InitArgs,
-  Output,
-  OutputResult,
-  PendingItem,
-  RecordWebhookResult,
-} from './types'
+import type { Context } from '@/context'
+
+import { output, timeoutError, type Output, type OutputResult, type RequestError } from './result'
+import { imageInferenceWebhook, type ImageInferenceInput } from './schema'
 
 const TIMEOUT_MS = 5 * 60 * 1000
 
-export class GenerationDO extends DurableObject<Env> {
-  // Sync KV — reads are synchronous, no constructor hydration needed.
+// -- State types --
+
+export type RequestMeta = {
+  id: string
+  model: string
+  input: Record<string, unknown>
+  outputFormat: ImageInferenceInput['outputFormat']
+  expectedCount: number
+  annotations: Record<string, unknown>
+  error?: RequestError
+  createdAt: number
+  completedAt?: number
+}
+
+export type RequestState = RequestMeta & {
+  outputs: Output[]
+}
+
+// -- RPC argument/return types --
+
+export type InitArgs = {
+  id: string
+  model: string
+  input: Record<string, unknown>
+  outputFormat: ImageInferenceInput['outputFormat']
+  expectedCount: number
+  annotations: Record<string, unknown>
+  error?: RequestError
+}
+
+export type PendingItem = {
+  index: number
+  imageURL: string
+  seed: number
+  cost?: number
+  raw: Record<string, unknown>
+}
+
+export type RecordWebhookResult = {
+  items: PendingItem[]
+  meta: RequestMeta
+}
+
+export type ConfirmResult = {
+  complete: boolean
+}
+
+// -- Durable Object --
+
+export class InferenceDO extends DurableObject<Env> {
   private get kv() {
     return this.ctx.storage.kv
   }
 
-  private getMeta(): GenerationMeta | undefined {
+  private getMeta(): RequestMeta | undefined {
     return this.kv.get('gen')
   }
 
@@ -40,10 +80,10 @@ export class GenerationDO extends DurableObject<Env> {
     return this.kv.get('outputs') ?? []
   }
 
-  /** Initialize generation state. Called once after dispatch (success or failure). */
+  /** Initialize request state. Called once after dispatch (success or failure). */
   async init(args: InitArgs) {
     const now = Date.now()
-    const meta: GenerationMeta = {
+    const meta: RequestMeta = {
       id: args.id,
       model: args.model,
       input: args.input,
@@ -53,7 +93,6 @@ export class GenerationDO extends DurableObject<Env> {
       createdAt: now,
     }
 
-    // If dispatch already failed, record it as complete with error
     if (args.error) {
       meta.error = args.error
       meta.completedAt = now
@@ -62,7 +101,6 @@ export class GenerationDO extends DurableObject<Env> {
     this.kv.put('gen', meta)
     this.kv.put('outputs', [])
 
-    // Set timeout alarm (only if not already failed)
     if (!args.error) {
       await this.ctx.storage.setAlarm(now + TIMEOUT_MS)
     }
@@ -71,25 +109,22 @@ export class GenerationDO extends DurableObject<Env> {
   /** Validate webhook payload, store raw data, return items for Worker to process. */
   recordWebhook(payload: unknown): RecordWebhookResult {
     const meta = this.getMeta()
-    if (!meta) throw new Error('No generation state')
+    if (!meta) throw new Error('No request state')
 
     const now = Date.now()
     const outputs = this.getOutputs()
     const parsed = imageInferenceWebhook.safeParse(payload)
 
-    // Validation failure — record error output inline
     if (!parsed.success) {
-      outputs.push(validationError(z.flattenError(parsed.error), payload, now))
+      outputs.push(output.validationError(z.flattenError(parsed.error), payload, now))
       this.kv.put('outputs', outputs)
       return { items: [], meta }
     }
 
-    // Runware reported an error for this task
     if ('errors' in parsed.data) {
-      outputs.push(webhookError(parsed.data.errors, payload, now))
+      outputs.push(output.webhookError(parsed.data.errors, payload, now))
       this.kv.put('outputs', outputs)
 
-      // Check completion (error outputs count toward total)
       if (outputs.length >= meta.expectedCount) {
         meta.completedAt = Date.now()
         this.kv.put('gen', meta)
@@ -98,7 +133,6 @@ export class GenerationDO extends DurableObject<Env> {
       return { items: [], meta }
     }
 
-    // Success — return items for Worker-level processing
     const items: PendingItem[] = parsed.data.data.map((result, index) => ({
       index,
       imageURL: result.imageURL,
@@ -113,13 +147,12 @@ export class GenerationDO extends DurableObject<Env> {
   /** Record processed output results from the Worker. */
   confirmOutputs(results: OutputResult[]): ConfirmResult {
     const meta = this.getMeta()
-    if (!meta) throw new Error('No generation state')
+    if (!meta) throw new Error('No request state')
 
     const outputs = this.getOutputs()
     outputs.push(...results)
     this.kv.put('outputs', outputs)
 
-    // Check completion
     if (outputs.length >= meta.expectedCount && !meta.completedAt) {
       meta.completedAt = Date.now()
       this.kv.put('gen', meta)
@@ -128,8 +161,8 @@ export class GenerationDO extends DurableObject<Env> {
     return { complete: !!meta.completedAt }
   }
 
-  /** Record a generation-level error (e.g. D1 projection failure). */
-  setError(error: GenerationError) {
+  /** Record a request-level error (e.g. D1 projection failure). */
+  setError(error: RequestError) {
     const meta = this.getMeta()
     if (!meta) return
     meta.error = error
@@ -137,7 +170,7 @@ export class GenerationDO extends DurableObject<Env> {
   }
 
   /** Read current state for client polling. */
-  getState(): GenerationState | null {
+  getState(): RequestState | null {
     const meta = this.getMeta()
     if (!meta) return null
     return { ...meta, outputs: this.getOutputs() }
@@ -153,4 +186,21 @@ export class GenerationDO extends DurableObject<Env> {
     meta.error = timeoutError(outputs.length, meta.expectedCount)
     this.kv.put('gen', meta)
   }
+}
+
+// -- Client --
+
+/** RPC interface for InferenceDO. Typed separately because CF's Rpc.Provider
+ *  collapses sync DO methods to `never`. This defines the actual RPC contract. */
+type RequestClient = {
+  init(args: InitArgs): Promise<void>
+  recordWebhook(payload: unknown): Promise<RecordWebhookResult>
+  confirmOutputs(results: OutputResult[]): Promise<ConfirmResult>
+  setError(error: RequestError): Promise<void>
+  getState(): Promise<RequestState | null>
+}
+
+export function getRequest(ctx: Context, id: string) {
+  const ns = ctx.env.GENERATION_DO
+  return ns.get(ns.idFromName(id)) as unknown as RequestClient
 }

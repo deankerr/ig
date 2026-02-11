@@ -7,7 +7,7 @@
  * @see https://runware.ai/docs/utilities/model-search
  */
 
-import type { Context } from '../../context'
+import type { Context } from './context'
 
 const RUNWARE_API_URL = 'https://api.runware.ai/v1'
 

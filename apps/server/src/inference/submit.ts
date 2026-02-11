@@ -1,12 +1,12 @@
 import { v7 as uuidv7 } from 'uuid'
 
-import type { Context } from '../../context'
-import { resolveAutoAspectRatio } from '../../services/auto-aspect-ratio'
-import type { Result } from '../../utils/result'
-import type { GenerationError } from './errors'
-import { httpError } from './errors'
-import type { ImageInferenceInput } from './schemas'
-import { getGenerationStub } from './stub'
+import type { Context } from '@/context'
+import { resolveAutoAspectRatio } from '@/services/auto-aspect-ratio'
+import type { Result } from '@/utils/result'
+
+import { getRequest } from './request'
+import { httpError, type RequestError } from './result'
+import type { ImageInferenceInput } from './schema'
 
 const RUNWARE_API_URL = 'https://api.runware.ai/v1'
 
@@ -16,7 +16,7 @@ const aspectRatioDimensions = {
   square: { width: 1280, height: 1280 },
 } as const
 
-export async function createGeneration(ctx: Context, args: { input: ImageInferenceInput }) {
+export async function submitRequest(ctx: Context, args: { input: ImageInferenceInput }) {
   const input = { ...args.input }
   const annotations: Record<string, unknown> = {}
 
@@ -40,8 +40,8 @@ export async function createGeneration(ctx: Context, args: { input: ImageInferen
     input,
   })
 
-  const stub = getGenerationStub(ctx, id)
-  await stub.init({
+  const request = getRequest(ctx, id)
+  await request.init({
     id,
     model: input.model,
     input: result.ok ? result.value.inferenceTask : {},
@@ -69,7 +69,7 @@ type DispatchArgs = {
 
 async function dispatch(
   args: DispatchArgs,
-): Promise<Result<{ inferenceTask: Record<string, unknown> }, GenerationError>> {
+): Promise<Result<{ inferenceTask: Record<string, unknown> }, RequestError>> {
   const inferenceTask = {
     taskType: 'imageInference' as const,
     taskUUID: args.id,
@@ -90,7 +90,7 @@ async function dispatch(
   if (!response.ok) {
     return {
       ok: false,
-      error: httpError('http_error', RUNWARE_API_URL, response.status, await response.text()),
+      error: httpError(RUNWARE_API_URL, response.status, await response.text()),
       message: `Runware API error: ${response.status}`,
     }
   }

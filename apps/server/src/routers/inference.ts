@@ -1,10 +1,11 @@
 import { z } from 'zod'
 
+import { getRequest } from '@/inference/request'
+import { imageInferenceInput } from '@/inference/schema'
+import { submitRequest } from '@/inference/submit'
+import { searchModels } from '@/models'
+
 import { apiKeyProcedure, publicProcedure } from '../orpc'
-import { createGeneration } from '../providers/runware/create'
-import { searchModels } from '../providers/runware/model-search'
-import { imageInferenceInput } from '../providers/runware/schemas'
-import { getGenerationStub } from '../providers/runware/stub'
 
 const MAX_TAGS = 20
 const tagSchema = z.string().trim().max(256, 'Tag cannot exceed 256 characters')
@@ -18,9 +19,9 @@ const createImageSchema = z.object({
   tags: tagsSchema.optional().default([]),
 })
 
-export const runwareRouter = {
+export const inferenceRouter = {
   createImage: apiKeyProcedure.input(createImageSchema).handler(async ({ input, context }) => {
-    const id = await createGeneration(context, { input: input.input })
+    const id = await submitRequest(context, { input: input.input })
     return { id }
   }),
 
@@ -28,8 +29,8 @@ export const runwareRouter = {
     .route({ spec: { security: [] } })
     .input(z.object({ id: z.uuid() }))
     .handler(async ({ input, context }) => {
-      const stub = getGenerationStub(context, input.id)
-      return stub.getState()
+      const request = getRequest(context, input.id)
+      return request.getState()
     }),
 
   searchModels: publicProcedure

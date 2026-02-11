@@ -11,7 +11,7 @@ packages/env/    # Cloudflare binding types (manual Env declaration)
 packages/infra/  # Alchemy infrastructure-as-code
 ```
 
-See `apps/server/CLAUDE.md` for server patterns and `apps/server/src/providers/runware/CLAUDE.md` for the Runware generation system.
+See `apps/server/CLAUDE.md` for server patterns and `apps/server/src/inference/CLAUDE.md` for the inference request system.
 
 ## Commands
 

@@ -9,14 +9,20 @@ src/
 ├── index.ts              # Hono app, routes, oRPC handler wiring
 ├── context.ts            # Context creation (env + headers)
 ├── orpc.ts               # Procedure definitions (public, apiKey-protected)
+├── models.ts             # Runware model catalog search (standalone)
 ├── routers/              # oRPC routers
 │   ├── index.ts          # App router (combines all routers)
-│   └── runware.ts        # Runware generation endpoints
+│   └── inference.ts      # Inference endpoints (submit, status, model search)
 ├── routes/               # Hono routes (file serving from R2)
+├── inference/            # Inference request system (see its CLAUDE.md)
+│   ├── request.ts        # InferenceDO + typed client
+│   ├── submit.ts         # Submit request to Runware API
+│   ├── webhook.ts        # Webhook handler + artifact processing
+│   ├── result.ts         # Result types + factories (request errors + output construction)
+│   ├── schema.ts         # Runware API schemas
+│   └── index.ts          # Public API
 ├── services/             # Internal functions — (ctx, args) pattern
 │   └── auto-aspect-ratio.ts  # AI-powered aspect ratio selection
-├── providers/
-│   └── runware/          # Runware provider (see its CLAUDE.md)
 └── utils/
     ├── result.ts         # Result<T, E> type
     ├── error.ts          # getErrorMessage, serializeError, error handlers
