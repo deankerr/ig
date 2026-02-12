@@ -81,18 +81,18 @@ export const server = await Worker('server', {
 const url = (worker: Awaited<ReturnType<typeof Worker>>) =>
   worker.url?.replace(/\/$/, '') ?? `https://${worker.domains?.[0]?.name}`
 
-// export const web = await Vite('web', {
-//   url: false,
-//   cwd: '../../apps/web',
-//   assets: 'dist',
-//   bindings: {
-//     VITE_SERVER_URL: url(server),
-//     VITE_BUILD_ID: process.env.VITE_BUILD_ID ?? Date.now().toString(),
-//   },
-//   domains: [domain('web')],
-// })
+export const web = await Vite('web', {
+  url: false,
+  cwd: '../../apps/web',
+  assets: 'dist',
+  bindings: {
+    VITE_SERVER_URL: url(server),
+    VITE_BUILD_ID: process.env.VITE_BUILD_ID ?? Date.now().toString(),
+  },
+  domains: [domain('web')],
+})
 
 console.log(`Server: ${url(server)}`)
-// console.log(`Web:    ${url(web)}`)
+console.log(`Web:    ${url(web)}`)
 
 await app.finalize()

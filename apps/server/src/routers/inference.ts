@@ -1,10 +1,9 @@
 import { z } from 'zod'
 
-import { getRequest } from '@/inference/request'
-import { imageInferenceInput } from '@/inference/schema'
-import { submitRequest } from '@/inference/submit'
-import { searchModels } from '@/models'
-
+import { getRequest } from '../inference/request'
+import { imageInferenceInput } from '../inference/schema'
+import { submitRequest } from '../inference/submit'
+import { searchModels } from '../models'
 import { apiKeyProcedure, publicProcedure } from '../orpc'
 
 const MAX_TAGS = 20

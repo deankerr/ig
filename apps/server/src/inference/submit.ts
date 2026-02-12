@@ -1,9 +1,8 @@
 import { v7 as uuidv7 } from 'uuid'
 
-import type { Context } from '@/context'
-import { resolveAutoAspectRatio } from '@/services/auto-aspect-ratio'
-import type { Result } from '@/utils/result'
-
+import type { Context } from '../context'
+import { resolveAutoAspectRatio } from '../services/auto-aspect-ratio'
+import type { Result } from '../utils/result'
 import { getRequest } from './request'
 import { httpError, type RequestError } from './result'
 import type { ImageInferenceInput } from './schema'

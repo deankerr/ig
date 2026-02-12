@@ -11,8 +11,7 @@
 import { DurableObject } from 'cloudflare:workers'
 import { z } from 'zod'
 
-import type { Context } from '@/context'
-
+import type { Context } from '../context'
 import { output, timeoutError, type Output, type OutputResult, type RequestError } from './result'
 import { imageInferenceWebhook, type ImageInferenceInput } from './schema'
 

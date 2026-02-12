@@ -5,7 +5,8 @@ import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import type { AppRouterClient } from 'server/src/routers'
 import { toast } from 'sonner'
 
-import { serverUrl } from '@/lib/server-url'
+import * as storage from '@/lib/storage'
+import { serverUrl } from '@/lib/utils'
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,24 +30,10 @@ export const queryClient = new QueryClient({
   }),
 })
 
-const API_KEY_STORAGE_KEY = 'ig-api-key'
-
-export function getApiKey(): string | null {
-  return localStorage.getItem(API_KEY_STORAGE_KEY)
-}
-
-export function setApiKey(key: string): void {
-  localStorage.setItem(API_KEY_STORAGE_KEY, key)
-}
-
-export function clearApiKey(): void {
-  localStorage.removeItem(API_KEY_STORAGE_KEY)
-}
-
 export const link = new RPCLink({
   url: new URL('/rpc', serverUrl).href,
   headers() {
-    const apiKey = getApiKey()
+    const apiKey = storage.getApiKey()
     return apiKey ? { 'x-api-key': apiKey } : {}
   },
   fetch(url, options) {

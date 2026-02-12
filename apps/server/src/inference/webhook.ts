@@ -8,8 +8,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
 import { v7 as uuidv7 } from 'uuid'
 
-import type { Context } from '@/context'
-
+import type { Context } from '../context'
 import { getRequest, type PendingItem, type RequestMeta } from './request'
 import {
   output,

@@ -1,5 +1,5 @@
 {
-  "name": "server",
+  "name": "@ig/server",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {

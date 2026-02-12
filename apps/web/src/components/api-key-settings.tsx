@@ -13,26 +13,28 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { clearApiKey, getApiKey, setApiKey } from '@/lib/orpc'
+import * as storage from '@/lib/storage'
 
 export function ApiKeySettings() {
   const [open, setOpen] = useState(false)
   const [key, setKey] = useState('')
-  const hasKey = !!getApiKey()
+  const [hasKey, setHasKey] = useState(() => !!storage.getApiKey())
 
   function handleSave() {
     if (!key.trim()) {
       toast.error('API key cannot be empty')
       return
     }
-    setApiKey(key.trim())
+    storage.setApiKey(key.trim())
+    setHasKey(true)
     setKey('')
     setOpen(false)
     toast.success('API key saved')
   }
 
   function handleClear() {
-    clearApiKey()
+    storage.clearApiKey()
+    setHasKey(false)
     setKey('')
     setOpen(false)
     toast.success('API key cleared')

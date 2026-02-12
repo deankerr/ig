@@ -10,11 +10,11 @@ Consumers include traditional web apps, Discord bots, CLI tools - anything I bui
 
 ## What It Does
 
-- **Inference orchestration** via Runware - text-to-image, image-to-image, image-to-video, vision models, anything Runware supports
+- **Inference orchestration** via Runware - text-to-image, image-to-image, and other modalities Runware supports
 - **Artifact storage** - outputs stored in R2, inputs and metadata in D1
-- **Full provenance** - every artifact retains its input parameters, endpoint, timing, metrics
-- **Flexible tagging** - consumers define their own organization schemes
-- **Unified API** - same interface regardless of endpoint or modality
+- **Full provenance** - every artifact retains its input parameters, model, timing, cost
+- **Admin console** - web UI for browsing artifacts/generations, inspecting metadata, and submitting requests
+- **Unified API** - same interface regardless of model or modality
 
 ## Design Philosophy
 
@@ -46,7 +46,5 @@ ig is deliberately limited in scope:
 
 **Resources:**
 
-- Endpoint schemas: `https://fal.ai/api/openapi/queue/openapi.json?endpoint_id={endpoint}`
-- [Queue API docs](https://docs.fal.ai/model-apis/model-endpoints/queue.md)
-- [Webhooks](https://docs.fal.ai/model-apis/model-endpoints/webhooks)
-- [Usage API](https://docs.fal.ai/platform-apis/v1/models/usage)
+- [Runware API docs](https://docs.runware.ai/)
+- [Runware image inference](https://docs.runware.ai/en/image-inference/text-to-image)

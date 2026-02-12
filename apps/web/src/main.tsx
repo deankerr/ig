@@ -3,7 +3,10 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import ReactDOM from 'react-dom/client'
 
+import { BenchProvider } from './components/bench-provider'
 import Loader from './components/loader'
+import { JsonSheetProvider } from './components/shared/json-sheet'
+import { TooltipProvider } from './components/ui/tooltip'
 import { queryClient } from './lib/orpc'
 import { routeTree } from './routeTree.gen'
 
@@ -20,7 +23,11 @@ const router = createRouter({
   Wrap: function WrapComponent({ children }: { children: React.ReactNode }) {
     return (
       <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-        {children}
+        <TooltipProvider>
+          <JsonSheetProvider>
+            <BenchProvider>{children}</BenchProvider>
+          </JsonSheetProvider>
+        </TooltipProvider>
       </PersistQueryClientProvider>
     )
   },

@@ -1,6 +1,5 @@
 import { db } from '@ig/db'
-import { generations } from '@ig/db/schema'
-import type { Generation } from '@ig/db/schema'
+import { generations, runwareArtifacts } from '@ig/db/schema'
 import { env } from '@ig/env/server'
 import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -17,14 +16,37 @@ fileRoutes.get('/art/*', async (c) => {
   const slug = dotIndex === -1 ? path : path.slice(0, dotIndex)
 
   const result = await db.select().from(generations).where(eq(generations.slug, slug)).limit(1)
-  return serveGeneration(c, result[0])
+  const gen = result[0]
+  if (!gen) return c.json({ error: 'Generation not found' }, 404)
+  if (gen.status !== 'ready') {
+    return c.json({ error: 'Generation not ready', status: gen.status }, 400)
+  }
+  return serveR2Object(c, `generations/${gen.id}`, gen.contentType ?? 'application/octet-stream')
 })
 
 // Full URL with ID or slug: /generations/{id}/file*
 fileRoutes.get('/generations/:id/file*', async (c) => {
   const id = c.req.param('id')
   const result = await db.select().from(generations).where(eq(generations.id, id)).limit(1)
-  return serveGeneration(c, result[0])
+  const gen = result[0]
+  if (!gen) return c.json({ error: 'Generation not found' }, 404)
+  if (gen.status !== 'ready') {
+    return c.json({ error: 'Generation not ready', status: gen.status }, 400)
+  }
+  return serveR2Object(c, `generations/${gen.id}`, gen.contentType ?? 'application/octet-stream')
+})
+
+// Artifact file serving: /artifacts/{id}/file*
+fileRoutes.get('/artifacts/:id/file*', async (c) => {
+  const id = c.req.param('id')
+  const result = await db
+    .select()
+    .from(runwareArtifacts)
+    .where(eq(runwareArtifacts.id, id))
+    .limit(1)
+  const artifact = result[0]
+  if (!artifact) return c.json({ error: 'Artifact not found' }, 404)
+  return serveR2Object(c, artifact.r2Key, artifact.contentType)
 })
 
 // * image transforms
@@ -110,19 +132,12 @@ function parseTransformParams(c: Context, originalType: string) {
   }
 }
 
-// * handler
+// * shared handler
 
-async function serveGeneration(c: Context, generation: Generation | undefined) {
-  if (!generation) return c.json({ error: 'Generation not found' }, 404)
-  if (generation.status !== 'ready') {
-    return c.json({ error: 'Generation not ready', status: generation.status }, 400)
-  }
-
-  const r2Key = `generations/${generation.id}`
+async function serveR2Object(c: Context, r2Key: string, contentType: string) {
   const object = await env.GENERATIONS_BUCKET.get(r2Key)
   if (!object) return c.json({ error: 'File not found' }, 404)
 
-  const contentType = generation.contentType ?? 'application/octet-stream'
   const canTransform = TRANSFORMABLE_TYPES.includes(contentType as OutputFormat)
   const transform = parseTransformParams(c, contentType)
 

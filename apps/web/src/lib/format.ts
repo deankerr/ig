@@ -6,19 +6,12 @@ export function formatPrice(unitPrice: number | null, unit?: string | null): str
   return unit ? `${price}/${unit}` : price
 }
 
-/** Elapsed seconds between two dates, formatted to 1 decimal place. */
-export function formatDuration(start: Date | string, end: Date | string): string {
-  const ms = new Date(end).getTime() - new Date(start).getTime()
-  return (ms / 1000).toFixed(1)
-}
-
-/** Coerce a date-like value to a Date, or null if missing. */
-export function parseDate(value: string | Date | null | undefined): Date | null {
-  if (value == null) return null
-  return value instanceof Date ? value : new Date(value)
-}
-
-/** Normalize slug input: lowercase, alphanumeric + dash + slash only. */
-export function normalizeSlug(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9-/]/g, '')
+/** Format millisecond duration as compact human-readable string. */
+export function formatDuration(ms: number) {
+  if (ms < 1000) return `${Math.round(ms)}ms`
+  const s = ms / 1000
+  if (s < 60) return `${s.toFixed(1)}s`
+  const m = Math.floor(s / 60)
+  const remainder = Math.round(s % 60)
+  return `${m}m ${remainder}s`
 }
