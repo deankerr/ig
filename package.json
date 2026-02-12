@@ -30,7 +30,7 @@
   },
   "type": "module",
   "scripts": {
-    "check": "bun run check-types && oxlint --fix && oxfmt --write",
+    "check": "bun run check-types && oxlint --fix apps packages && oxfmt --write apps packages",
     "check-types": "turbo check-types",
     "clean": "rm -rf node_modules .turbo apps/*/node_modules packages/*/node_modules packages/*/dist apps/*/dist && find . -name '*.tsbuildinfo' -not -path '*/node_modules/*' -delete",
     "db:generate": "turbo -F @ig/db db:generate",

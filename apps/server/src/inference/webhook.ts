@@ -127,6 +127,11 @@ async function persistToD1(
   const successes = state.outputs.filter((o: Output): o is OutputSuccess => o.type === 'success')
   const db = drizzle(ctx.env.DB, { schema })
 
+  // Extract dimensions from generation input
+  const input = meta.input as Record<string, unknown>
+  const width = typeof input.width === 'number' ? input.width : undefined
+  const height = typeof input.height === 'number' ? input.height : undefined
+
   try {
     await db.insert(schema.runwareGenerations).values({
       id: generationId,
@@ -144,6 +149,8 @@ async function persistToD1(
         model: meta.model,
         r2Key: artifact.r2Key,
         contentType: artifact.contentType,
+        width,
+        height,
         seed: artifact.seed,
         cost: artifact.cost,
         metadata: artifact.metadata,

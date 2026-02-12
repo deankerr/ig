@@ -1,3 +1,4 @@
+import { relations } from 'drizzle-orm'
 import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core'
 
 export const runwareGenerations = sqliteTable(
@@ -7,6 +8,7 @@ export const runwareGenerations = sqliteTable(
     model: text('model').notNull(),
     input: text('input', { mode: 'json' }).notNull().$type<Record<string, unknown>>(),
     artifactCount: integer('artifact_count').notNull(),
+    metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
     completedAt: integer('completed_at', { mode: 'timestamp_ms' }).notNull(),
   },
@@ -29,6 +31,8 @@ export const runwareArtifacts = sqliteTable(
     model: text('model').notNull(),
     r2Key: text('r2_key').notNull(),
     contentType: text('content_type').notNull(),
+    width: integer('width'),
+    height: integer('height'),
     seed: integer('seed'),
     cost: real('cost'),
     metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
@@ -43,3 +47,16 @@ export const runwareArtifacts = sqliteTable(
 
 export type RunwareArtifact = typeof runwareArtifacts.$inferSelect
 export type NewRunwareArtifact = typeof runwareArtifacts.$inferInsert
+
+// -- Relations --
+
+export const runwareGenerationsRelations = relations(runwareGenerations, ({ many }) => ({
+  artifacts: many(runwareArtifacts),
+}))
+
+export const runwareArtifactsRelations = relations(runwareArtifacts, ({ one }) => ({
+  generation: one(runwareGenerations, {
+    fields: [runwareArtifacts.generationId],
+    references: [runwareGenerations.id],
+  }),
+}))

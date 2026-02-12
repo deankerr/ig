@@ -89,7 +89,11 @@ export const ArtifactList = memo(function ArtifactList() {
                   </ItemContent>
                   <ItemActions>
                     <span className="text-muted-foreground shrink-0 text-xs">
-                      {artifact.duration != null && formatDuration(artifact.duration)}
+                      {artifact.generation &&
+                        formatDuration(
+                          new Date(artifact.generation.completedAt).getTime() -
+                            new Date(artifact.generation.createdAt).getTime(),
+                        )}
                     </span>
                     <TimeAgo
                       date={artifact.createdAt}
