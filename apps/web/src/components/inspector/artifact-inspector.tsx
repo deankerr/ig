@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import { BracesIcon, ClipboardIcon, DownloadIcon, ExternalLinkIcon, SendIcon } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { HeaderAction } from '@/components/inspector/header-action'
 import { useInspector } from '@/components/inspector/inspector-context'
@@ -37,9 +36,7 @@ export function ArtifactInspector() {
   const { artifact, generation, siblings } = query.data
   const imageUrl = `${serverUrl.origin}/artifacts/${artifact.id}/file`
   const duration =
-    generation && generation.completedAt
-      ? new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()
-      : null
+    new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()
 
   function handleDownload() {
     const a = document.createElement('a')
@@ -49,15 +46,10 @@ export function ArtifactInspector() {
   }
 
   function handleSendToBench() {
-    if (!generation?.input) {
-      toast.error('No generation input to send')
-      return
-    }
     sendToBench(generation.input)
   }
 
   async function handleViewRequestState() {
-    if (!generation) return
     const data = await queryClient.fetchQuery(statusQueryOptions(generation.id))
     jsonSheet.open(data ?? 'No DO state found', `request/${generation.id}`)
   }
@@ -74,11 +66,9 @@ export function ArtifactInspector() {
         <HeaderAction label="Copy URL" onClick={() => copy(imageUrl, 'URL copied')}>
           <ClipboardIcon />
         </HeaderAction>
-        {generation?.input && (
-          <HeaderAction label="Send to bench" onClick={handleSendToBench}>
-            <SendIcon />
-          </HeaderAction>
-        )}
+        <HeaderAction label="Send to bench" onClick={handleSendToBench}>
+          <SendIcon />
+        </HeaderAction>
         <HeaderAction
           label="JSON"
           onClick={() => jsonSheet.open(artifact, `artifact/${artifact.id}`)}
@@ -98,7 +88,7 @@ export function ArtifactInspector() {
             />
           </div>
           {siblings.length > 1 && (
-            <div className="flex shrink-0 gap-1 border-t p-2">
+            <div className="flex shrink-0 justify-center gap-1 border-t p-2">
               {siblings.map((s) => (
                 <ArtifactLink key={s.id} id={s.id} active={s.id === artifact.id} />
               ))}
@@ -112,34 +102,50 @@ export function ArtifactInspector() {
           <MetaField label="content type" value={artifact.contentType} />
           {artifact.seed != null && <MetaField label="seed" value={String(artifact.seed)} />}
           {artifact.cost != null && <MetaField label="cost" value={formatPrice(artifact.cost)} />}
-          {duration != null && <MetaField label="duration" value={formatDuration(duration)} />}
+          <MetaField label="duration" value={formatDuration(duration)} />
           <MetaField label="created" value={<TimeAgo date={artifact.createdAt} />} />
 
-          {/* Generation input */}
-          {generation?.input && (
+          {/* Tags */}
+          {Object.keys(artifact.tags).length > 0 && (
             <div className="mt-1 flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs font-medium">generation input</span>
-              <pre className="bg-muted max-h-64 overflow-auto p-2 text-xs break-all whitespace-pre-wrap">
-                {JSON.stringify(generation.input, null, 2)}
-              </pre>
+              <span className="text-muted-foreground text-xs font-medium">tags</span>
+              <div className="flex flex-wrap gap-1">
+                {Object.entries(artifact.tags).map(([key, value]) => (
+                  <span key={key} className="bg-muted rounded px-1.5 py-0.5 text-xs">
+                    {value != null ? `${key}=${value}` : key}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
+          {/* Generation input */}
+          <div className="mt-1 flex flex-col gap-1">
+            <span className="text-muted-foreground text-xs font-medium">generation input</span>
+            <pre className="bg-muted h-72 overflow-auto p-2 text-xs break-all whitespace-pre-wrap">
+              {JSON.stringify(generation.input, null, 2)}
+            </pre>
+          </div>
+
           {/* Links to related records */}
-          {generation && (
-            <div className="mt-1 flex flex-col items-start gap-1">
-              <Button
-                variant="link"
-                size="sm"
-                onClick={() => jsonSheet.open(generation, `generation/${generation.id}`)}
-              >
-                view generation record
-              </Button>
-              <Button variant="link" size="sm" onClick={handleViewRequestState}>
-                view DO request state
-              </Button>
-            </div>
-          )}
+          <div className="mt-1 flex flex-col items-start gap-1">
+            <Button
+              variant="link"
+              size="sm"
+              className="text-foreground underline decoration-dotted"
+              onClick={() => jsonSheet.open(generation, `generation/${generation.id}`)}
+            >
+              view generation record
+            </Button>
+            <Button
+              variant="link"
+              size="sm"
+              className="text-foreground underline decoration-dotted"
+              onClick={handleViewRequestState}
+            >
+              view DO request state
+            </Button>
+          </div>
         </InspectorSidebar>
       </InspectorBody>
     </>

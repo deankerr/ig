@@ -1,12 +1,12 @@
 import { useSearch } from '@tanstack/react-router'
 import { FlaskConicalIcon } from 'lucide-react'
 
-import { ApiKeySettings } from '@/components/api-key-settings'
 import { ArtifactList } from '@/components/artifact-list'
 import { useBench } from '@/components/bench-provider'
 import { CraftBench } from '@/components/craft-bench'
 import { GenerationList } from '@/components/generation-list'
 import { InspectorModal } from '@/components/inspector'
+import { ServerStatus } from '@/components/server-status'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { ViewToggle } from '@/components/view-toggle'
@@ -28,7 +28,7 @@ export function AppShell() {
           <FlaskConicalIcon data-icon="inline-start" />
           craft bench
         </Button>
-        <ApiKeySettings />
+        <ServerStatus />
       </header>
 
       {/* Content area */}

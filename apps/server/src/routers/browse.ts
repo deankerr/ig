@@ -3,11 +3,33 @@
 // List endpoints use keyset/cursor pagination (createdAt DESC, id DESC).
 
 import { db } from '@ig/db'
-import { runwareArtifacts, runwareGenerations } from '@ig/db/schema'
-import { and, desc, eq, getTableColumns, lt, or } from 'drizzle-orm'
+import { runwareArtifacts, runwareGenerations, tags } from '@ig/db/schema'
+import { and, desc, eq, getTableColumns, inArray, lt, or } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { publicProcedure } from '../orpc'
+
+// -- Tag fetching helper --
+
+type TagMap = Map<string, Record<string, string | null>>
+
+/** Batch-fetch tags for a set of artifact IDs, grouped by artifact. */
+async function fetchTagsForArtifacts(artifactIds: string[]): Promise<TagMap> {
+  if (artifactIds.length === 0) return new Map()
+
+  const rows = await db.select().from(tags).where(inArray(tags.targetId, artifactIds))
+
+  const map: TagMap = new Map()
+  for (const row of rows) {
+    let entry = map.get(row.targetId)
+    if (!entry) {
+      entry = {}
+      map.set(row.targetId, entry)
+    }
+    entry[row.tag] = row.value
+  }
+  return map
+}
 
 // Cursor: "{createdAt_ms}:{id}" — encodes position for keyset pagination
 function encodeCursor(createdAt: Date, id: string) {
@@ -64,10 +86,14 @@ export const browseRouter = {
       const hasMore = items.length > limit
       if (hasMore) items.pop()
 
+      // Merge tags onto each artifact
+      const tagMap = await fetchTagsForArtifacts(items.map((i) => i.id))
+      const itemsWithTags = items.map((i) => ({ ...i, tags: tagMap.get(i.id) ?? {} }))
+
       const lastItem = items[items.length - 1]
       const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.createdAt, lastItem.id) : null
 
-      return { items, nextCursor }
+      return { items: itemsWithTags, nextCursor }
     }),
 
   // List generations with their artifacts, newest first
@@ -100,10 +126,18 @@ export const browseRouter = {
       const hasMore = items.length > limit
       if (hasMore) items.pop()
 
+      // Collect all artifact IDs and batch-fetch tags
+      const allArtifactIds = items.flatMap((g) => g.artifacts.map((a) => a.id))
+      const tagMap = await fetchTagsForArtifacts(allArtifactIds)
+      const itemsWithTags = items.map((g) => ({
+        ...g,
+        artifacts: g.artifacts.map((a) => ({ ...a, tags: tagMap.get(a.id) ?? {} })),
+      }))
+
       const lastItem = items[items.length - 1]
       const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.createdAt, lastItem.id) : null
 
-      return { items, nextCursor }
+      return { items: itemsWithTags, nextCursor }
     }),
 
   // Single artifact with its generation and sibling artifacts from the same batch
@@ -133,7 +167,15 @@ export const browseRouter = {
         .where(eq(runwareArtifacts.generationId, artifact.generationId))
         .orderBy(desc(runwareArtifacts.createdAt))
 
-      return { artifact, generation, siblings }
+      // Fetch tags for this artifact and all siblings
+      const allIds = siblings.map((s) => s.id)
+      const tagMap = await fetchTagsForArtifacts(allIds)
+
+      return {
+        artifact: { ...artifact, tags: tagMap.get(artifact.id) ?? {} },
+        generation,
+        siblings: siblings.map((s) => ({ ...s, tags: tagMap.get(s.id) ?? {} })),
+      }
     }),
 
   // Single generation with all its artifacts
@@ -141,11 +183,17 @@ export const browseRouter = {
     .route({ spec: { security: [] } })
     .input(z.object({ id: z.string() }))
     .handler(async ({ input }) => {
-      return (
-        (await db.query.runwareGenerations.findFirst({
-          where: eq(runwareGenerations.id, input.id),
-          with: { artifacts: true },
-        })) ?? null
-      )
+      const generation = await db.query.runwareGenerations.findFirst({
+        where: eq(runwareGenerations.id, input.id),
+        with: { artifacts: true },
+      })
+      if (!generation) return null
+
+      // Fetch tags for all artifacts in the generation
+      const tagMap = await fetchTagsForArtifacts(generation.artifacts.map((a) => a.id))
+      return {
+        ...generation,
+        artifacts: generation.artifacts.map((a) => ({ ...a, tags: tagMap.get(a.id) ?? {} })),
+      }
     }),
 }

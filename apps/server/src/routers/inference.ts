@@ -7,20 +7,22 @@ import { searchModels } from '../models'
 import { apiKeyProcedure, publicProcedure } from '../orpc'
 
 const MAX_TAGS = 20
-const tagSchema = z.string().trim().max(256, 'Tag cannot exceed 256 characters')
-const tagsSchema = z
-  .array(tagSchema)
-  .transform((tags) => [...new Set(tags.filter(Boolean))])
-  .refine((tags) => tags.length <= MAX_TAGS, `Cannot exceed ${MAX_TAGS} tags`)
+const MAX_KEY_LENGTH = 64
+const MAX_VALUE_LENGTH = 256
 
-const createImageSchema = z.object({
-  input: imageInferenceInput,
-  tags: tagsSchema.optional().default([]),
+const tagsSchema = z
+  .record(z.string().trim().min(1).max(MAX_KEY_LENGTH), z.string().max(MAX_VALUE_LENGTH).nullable())
+  .refine((tags) => Object.keys(tags).length <= MAX_TAGS, `Cannot exceed ${MAX_TAGS} tags`)
+
+// Flat input: inference fields + ig extensions (tags, etc.) at the same level
+const createImageSchema = imageInferenceInput.extend({
+  tags: tagsSchema.optional(),
 })
 
 export const inferenceRouter = {
   createImage: apiKeyProcedure.input(createImageSchema).handler(async ({ input, context }) => {
-    const id = await submitRequest(context, { input: input.input })
+    const { tags, ...inferenceInput } = input
+    const id = await submitRequest(context, { input: inferenceInput, tags })
     return { id }
   }),
 

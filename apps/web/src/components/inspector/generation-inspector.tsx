@@ -34,7 +34,7 @@ export function GenerationInspector() {
     )
   }
 
-  const { generation, artifacts } = query.data
+  const { artifacts, ...generation } = query.data
   const duration =
     new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()
 
@@ -84,14 +84,19 @@ export function GenerationInspector() {
           {/* Generation input */}
           <div className="mt-1 flex flex-col gap-1">
             <span className="text-muted-foreground text-xs font-medium">input</span>
-            <pre className="bg-muted max-h-64 overflow-auto p-2 text-xs break-all whitespace-pre-wrap">
+            <pre className="bg-muted h-72 overflow-auto p-2 text-xs break-all whitespace-pre-wrap">
               {JSON.stringify(generation.input, null, 2)}
             </pre>
           </div>
 
           {/* Link to DO request state */}
           <div className="mt-1">
-            <Button variant="link" size="sm" onClick={handleViewRequestState}>
+            <Button
+              variant="link"
+              size="sm"
+              className="text-foreground underline decoration-dotted"
+              onClick={handleViewRequestState}
+            >
               view DO request state
             </Button>
           </div>

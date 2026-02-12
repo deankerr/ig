@@ -35,7 +35,19 @@ export function JsonSheetProvider({ children }: { children: React.ReactNode }) {
       <Sheet open={!!state} onOpenChange={(open) => !open && setState(null)}>
         <SheetContent className="max-w-xl">
           <SheetHeader className="flex-row items-center justify-between gap-2 pr-12">
-            <SheetTitle className="truncate font-mono">{state?.title ?? 'JSON'}</SheetTitle>
+            <SheetTitle className="truncate font-mono">
+              {(() => {
+                const title = state?.title ?? 'JSON'
+                if (!title.includes('/')) return title
+                const slashIndex = title.indexOf('/')
+                return (
+                  <>
+                    {title.slice(0, slashIndex)}
+                    <span className="text-muted-foreground">/{title.slice(slashIndex + 1)}</span>
+                  </>
+                )
+              })()}
+            </SheetTitle>
             <Button
               variant="ghost"
               size="sm"

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { SendIcon, XIcon } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { BracesIcon, SendIcon, XIcon } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { useBench } from '@/components/bench-provider'
@@ -18,7 +18,16 @@ const CRAFT_BENCH_EVENT = 'craft-bench-input-update'
 
 const DEFAULT_INPUT = JSON.stringify({ model: '', positivePrompt: '' }, null, 2)
 
-// Fields accepted by the imageInferenceInput schema
+/** Try to pretty-print JSON, return as-is if invalid. */
+function tryFormatJson(raw: string) {
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2)
+  } catch {
+    return raw
+  }
+}
+
+// Fields accepted by the createImage endpoint (inference + ig extensions)
 const INPUT_KEYS = new Set([
   'model',
   'positivePrompt',
@@ -38,6 +47,7 @@ const INPUT_KEYS = new Set([
   'promptWeighting',
   'lora',
   'numberResults',
+  'tags',
 ])
 
 // Extract only valid inference input fields from a generation's stored input
@@ -58,8 +68,17 @@ export function setCraftBenchInput(input: Record<string, unknown>) {
 
 export function CraftBench() {
   const { close, inflightIds, addInflight } = useBench()
-  const [input, setInput] = useState(() => storage.getBenchInput() || DEFAULT_INPUT)
+  const [input, setInput] = useState(() => tryFormatJson(storage.getBenchInput() || DEFAULT_INPUT))
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const isValidJson = useMemo(() => {
+    try {
+      JSON.parse(input)
+      return true
+    } catch {
+      return false
+    }
+  }, [input])
 
   // Persist input to localStorage (debounced)
   useEffect(() => {
@@ -70,7 +89,7 @@ export function CraftBench() {
   // Listen for external input updates (e.g., "Send to Bench")
   useEffect(() => {
     function handleUpdate() {
-      setInput(storage.getBenchInput() || DEFAULT_INPUT)
+      setInput(tryFormatJson(storage.getBenchInput() || DEFAULT_INPUT))
     }
     window.addEventListener(CRAFT_BENCH_EVENT, handleUpdate)
     return () => window.removeEventListener(CRAFT_BENCH_EVENT, handleUpdate)
@@ -87,21 +106,22 @@ export function CraftBench() {
       return
     }
 
+    // Inject source tag so artifacts from the console are identifiable
+    const tags = (parsed.tags ?? {}) as Record<string, string | null>
+    parsed.tags = { ...tags, source: 'ig-console' }
+
     console.log('[craft-bench:send]', { input: parsed })
 
-    mutation.mutate(
-      { input: parsed as never },
-      {
-        onSuccess: (data) => {
-          console.log('[craft-bench:submitted]', { id: data.id })
-          addInflight(data.id)
-          toast.success('Request submitted')
-        },
-        onError: (error) => {
-          toast.error(`Failed: ${error.message}`)
-        },
+    mutation.mutate(parsed as never, {
+      onSuccess: (data) => {
+        console.log('[craft-bench:submitted]', { id: data.id })
+        addInflight(data.id)
+        toast.success('Request submitted')
       },
-    )
+      onError: (error) => {
+        toast.error(`Failed: ${error.message}`)
+      },
+    })
   }, [input, mutation, addInflight])
 
   return (
@@ -134,11 +154,38 @@ export function CraftBench() {
           }}
         />
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground text-xs">cmd+enter to send</span>
-          <Button size="sm" onClick={handleSend} disabled={mutation.isPending || !input.trim()}>
-            <SendIcon data-icon="inline-start" />
-            send
-          </Button>
+          <div className="flex items-center gap-2">
+            {!isValidJson && input.trim() ? (
+              <span className="text-destructive text-xs">invalid JSON</span>
+            ) : (
+              <span className="text-muted-foreground text-xs">cmd+enter to send</span>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    disabled={!isValidJson}
+                    onClick={() => setInput(tryFormatJson(input))}
+                  />
+                }
+              >
+                <BracesIcon />
+              </TooltipTrigger>
+              <TooltipContent>Format JSON</TooltipContent>
+            </Tooltip>
+            <Button
+              size="sm"
+              onClick={handleSend}
+              disabled={mutation.isPending || !isValidJson || !input.trim()}
+            >
+              <SendIcon data-icon="inline-start" />
+              send
+            </Button>
+          </div>
         </div>
       </div>
 

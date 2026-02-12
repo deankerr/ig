@@ -31,6 +31,7 @@ bun run deploy        # Deploy to Cloudflare via Alchemy
 - Run `bun run check` to verify your work.
 - Do not deploy unless specifically asked.
 - Webhooks require a public URL, so local development uses the remote server.
+- LSP diagnostics are often stale in this project - `bun run check` is the source of truth.
 
 ## Features
 

@@ -15,7 +15,12 @@ const aspectRatioDimensions = {
   square: { width: 1280, height: 1280 },
 } as const
 
-export async function submitRequest(ctx: Context, args: { input: ImageInferenceInput }) {
+type SubmitArgs = {
+  input: ImageInferenceInput
+  tags?: Record<string, string | null>
+}
+
+export async function submitRequest(ctx: Context, args: SubmitArgs) {
   const input = { ...args.input }
   const annotations: Record<string, unknown> = {}
 
@@ -47,6 +52,7 @@ export async function submitRequest(ctx: Context, args: { input: ImageInferenceI
     outputFormat: input.outputFormat,
     expectedCount: input.numberResults,
     annotations,
+    tags: args.tags,
     error: result.ok ? undefined : result.error,
   })
 

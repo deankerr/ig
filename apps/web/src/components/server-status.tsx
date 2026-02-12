@@ -1,7 +1,8 @@
-import { KeyIcon } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { PulsingDot } from '@/components/shared/pulsing-dot'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -14,11 +15,25 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import * as storage from '@/lib/storage'
+import { serverUrl } from '@/lib/utils'
+import { healthQueryOptions } from '@/queries/health'
 
-export function ApiKeySettings() {
+export function ServerStatus() {
   const [open, setOpen] = useState(false)
   const [key, setKey] = useState('')
   const [hasKey, setHasKey] = useState(() => !!storage.getApiKey())
+
+  const health = useQuery(healthQueryOptions())
+
+  // Determine dot color: yellow (pending) if no key, green if healthy, red if failed
+  const dotColor = !hasKey
+    ? 'pending'
+    : health.isSuccess
+      ? 'ready'
+      : health.isError
+        ? 'failed'
+        : 'pending'
+  const dotPulse = health.isFetching || !hasKey
 
   function handleSave() {
     if (!key.trim()) {
@@ -45,15 +60,16 @@ export function ApiKeySettings() {
       <DialogTrigger
         render={
           <Button
-            size="icon-xs"
             variant="ghost"
-            className={hasKey ? 'text-status-ready hover:text-status-ready/80' : ''}
+            size="sm"
+            className="text-muted-foreground gap-2"
             title={hasKey ? 'API key set' : 'No API key'}
-          >
-            <KeyIcon />
-          </Button>
+          />
         }
-      />
+      >
+        <PulsingDot color={dotColor} pulse={dotPulse} size="sm" />
+        <span className="text-xs">{serverUrl.host}</span>
+      </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-mono text-base">api key</DialogTitle>

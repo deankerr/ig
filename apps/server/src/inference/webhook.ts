@@ -157,6 +157,21 @@ async function persistToD1(
         createdAt: new Date(artifact.createdAt),
       })
     }
+
+    // Persist tags for each artifact (if provided on the request)
+    if (meta.tags && Object.keys(meta.tags).length > 0) {
+      const tagRows = successes.flatMap((artifact) =>
+        Object.entries(meta.tags!).map(([tag, value]) => ({
+          tag,
+          value,
+          targetId: artifact.id,
+        })),
+      )
+      // D1 limit: 100 params per query, 3 columns per row → max 33 rows
+      for (let i = 0; i < tagRows.length; i += 33) {
+        await db.insert(schema.tags).values(tagRows.slice(i, i + 33))
+      }
+    }
   } catch (err) {
     console.error('D1 projection failed', { generationId, error: err })
     const request = getRequest(ctx, generationId)

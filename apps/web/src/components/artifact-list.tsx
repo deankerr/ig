@@ -9,20 +9,18 @@ import { TimeAgo } from '@/components/shared/time-ago'
 import { Empty, EmptyDescription } from '@/components/ui/empty'
 import {
   Item,
-  ItemActions,
   ItemContent,
   ItemDescription,
+  ItemGroup,
   ItemMedia,
   ItemTitle,
 } from '@/components/ui/item'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
-import { formatDuration } from '@/lib/format'
+import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
 import * as storage from '@/lib/storage'
 import type { DisplayMode } from '@/lib/storage'
 import { listArtifactsOptions } from '@/queries/artifacts'
-
-const GRID_CLASSES = 'grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-1'
 
 export const ArtifactList = memo(function ArtifactList() {
   const search = useSearch({ from: '/' })
@@ -55,7 +53,7 @@ export const ArtifactList = memo(function ArtifactList() {
 
       {/* Grid mode */}
       {display === 'grid' && (
-        <div className={GRID_CLASSES}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-1">
           {query.isPending
             ? Array.from({ length: 12 }).map((_, i) => (
                 <Skeleton key={i} className="aspect-square" />
@@ -68,41 +66,39 @@ export const ArtifactList = memo(function ArtifactList() {
 
       {/* List mode */}
       {display === 'list' && (
-        <div className="flex flex-col gap-px">
+        <ItemGroup>
           {query.isPending
             ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
             : allArtifacts.map((artifact) => (
                 <Item
                   key={artifact.id}
-                  size="xs"
                   render={<Link to="/" search={{ ...search, artifact: artifact.id }} />}
                 >
                   <ItemMedia variant="image">
-                    <ArtifactThumbnail id={artifact.id} size="small" className="size-12" />
+                    <ArtifactThumbnail id={artifact.id} size="small" />
                   </ItemMedia>
                   <ItemContent>
-                    <ItemTitle>{artifact.model}</ItemTitle>
-                    <ItemDescription className="font-mono">
-                      {artifact.id}
-                      {artifact.seed != null && <span className="ml-2">seed:{artifact.seed}</span>}
-                    </ItemDescription>
+                    <ItemTitle className="w-full">
+                      {artifact.model}
+                      <div className="text-muted-foreground flex grow justify-end gap-4">
+                        <span>{formatPrice(artifact.cost)}</span>
+                        <span>
+                          {artifact.generation &&
+                            formatDuration(
+                              new Date(artifact.generation.completedAt).getTime() -
+                                new Date(artifact.generation.createdAt).getTime(),
+                            )}
+                        </span>
+                        <span>
+                          <TimeAgo date={artifact.createdAt} />
+                        </span>
+                      </div>
+                    </ItemTitle>
+                    <ItemDescription>{formatPrompt(artifact.generation.input)}</ItemDescription>
                   </ItemContent>
-                  <ItemActions>
-                    <span className="text-muted-foreground shrink-0 text-xs">
-                      {artifact.generation &&
-                        formatDuration(
-                          new Date(artifact.generation.completedAt).getTime() -
-                            new Date(artifact.generation.createdAt).getTime(),
-                        )}
-                    </span>
-                    <TimeAgo
-                      date={artifact.createdAt}
-                      className="text-muted-foreground shrink-0 text-xs"
-                    />
-                  </ItemActions>
                 </Item>
               ))}
-        </div>
+        </ItemGroup>
       )}
 
       {/* Empty state */}

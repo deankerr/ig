@@ -6,6 +6,12 @@ export function formatPrice(unitPrice: number | null, unit?: string | null): str
   return unit ? `${price}/${unit}` : price
 }
 
+/** Extract a display string from an inference input object. */
+export function formatPrompt(input: Record<string, unknown>): string {
+  const value = input.positivePrompt ?? input.prompt
+  return typeof value === 'string' ? value : ''
+}
+
 /** Format millisecond duration as compact human-readable string. */
 export function formatDuration(ms: number) {
   if (ms < 1000) return `${Math.round(ms)}ms`

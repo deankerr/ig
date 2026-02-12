@@ -86,13 +86,13 @@ export const web = await Vite('web', {
   cwd: '../../apps/web',
   assets: 'dist',
   bindings: {
-    VITE_SERVER_URL: url(server),
+    VITE_SERVER_URL: process.env.OVERRIDE_SERVER_URL ?? url(server),
     VITE_BUILD_ID: process.env.VITE_BUILD_ID ?? Date.now().toString(),
   },
   domains: [domain('web')],
 })
 
 console.log(`Server: ${url(server)}`)
-console.log(`Web:    ${url(web)}`)
+console.log(`Web:    ${url(web)}`, web.bindings.VITE_SERVER_URL)
 
 await app.finalize()

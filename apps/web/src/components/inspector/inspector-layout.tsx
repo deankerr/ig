@@ -15,7 +15,16 @@ export function InspectorHeader({
 }) {
   return (
     <div className="flex shrink-0 items-center border-b px-4 py-3">
-      <DialogTitle className="font-mono text-sm">{title}</DialogTitle>
+      <DialogTitle className="font-mono text-sm">
+        {title.includes('/') ? (
+          <>
+            {title.slice(0, title.indexOf('/'))}
+            <span className="text-muted-foreground">/{title.slice(title.indexOf('/') + 1)}</span>
+          </>
+        ) : (
+          title
+        )}
+      </DialogTitle>
       <div className="ml-auto flex items-center gap-1">
         {children}
         <HeaderDivider />

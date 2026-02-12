@@ -54,9 +54,5 @@ export const runwareGenerationsRelations = relations(runwareGenerations, ({ many
   artifacts: many(runwareArtifacts),
 }))
 
-export const runwareArtifactsRelations = relations(runwareArtifacts, ({ one }) => ({
-  generation: one(runwareGenerations, {
-    fields: [runwareArtifacts.generationId],
-    references: [runwareGenerations.id],
-  }),
-}))
+// runwareArtifactsRelations is defined in tags.ts to avoid circular imports
+// (tags table references runwareArtifacts, and the relation needs to reference tags)

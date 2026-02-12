@@ -26,6 +26,7 @@ export type RequestMeta = {
   outputFormat: ImageInferenceInput['outputFormat']
   expectedCount: number
   annotations: Record<string, unknown>
+  tags?: Record<string, string | null>
   error?: RequestError
   createdAt: number
   completedAt?: number
@@ -44,6 +45,7 @@ export type InitArgs = {
   outputFormat: ImageInferenceInput['outputFormat']
   expectedCount: number
   annotations: Record<string, unknown>
+  tags?: Record<string, string | null>
   error?: RequestError
 }
 
@@ -89,6 +91,7 @@ export class InferenceDO extends DurableObject<Env> {
       outputFormat: args.outputFormat,
       expectedCount: args.expectedCount,
       annotations: args.annotations ?? {},
+      tags: args.tags,
       createdAt: now,
     }
 
