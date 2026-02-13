@@ -4,7 +4,7 @@
 
 import { db } from '@ig/db'
 import { runwareArtifacts, runwareGenerations, tags } from '@ig/db/schema'
-import { and, desc, eq, getTableColumns, inArray, lt, or } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, inArray, isNull, lt, or } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { publicProcedure } from '../orpc'
@@ -71,6 +71,7 @@ export const browseRouter = {
         : undefined
 
       // Join generation so each artifact carries its full context
+      const notDeleted = isNull(runwareArtifacts.deletedAt)
       const items = await db
         .select({
           ...getTableColumns(runwareArtifacts),
@@ -78,7 +79,7 @@ export const browseRouter = {
         })
         .from(runwareArtifacts)
         .innerJoin(runwareGenerations, eq(runwareArtifacts.generationId, runwareGenerations.id))
-        .where(cursorCondition)
+        .where(cursorCondition ? and(notDeleted, cursorCondition) : notDeleted)
         .orderBy(desc(runwareArtifacts.createdAt), desc(runwareArtifacts.id))
         .limit(limit + 1)
 
@@ -115,10 +116,10 @@ export const browseRouter = {
           )
         : undefined
 
-      // Relational query auto-loads child artifacts
+      // Relational query auto-loads child artifacts (excluding soft-deleted)
       const items = await db.query.runwareGenerations.findMany({
         where: cursorCondition,
-        with: { artifacts: true },
+        with: { artifacts: { where: isNull(runwareArtifacts.deletedAt) } },
         orderBy: [desc(runwareGenerations.createdAt), desc(runwareGenerations.id)],
         limit: limit + 1,
       })
@@ -160,11 +161,16 @@ export const browseRouter = {
 
       const { generation, ...artifact } = row
 
-      // Other artifacts from the same generation
+      // Other artifacts from the same generation (excluding soft-deleted)
       const siblings = await db
         .select()
         .from(runwareArtifacts)
-        .where(eq(runwareArtifacts.generationId, artifact.generationId))
+        .where(
+          and(
+            eq(runwareArtifacts.generationId, artifact.generationId),
+            isNull(runwareArtifacts.deletedAt),
+          ),
+        )
         .orderBy(desc(runwareArtifacts.createdAt))
 
       // Fetch tags for this artifact and all siblings
@@ -185,7 +191,7 @@ export const browseRouter = {
     .handler(async ({ input }) => {
       const generation = await db.query.runwareGenerations.findFirst({
         where: eq(runwareGenerations.id, input.id),
-        with: { artifacts: true },
+        with: { artifacts: { where: isNull(runwareArtifacts.deletedAt) } },
       })
       if (!generation) return null
 

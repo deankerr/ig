@@ -1,5 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
-import { BracesIcon, SendIcon } from 'lucide-react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { BracesIcon, SendIcon, TrashIcon } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 import { HeaderAction } from '@/components/inspector/header-action'
 import { useInspector } from '@/components/inspector/inspector-context'
@@ -14,14 +16,24 @@ import { ArtifactLink } from '@/components/shared/artifact-link'
 import { useJsonSheet } from '@/components/shared/json-sheet'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { Button } from '@/components/ui/button'
-import { queryClient } from '@/lib/api'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { orpc, queryClient } from '@/lib/api'
 import { formatDuration } from '@/lib/format'
-import { getGenerationOptions, statusQueryOptions } from '@/lib/queries'
+import { deleteGenerationMutation, getGenerationOptions, statusQueryOptions } from '@/lib/queries'
 
 export function GenerationInspector() {
-  const { id, sendToBench } = useInspector()
+  const { id, close, sendToBench } = useInspector()
   const query = useQuery(getGenerationOptions(id))
+  const deleteMutation = useMutation(deleteGenerationMutation())
   const jsonSheet = useJsonSheet()
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   if (query.isLoading) {
     return <div className="text-muted-foreground py-8 text-center text-xs">Loading...</div>
@@ -43,6 +55,23 @@ export function GenerationInspector() {
     jsonSheet.open(data ?? 'No DO state found', `request/${generation.id}`)
   }
 
+  function handleDelete() {
+    deleteMutation.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          console.log('[generation-inspector:deleted]', { id })
+          toast.success('Generation deleted')
+          queryClient.invalidateQueries({ queryKey: orpc.browse.key() })
+          close()
+        },
+        onError: (error) => {
+          toast.error(`Delete failed: ${error.message}`)
+        },
+      },
+    )
+  }
+
   return (
     <>
       <InspectorHeader title={`generation/${generation.id}`}>
@@ -54,6 +83,9 @@ export function GenerationInspector() {
           onClick={() => jsonSheet.open({ generation, artifacts }, `generation/${generation.id}`)}
         >
           <BracesIcon />
+        </HeaderAction>
+        <HeaderAction label="Delete" onClick={() => setDeleteOpen(true)}>
+          <TrashIcon />
         </HeaderAction>
       </InspectorHeader>
 
@@ -103,6 +135,32 @@ export function GenerationInspector() {
           </div>
         </InspectorSidebar>
       </InspectorBody>
+
+      {/* Delete confirmation */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete generation</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the generation, {artifacts.length} artifact
+              {artifacts.length !== 1 ? 's' : ''}, and all associated R2 objects. This cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

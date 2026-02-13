@@ -34,15 +34,31 @@ export function createImageMutation() {
   return orpc.inference.createImage.mutationOptions()
 }
 
+// Client-side safety net — stop polling if the server timeout clearly passed.
+// Slightly longer than the server's 5min REQUEST_TIMEOUT_MS.
+const STALE_AFTER_MS = 6 * 60 * 1000
+
 export function statusQueryOptions(id: string) {
   return orpc.inference.getStatus.queryOptions({
     input: { id },
     refetchInterval: (query) => {
       const data = query.state.data
       if (data?.completedAt) return false
+      if (data?.createdAt && Date.now() - new Date(data.createdAt).getTime() > STALE_AFTER_MS)
+        return false
       return 1000
     },
   })
+}
+
+// -- Admin --
+
+export function deleteArtifactMutation() {
+  return orpc.admin.deleteArtifact.mutationOptions()
+}
+
+export function deleteGenerationMutation() {
+  return orpc.admin.deleteGeneration.mutationOptions()
 }
 
 // -- Health --

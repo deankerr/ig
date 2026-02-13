@@ -38,6 +38,7 @@ export const runwareArtifacts = sqliteTable(
     cost: real('cost'),
     metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
   },
   (table) => [
     index('idx_ra_created').on(table.createdAt),

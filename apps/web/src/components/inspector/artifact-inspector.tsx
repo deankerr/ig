@@ -1,5 +1,13 @@
-import { useQuery } from '@tanstack/react-query'
-import { BracesIcon, ClipboardIcon, DownloadIcon, ExternalLinkIcon, SendIcon } from 'lucide-react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+  BracesIcon,
+  ClipboardIcon,
+  DownloadIcon,
+  ExternalLinkIcon,
+  SendIcon,
+  TrashIcon,
+} from 'lucide-react'
+import { toast } from 'sonner'
 
 import { HeaderAction } from '@/components/inspector/header-action'
 import { useInspector } from '@/components/inspector/inspector-context'
@@ -14,14 +22,15 @@ import { ArtifactLink } from '@/components/shared/artifact-link'
 import { useJsonSheet } from '@/components/shared/json-sheet'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { Button } from '@/components/ui/button'
-import { queryClient } from '@/lib/api'
+import { orpc, queryClient } from '@/lib/api'
 import { formatDuration, formatPrice } from '@/lib/format'
-import { getArtifactOptions, statusQueryOptions } from '@/lib/queries'
+import { deleteArtifactMutation, getArtifactOptions, statusQueryOptions } from '@/lib/queries'
 import { serverUrl } from '@/lib/utils'
 
 export function ArtifactInspector() {
-  const { id, copy, sendToBench } = useInspector()
+  const { id, close, copy, sendToBench } = useInspector()
   const query = useQuery(getArtifactOptions(id))
+  const deleteMutation = useMutation(deleteArtifactMutation())
   const jsonSheet = useJsonSheet()
 
   if (query.isLoading) {
@@ -54,6 +63,23 @@ export function ArtifactInspector() {
     jsonSheet.open(data ?? 'No DO state found', `request/${generation.id}`)
   }
 
+  function handleDelete() {
+    deleteMutation.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          console.log('[artifact-inspector:deleted]', { id })
+          toast.success('Artifact deleted')
+          queryClient.invalidateQueries({ queryKey: orpc.browse.key() })
+          close()
+        },
+        onError: (error) => {
+          toast.error(`Delete failed: ${error.message}`)
+        },
+      },
+    )
+  }
+
   return (
     <>
       <InspectorHeader title={`artifact/${artifact.id}`}>
@@ -74,6 +100,9 @@ export function ArtifactInspector() {
           onClick={() => jsonSheet.open(artifact, `artifact/${artifact.id}`)}
         >
           <BracesIcon />
+        </HeaderAction>
+        <HeaderAction label="Delete" onClick={handleDelete}>
+          <TrashIcon />
         </HeaderAction>
       </InspectorHeader>
 

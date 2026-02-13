@@ -65,6 +65,9 @@ export const GenerationList = memo(function GenerationList() {
 
 // -- Generation row with derived status --
 
+// Client-side staleness threshold — slightly longer than server's 5min REQUEST_TIMEOUT_MS.
+const STALE_AFTER_MS = 6 * 60 * 1000
+
 type Generation = {
   id: string
   model: string
@@ -90,6 +93,7 @@ const GenerationRow = memo(function GenerationRow({
   search: SearchParams
 }) {
   const isInProgress = !gen.completedAt
+  const isStale = isInProgress && Date.now() - new Date(gen.createdAt).getTime() > STALE_AFTER_MS
   const hasError = !!gen.error
 
   return (
@@ -97,7 +101,8 @@ const GenerationRow = memo(function GenerationRow({
       <ItemContent>
         <ItemTitle className="w-full">
           {/* Status indicator */}
-          {isInProgress && <PulsingDot color="pending" />}
+          {isStale && <PulsingDot color="failed" pulse={false} />}
+          {isInProgress && !isStale && <PulsingDot color="pending" />}
           {hasError && <AlertCircleIcon className="text-destructive size-4" />}
 
           {gen.model}
@@ -133,6 +138,7 @@ const GenerationRow = memo(function GenerationRow({
         ))}
         {/* Placeholder slots for expected-but-not-yet-arrived artifacts */}
         {isInProgress &&
+          !isStale &&
           gen.artifacts.length < gen.batch &&
           Array.from({ length: gen.batch - gen.artifacts.length }).map((_, i) => (
             <div key={`placeholder-${i}`} className="bg-muted/50 size-20 animate-pulse rounded" />

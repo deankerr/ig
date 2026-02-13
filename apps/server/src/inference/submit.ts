@@ -30,7 +30,7 @@ type SubmitArgs = {
 export type SyncResult = {
   id: string
   generation: Omit<RunwareGeneration, 'error' | 'metadata'>
-  artifacts: Omit<RunwareArtifact, 'metadata'>[]
+  artifacts: Omit<RunwareArtifact, 'metadata' | 'deletedAt'>[]
 }
 
 export type SubmitResult = { id: string } | SyncResult

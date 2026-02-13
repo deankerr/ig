@@ -72,10 +72,6 @@ NOTE: Modules in our codebase that originated externally or are auto-generated a
 
 The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. **Do not** use Alchemy's inferred `typeof server.Env` — its `Bound<T>` conditional type chain triggers TS2589 (excessively deep type instantiation). When adding a binding in `packages/infra/alchemy.run.ts`, add the corresponding property to `env.d.ts` using the Cloudflare runtime type (`D1Database`, `R2Bucket`, `DurableObjectNamespace`, etc).
 
-## Context
-
-`Context` from `apps/server/src/context.ts` is the standard context passed to internal functions. Contains `env: Env`, `headers: Headers`, and `waitUntil` for background work. Functions that need bindings accept `(ctx: Context, args)` — not individual bindings.
-
 ## API
 
 - **REST** (`/api/*`) — Scalar docs at `/api`, OpenAPI spec at `/api/spec.json`
@@ -85,7 +81,7 @@ The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. 
 
 ### Curling the server
 
-Use the OpenAPI endpoints (all POST, JSON body) — not the oRPC wire format. The base URL is `http://localhost:3220` locally, or `https://server.{stage}.{baseDomain}` for remote dev (see `packages/infra/config.ts`). The dev stage defaults to the OS username (e.g. `dean`).
+Use the OpenAPI endpoints (all POST, JSON body) — not the oRPC wire format. The base URL is `https://server.{stage}.ig-dev.orb.town` (see `packages/infra/config.ts`). The dev stage defaults to the OS username, so the default is `https://server.{username}.ig-dev.orb.town`.
 
 ```bash
 # Mutations (require x-api-key)
@@ -116,18 +112,20 @@ Alchemy (`packages/infra/alchemy.run.ts`) defines all Cloudflare resources:
 
 ## Live Demo
 
-Use this procedure to verify inference end-to-end after changes.
+Use this procedure to verify inference end-to-end after changes. All testing is done against the remote deployment.
 
-**Dev server:** `omux run 'bun run dev'`
+**Deploy:** `bun run deploy`
 
-**Remote logs:** `omux run 'bunx wrangler tail ig-server-dean'`
+**Remote logs:** `omux run 'bunx wrangler tail ig-server-{username}'`
 
-Leave these running — don't kill them after a task. The output is useful for both of us to observe.
+Leave the tail running — don't kill it after a task. The output is useful for both of us to observe.
 
-**Test matrix:** sync (local) then async (remote, after `bun run deploy`), batch of 1 and 3, both success and error cases.
+**Setup:** `BASE_URL=https://server.{username}.ig-dev.orb.town` and `API_KEY` from `.env`.
+
+**Test matrix:** sync and async, batch of 1 and 3, success and error cases.
 
 ```bash
-# Sync success (local)
+# Sync success
 curl -s -X POST "$BASE_URL/api/inference/createImage" \
   -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
   -d '{"model":"runware:400@4","positivePrompt":"a cat","sync":true}' | jq .
@@ -138,7 +136,7 @@ curl -s -X POST "$BASE_URL/api/inference/createImage" \
 # Sync error (bad dimensions)
 # same as above with "width":1,"height":1
 
-# Async (remote) — returns ID immediately, check D1 after
+# Async — returns ID immediately, check D1 after
 curl -s -X POST "$BASE_URL/api/inference/createImage" \
   -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
   -d '{"model":"runware:400@4","positivePrompt":"a cat"}' | jq .

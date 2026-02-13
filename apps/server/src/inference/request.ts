@@ -180,6 +180,11 @@ export class InferenceDO extends DurableObject<Env> {
     this.kv.put(KV.meta, meta)
   }
 
+  /** Clear all DO storage. Used when hard-deleting a generation. */
+  async destroy() {
+    await this.ctx.storage.deleteAll()
+  }
+
   /** Read current state for client polling. */
   getState(): RequestState | null {
     const meta = this.getMeta()
@@ -222,6 +227,7 @@ type RequestClient = {
   confirmOutputs(results: Output[]): Promise<ConfirmResult>
   setError(error: RequestError): Promise<void>
   getState(): Promise<RequestState | null>
+  destroy(): Promise<void>
 }
 
 export function getRequest(ctx: Context, id: string) {

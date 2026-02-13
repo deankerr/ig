@@ -1,6 +1,7 @@
 import type { RouterClient } from '@orpc/server'
 
 import { publicProcedure } from '../orpc'
+import { adminRouter } from './admin'
 import { browseRouter } from './browse'
 import { inferenceRouter } from './inference'
 import { tagsRouter } from './tags'
@@ -12,6 +13,7 @@ export const appRouter = {
   inference: inferenceRouter,
   browse: browseRouter,
   tags: tagsRouter,
+  admin: adminRouter,
 }
 export type AppRouter = typeof appRouter
 export type AppRouterClient = RouterClient<typeof appRouter>

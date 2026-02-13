@@ -71,6 +71,13 @@
       "when": 1770959488824,
       "tag": "0009_rainy_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1770995024740,
+      "tag": "0010_lyrical_moira_mactaggert",
+      "breakpoints": true
     }
   ]
 }
