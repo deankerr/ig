@@ -83,7 +83,7 @@ export const ArtifactList = memo(function ArtifactList() {
                       <div className="text-muted-foreground flex grow justify-end gap-4">
                         <span>{formatPrice(artifact.cost)}</span>
                         <span>
-                          {artifact.generation &&
+                          {artifact.generation?.completedAt &&
                             formatDuration(
                               new Date(artifact.generation.completedAt).getTime() -
                                 new Date(artifact.generation.createdAt).getTime(),

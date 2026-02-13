@@ -34,8 +34,9 @@ export function ArtifactInspector() {
 
   const { artifact, generation, siblings } = query.data
   const imageUrl = `${serverUrl.origin}/artifacts/${artifact.id}/file`
-  const duration =
-    new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()
+  const duration = generation.completedAt
+    ? new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()
+    : null
 
   function handleDownload() {
     const a = document.createElement('a')
@@ -101,7 +102,10 @@ export function ArtifactInspector() {
           <MetaField label="content type" value={artifact.contentType} />
           {artifact.seed != null && <MetaField label="seed" value={String(artifact.seed)} />}
           {artifact.cost != null && <MetaField label="cost" value={formatPrice(artifact.cost)} />}
-          <MetaField label="duration" value={formatDuration(duration)} />
+          <MetaField
+            label="duration"
+            value={duration != null ? formatDuration(duration) : 'in progress'}
+          />
           <MetaField label="created" value={<TimeAgo date={artifact.createdAt} />} />
 
           {/* Tags */}

@@ -7,10 +7,11 @@ export const runwareGenerations = sqliteTable(
     id: text('id').primaryKey(),
     model: text('model').notNull(),
     input: text('input', { mode: 'json' }).notNull().$type<Record<string, unknown>>(),
-    artifactCount: integer('artifact_count').notNull(),
+    batch: integer('batch').notNull(),
+    error: text('error'),
     metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-    completedAt: integer('completed_at', { mode: 'timestamp_ms' }).notNull(),
+    completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
   },
   (table) => [
     index('idx_rg_created').on(table.createdAt),

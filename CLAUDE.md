@@ -114,6 +114,47 @@ Alchemy (`packages/infra/alchemy.run.ts`) defines all Cloudflare resources:
 - State stored remotely (survives local deletion)
 - URLs derived from stage name
 
+## Live Demo
+
+Use this procedure to verify inference end-to-end after changes.
+
+**Dev server:** `omux run 'bun run dev'`
+
+**Remote logs:** `omux run 'bunx wrangler tail ig-server-dean'`
+
+Leave these running — don't kill them after a task. The output is useful for both of us to observe.
+
+**Test matrix:** sync (local) then async (remote, after `bun run deploy`), batch of 1 and 3, both success and error cases.
+
+```bash
+# Sync success (local)
+curl -s -X POST "$BASE_URL/api/inference/createImage" \
+  -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
+  -d '{"model":"runware:400@4","positivePrompt":"a cat","sync":true}' | jq .
+
+# Sync success, batch of 3
+# same as above with "numberResults":3
+
+# Sync error (bad dimensions)
+# same as above with "width":1,"height":1
+
+# Async (remote) — returns ID immediately, check D1 after
+curl -s -X POST "$BASE_URL/api/inference/createImage" \
+  -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
+  -d '{"model":"runware:400@4","positivePrompt":"a cat"}' | jq .
+
+# Verify D1 state
+curl -s -X POST "$BASE_URL/api/browse/listGenerations" \
+  -H "Content-Type: application/json" -d '{"limit":5}' \
+  | jq '.items[] | {id, batch, error, completedAt, artifacts: (.artifacts | length)}'
+```
+
+**Expected behavior:**
+
+- Sync error: 400 returned to client, no D1 row
+- Async error: ID returned immediately, D1 row appears (in-progress), then updated with error + completedAt
+- Success: D1 generation row appears immediately (async) or after dispatch (sync), artifacts appear progressively, completedAt set on completion
+
 ## Models
 
 These models are fast and cost practically nothing. Use them when testing inference functionality.

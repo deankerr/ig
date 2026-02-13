@@ -1,7 +1,9 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { Link, useSearch } from '@tanstack/react-router'
+import { AlertCircleIcon } from 'lucide-react'
 import { memo, useMemo } from 'react'
 
+import { PulsingDot } from '@/components/shared/pulsing-dot'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { Empty, EmptyDescription } from '@/components/ui/empty'
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item'
@@ -42,45 +44,7 @@ export const GenerationList = memo(function GenerationList() {
       {/* Generation rows */}
       <ItemGroup>
         {allGenerations.map((gen) => (
-          <Item
-            key={gen.id}
-            variant="outline"
-            render={<Link to="/" search={{ ...search, generation: gen.id }} />}
-          >
-            {/* Generation record — links to generation detail */}
-            <ItemContent>
-              <ItemTitle className="w-full">
-                {gen.model}
-
-                <span className="text-muted-foreground">
-                  {gen.artifacts.length}/{gen.artifactCount}
-                </span>
-
-                <div className="text-muted-foreground flex grow justify-end gap-4">
-                  <span>
-                    {formatPrice(gen.artifacts.reduce((sum, a) => sum + (a.cost ?? 0), 0))}
-                  </span>
-                  <span>
-                    {formatDuration(
-                      new Date(gen.completedAt).getTime() - new Date(gen.createdAt).getTime(),
-                    )}
-                  </span>
-                  <span>
-                    <TimeAgo date={gen.createdAt} />
-                  </span>
-                </div>
-              </ItemTitle>
-
-              <ItemDescription>{formatPrompt(gen.input)}</ItemDescription>
-            </ItemContent>
-
-            {/* Artifact thumbnails */}
-            <div className="flex w-full flex-wrap gap-1 py-1">
-              {gen.artifacts.map((a) => (
-                <ArtifactThumbnail key={a.id} id={a.id} size="small" className="size-20" />
-              ))}
-            </div>
-          </Item>
+          <GenerationRow key={gen.id} gen={gen} search={search} />
         ))}
       </ItemGroup>
 
@@ -96,5 +60,84 @@ export const GenerationList = memo(function GenerationList() {
       {/* Infinite scroll sentinel */}
       <div ref={sentinelRef} className="h-px" />
     </div>
+  )
+})
+
+// -- Generation row with derived status --
+
+type Generation = {
+  id: string
+  model: string
+  input: Record<string, unknown>
+  batch: number
+  error: string | null
+  createdAt: Date
+  completedAt: Date | null
+  artifacts: Array<{ id: string; cost: number | null }>
+}
+
+type SearchParams = {
+  view: 'artifacts' | 'generations'
+  artifact?: string
+  generation?: string
+}
+
+const GenerationRow = memo(function GenerationRow({
+  gen,
+  search,
+}: {
+  gen: Generation
+  search: SearchParams
+}) {
+  const isInProgress = !gen.completedAt
+  const hasError = !!gen.error
+
+  return (
+    <Item variant="outline" render={<Link to="/" search={{ ...search, generation: gen.id }} />}>
+      <ItemContent>
+        <ItemTitle className="w-full">
+          {/* Status indicator */}
+          {isInProgress && <PulsingDot color="pending" />}
+          {hasError && <AlertCircleIcon className="text-destructive size-4" />}
+
+          {gen.model}
+
+          <span className="text-muted-foreground">
+            {gen.artifacts.length}/{gen.batch}
+          </span>
+
+          <div className="text-muted-foreground flex grow justify-end gap-4">
+            <span>{formatPrice(gen.artifacts.reduce((sum, a) => sum + (a.cost ?? 0), 0))}</span>
+            {gen.completedAt ? (
+              <span>
+                {formatDuration(
+                  new Date(gen.completedAt).getTime() - new Date(gen.createdAt).getTime(),
+                )}
+              </span>
+            ) : (
+              <span className="text-muted-foreground/50">...</span>
+            )}
+            <span>
+              <TimeAgo date={gen.createdAt} />
+            </span>
+          </div>
+        </ItemTitle>
+
+        <ItemDescription>{formatPrompt(gen.input)}</ItemDescription>
+      </ItemContent>
+
+      {/* Artifact thumbnails */}
+      <div className="flex w-full flex-wrap gap-1 py-1">
+        {gen.artifacts.map((a) => (
+          <ArtifactThumbnail key={a.id} id={a.id} size="small" className="size-20" />
+        ))}
+        {/* Placeholder slots for expected-but-not-yet-arrived artifacts */}
+        {isInProgress &&
+          gen.artifacts.length < gen.batch &&
+          Array.from({ length: gen.batch - gen.artifacts.length }).map((_, i) => (
+            <div key={`placeholder-${i}`} className="bg-muted/50 size-20 animate-pulse rounded" />
+          ))}
+      </div>
+    </Item>
   )
 })

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c11a64a0-1469-4941-a6df-ff8631b5f6e7",
+  "id": "c217ba6f-e700-4e53-a927-c1bd93afaf97",
   "prevId": "a1b2c3d4-5678-90ab-cdef-012345678901",
   "tables": {
     "generations": {
@@ -179,6 +179,20 @@
           "notNull": true,
           "autoincrement": false
         },
+        "width": {
+          "name": "width",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "seed": {
           "name": "seed",
           "type": "integer",
@@ -264,11 +278,25 @@
           "notNull": true,
           "autoincrement": false
         },
-        "artifact_count": {
-          "name": "artifact_count",
+        "batch": {
+          "name": "batch",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "created_at": {
@@ -282,7 +310,7 @@
           "name": "completed_at",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         }
       },
@@ -300,6 +328,68 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "tags": {
+      "name": "tags",
+      "columns": {
+        "tag": {
+          "name": "tag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_tags_target": {
+          "name": "idx_tags_target",
+          "columns": ["target_id"],
+          "isUnique": false
+        },
+        "idx_tags_tag": {
+          "name": "idx_tags_tag",
+          "columns": ["tag"],
+          "isUnique": false
+        },
+        "idx_tags_tag_value": {
+          "name": "idx_tags_tag_value",
+          "columns": ["tag", "value"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "tags_target_id_runware_artifacts_id_fk": {
+          "name": "tags_target_id_runware_artifacts_id_fk",
+          "tableFrom": "tags",
+          "tableTo": "runware_artifacts",
+          "columnsFrom": ["target_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "tags_tag_target_id_pk": {
+          "columns": ["tag", "target_id"],
+          "name": "tags_tag_target_id_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     }

@@ -4,6 +4,8 @@ CREATE TABLE `runware_artifacts` (
 	`model` text NOT NULL,
 	`r2_key` text NOT NULL,
 	`content_type` text NOT NULL,
+	`width` integer,
+	`height` integer,
 	`seed` integer,
 	`cost` real,
 	`metadata` text,
@@ -18,13 +20,26 @@ CREATE TABLE `runware_generations` (
 	`id` text PRIMARY KEY NOT NULL,
 	`model` text NOT NULL,
 	`input` text NOT NULL,
-	`artifact_count` integer NOT NULL,
+	`batch` integer NOT NULL,
+	`error` text,
+	`metadata` text,
 	`created_at` integer NOT NULL,
-	`completed_at` integer NOT NULL
+	`completed_at` integer
 );
 --> statement-breakpoint
 CREATE INDEX `idx_rg_created` ON `runware_generations` (`created_at`);--> statement-breakpoint
 CREATE INDEX `idx_rg_model_created` ON `runware_generations` (`model`,`created_at`);--> statement-breakpoint
+CREATE TABLE `tags` (
+	`tag` text NOT NULL,
+	`value` text,
+	`target_id` text NOT NULL,
+	PRIMARY KEY(`tag`, `target_id`),
+	FOREIGN KEY (`target_id`) REFERENCES `runware_artifacts`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE INDEX `idx_tags_target` ON `tags` (`target_id`);--> statement-breakpoint
+CREATE INDEX `idx_tags_tag` ON `tags` (`tag`);--> statement-breakpoint
+CREATE INDEX `idx_tags_tag_value` ON `tags` (`tag`,`value`);--> statement-breakpoint
 DROP TABLE `models`;--> statement-breakpoint
 DROP TABLE `presets`;--> statement-breakpoint
 PRAGMA foreign_keys=OFF;--> statement-breakpoint

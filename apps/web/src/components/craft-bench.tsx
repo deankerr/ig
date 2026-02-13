@@ -1,17 +1,14 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { BracesIcon, SendIcon, XIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { useBench } from '@/components/bench-provider'
-import { ArtifactLink } from '@/components/shared/artifact-link'
-import { PulsingDot } from '@/components/shared/pulsing-dot'
 import { Button } from '@/components/ui/button'
-import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { orpc, queryClient } from '@/lib/api'
-import { createImageMutation, statusQueryOptions } from '@/lib/queries'
+import { createImageMutation } from '@/lib/queries'
 import * as storage from '@/lib/storage'
 
 const CRAFT_BENCH_EVENT = 'craft-bench-input-update'
@@ -67,7 +64,7 @@ export function setCraftBenchInput(input: Record<string, unknown>) {
 }
 
 export function CraftBench() {
-  const { close, inflightIds, addInflight } = useBench()
+  const { close } = useBench()
   const [input, setInput] = useState(() => tryFormatJson(storage.getBenchInput() || DEFAULT_INPUT))
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -115,14 +112,15 @@ export function CraftBench() {
     mutation.mutate(parsed as never, {
       onSuccess: (data) => {
         console.log('[craft-bench:submitted]', { id: data.id })
-        addInflight(data.id)
         toast.success('Request submitted')
+        // Invalidate generation list so the new in-progress row appears
+        queryClient.invalidateQueries({ queryKey: orpc.browse.key() })
       },
       onError: (error) => {
         toast.error(`Failed: ${error.message}`)
       },
     })
-  }, [input, mutation, addInflight])
+  }, [input, mutation])
 
   return (
     <div className="bg-background flex h-full flex-col">
@@ -188,69 +186,6 @@ export function CraftBench() {
           </div>
         </div>
       </div>
-
-      {/* In-flight generations */}
-      {inflightIds.length > 0 && (
-        <div className="border-border flex-1 overflow-y-auto border-t">
-          <div className="p-3">
-            <span className="text-muted-foreground text-xs">in-flight</span>
-          </div>
-          {inflightIds.map((id) => (
-            <InflightGeneration key={id} id={id} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Tracks a single in-flight generation with status polling
-function InflightGeneration({ id }: { id: string }) {
-  const query = useQuery(statusQueryOptions(id))
-  const data = query.data
-
-  // Invalidate browse queries when generation completes
-  const invalidatedRef = useRef(false)
-  useEffect(() => {
-    if (data?.completedAt && !invalidatedRef.current) {
-      invalidatedRef.current = true
-      queryClient.invalidateQueries({ queryKey: orpc.browse.key() })
-    }
-  }, [data])
-
-  const isComplete = !!data?.completedAt
-  // Filter outputs for successful artifacts
-  const artifacts = (data?.outputs ?? []).filter((o) => o.type === 'success')
-
-  return (
-    <div className="border-border border-b px-3 py-2">
-      <Item size="xs">
-        <ItemMedia variant="icon">
-          {!isComplete ? (
-            <PulsingDot color="pending" />
-          ) : (
-            <span className="text-status-ready">●</span>
-          )}
-        </ItemMedia>
-        <ItemContent>
-          <ItemTitle className="font-mono">{id}</ItemTitle>
-          {isComplete && (
-            <ItemDescription>
-              {artifacts.length} artifact{artifacts.length !== 1 ? 's' : ''}
-            </ItemDescription>
-          )}
-        </ItemContent>
-      </Item>
-
-      {/* Completed artifact thumbnails */}
-      {artifacts.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {artifacts.map((a) => {
-            if (a.type !== 'success') return null
-            return <ArtifactLink key={a.id} id={a.id} />
-          })}
-        </div>
-      )}
     </div>
   )
 }

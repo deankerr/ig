@@ -12,10 +12,10 @@ import { DurableObject } from 'cloudflare:workers'
 import { z } from 'zod'
 
 import type { Context } from '../context'
-import { output, timeoutError, type Output, type OutputResult, type RequestError } from './result'
+import { REQUEST_TIMEOUT_MS } from './config'
+import * as persist from './persist'
+import { output, timeoutError, type Output, type RequestError } from './result'
 import { imageInferenceWebhook, type ImageInferenceInput } from './schema'
-
-const TIMEOUT_MS = 5 * 60 * 1000
 
 // -- State types --
 
@@ -23,13 +23,14 @@ export type RequestMeta = {
   id: string
   model: string
   input: Record<string, unknown>
-  outputFormat: ImageInferenceInput['outputFormat']
-  expectedCount: number
-  annotations: Record<string, unknown>
-  tags?: Record<string, string | null>
+  batch: number
   error?: RequestError
-  createdAt: number
-  completedAt?: number
+  createdAt: Date
+  completedAt?: Date
+
+  annotations: Record<string, unknown>
+  outputFormat: ImageInferenceInput['outputFormat']
+  tags?: Record<string, string | null>
 }
 
 export type RequestState = RequestMeta & {
@@ -38,16 +39,7 @@ export type RequestState = RequestMeta & {
 
 // -- RPC argument/return types --
 
-export type InitArgs = {
-  id: string
-  model: string
-  input?: Record<string, unknown>
-  outputFormat: ImageInferenceInput['outputFormat']
-  expectedCount: number
-  annotations?: Record<string, unknown>
-  tags?: Record<string, string | null>
-  error?: RequestError
-}
+export type InitArgs = Omit<RequestMeta, 'createdAt' | 'completedAt'>
 
 export type SetDispatchArgs = {
   input: Record<string, unknown>
@@ -55,7 +47,7 @@ export type SetDispatchArgs = {
   error?: RequestError
 }
 
-export type PendingItem = {
+export type WebhookItem = {
   index: number
   imageURL: string
   seed: number
@@ -64,7 +56,7 @@ export type PendingItem = {
 }
 
 export type RecordWebhookResult = {
-  items: PendingItem[]
+  items: WebhookItem[]
   meta: RequestMeta
 }
 
@@ -74,30 +66,27 @@ export type ConfirmResult = {
 
 // -- Durable Object --
 
+// DO storage keys — typed constants to avoid silent mismatches
+const KV = { meta: 'meta', outputs: 'outputs' } as const
+
 export class InferenceDO extends DurableObject<Env> {
   private get kv() {
     return this.ctx.storage.kv
   }
 
   private getMeta(): RequestMeta | undefined {
-    return this.kv.get('gen')
+    return this.kv.get(KV.meta)
   }
 
   private getOutputs(): Output[] {
-    return this.kv.get('outputs') ?? []
+    return this.kv.get(KV.outputs) ?? []
   }
 
   /** Initialize request state. Called once after dispatch (success or failure). */
   async init(args: InitArgs) {
-    const now = Date.now()
+    const now = new Date()
     const meta: RequestMeta = {
-      id: args.id,
-      model: args.model,
-      input: args.input ?? {},
-      outputFormat: args.outputFormat,
-      expectedCount: args.expectedCount,
-      annotations: args.annotations ?? {},
-      tags: args.tags,
+      ...args,
       createdAt: now,
     }
 
@@ -106,11 +95,11 @@ export class InferenceDO extends DurableObject<Env> {
       meta.completedAt = now
     }
 
-    this.kv.put('gen', meta)
-    this.kv.put('outputs', [])
+    this.kv.put(KV.meta, meta)
+    this.kv.put(KV.outputs, [])
 
     if (!args.error) {
-      await this.ctx.storage.setAlarm(now + TIMEOUT_MS)
+      await this.ctx.storage.setAlarm(now.getTime() + REQUEST_TIMEOUT_MS)
     }
   }
 
@@ -119,29 +108,29 @@ export class InferenceDO extends DurableObject<Env> {
     const meta = this.getMeta()
     if (!meta) throw new Error('No request state')
 
-    const now = Date.now()
+    const now = new Date()
     const outputs = this.getOutputs()
     const parsed = imageInferenceWebhook.safeParse(payload)
 
     if (!parsed.success) {
       outputs.push(output.validationError(z.flattenError(parsed.error), payload, now))
-      this.kv.put('outputs', outputs)
+      this.kv.put(KV.outputs, outputs)
       return { items: [], meta }
     }
 
     if ('errors' in parsed.data) {
       outputs.push(output.webhookError(parsed.data.errors, payload, now))
-      this.kv.put('outputs', outputs)
+      this.kv.put(KV.outputs, outputs)
 
-      if (outputs.length >= meta.expectedCount) {
-        meta.completedAt = Date.now()
-        this.kv.put('gen', meta)
+      if (outputs.length >= meta.batch) {
+        meta.completedAt = new Date()
+        this.kv.put(KV.meta, meta)
       }
 
       return { items: [], meta }
     }
 
-    const items: PendingItem[] = parsed.data.data.map((result, index) => ({
+    const items: WebhookItem[] = parsed.data.data.map((result, index) => ({
       index,
       imageURL: result.imageURL,
       seed: result.seed,
@@ -153,17 +142,17 @@ export class InferenceDO extends DurableObject<Env> {
   }
 
   /** Record processed output results from the Worker. */
-  confirmOutputs(results: OutputResult[]): ConfirmResult {
+  confirmOutputs(results: Output[]): ConfirmResult {
     const meta = this.getMeta()
     if (!meta) throw new Error('No request state')
 
     const outputs = this.getOutputs()
     outputs.push(...results)
-    this.kv.put('outputs', outputs)
+    this.kv.put(KV.outputs, outputs)
 
-    if (outputs.length >= meta.expectedCount && !meta.completedAt) {
-      meta.completedAt = Date.now()
-      this.kv.put('gen', meta)
+    if (outputs.length >= meta.batch && !meta.completedAt) {
+      meta.completedAt = new Date()
+      this.kv.put(KV.meta, meta)
     }
 
     return { complete: !!meta.completedAt }
@@ -174,7 +163,7 @@ export class InferenceDO extends DurableObject<Env> {
     const meta = this.getMeta()
     if (!meta) return
     meta.error = error
-    this.kv.put('gen', meta)
+    this.kv.put(KV.meta, meta)
   }
 
   /** Update request with dispatch result. Called after background dispatch completes. */
@@ -186,9 +175,9 @@ export class InferenceDO extends DurableObject<Env> {
     meta.annotations = args.annotations
     if (args.error) {
       meta.error = args.error
-      meta.completedAt = Date.now()
+      meta.completedAt = new Date()
     }
-    this.kv.put('gen', meta)
+    this.kv.put(KV.meta, meta)
   }
 
   /** Read current state for client polling. */
@@ -204,9 +193,21 @@ export class InferenceDO extends DurableObject<Env> {
     if (!meta || meta.completedAt) return
 
     const outputs = this.getOutputs()
-    meta.completedAt = Date.now()
-    meta.error = timeoutError(outputs.length, meta.expectedCount)
-    this.kv.put('gen', meta)
+    const now = new Date()
+    meta.completedAt = now
+    meta.error = timeoutError(outputs.length, meta.batch)
+    this.kv.put(KV.meta, meta)
+
+    // Persist timeout to D1
+    await persist.failGeneration(this.env.DB, {
+      id: meta.id,
+      error: `[timeout] received ${outputs.length}/${meta.batch}`,
+      completedAt: now,
+      model: meta.model,
+      input: meta.input,
+      batch: meta.batch,
+      createdAt: meta.createdAt,
+    })
   }
 }
 
@@ -218,7 +219,7 @@ type RequestClient = {
   init(args: InitArgs): Promise<void>
   setDispatchResult(args: SetDispatchArgs): Promise<void>
   recordWebhook(payload: unknown): Promise<RecordWebhookResult>
-  confirmOutputs(results: OutputResult[]): Promise<ConfirmResult>
+  confirmOutputs(results: Output[]): Promise<ConfirmResult>
   setError(error: RequestError): Promise<void>
   getState(): Promise<RequestState | null>
 }

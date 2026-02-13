@@ -39,20 +39,17 @@ export type OutputSuccess = {
   contentType: string
   seed: number
   cost?: number
-  metadata: Record<string, unknown>
-  createdAt: number
+  createdAt: Date
 }
 
 export type OutputError = {
   type: 'error'
   error: OutputErrorDetail
   raw: unknown
-  createdAt: number
+  createdAt: Date
 }
 
 export type Output = OutputSuccess | OutputError
-
-export type OutputResult = OutputSuccess | OutputError
 
 // -- Output factories --
 
@@ -61,11 +58,11 @@ export const output = {
     return { type: 'success', ...args }
   },
 
-  validationError(issues: FlatError, raw: unknown, createdAt: number): OutputError {
+  validationError(issues: FlatError, raw: unknown, createdAt: Date): OutputError {
     return { type: 'error', error: { code: 'validation', issues }, raw, createdAt }
   },
 
-  webhookError(errors: RunwareError[], raw: unknown, createdAt: number): OutputError {
+  webhookError(errors: RunwareError[], raw: unknown, createdAt: Date): OutputError {
     return { type: 'error', error: { code: 'webhook_error', errors }, raw, createdAt }
   },
 
@@ -74,12 +71,12 @@ export const output = {
     status: number,
     body: string,
     raw: unknown,
-    createdAt: number,
+    createdAt: Date,
   ): OutputError {
     return { type: 'error', error: { code: 'fetch_failed', url, status, body }, raw, createdAt }
   },
 
-  storageError(r2Key: string, cause: unknown, raw: unknown, createdAt: number): OutputError {
+  storageError(r2Key: string, cause: unknown, raw: unknown, createdAt: Date): OutputError {
     return {
       type: 'error',
       error: { code: 'storage_failed', r2Key, cause: serializeError(cause) },

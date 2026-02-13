@@ -20,7 +20,7 @@ export function listGenerationsOptions() {
     input: (cursor) => ({ cursor, limit: 20 }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    staleTime: 30_000,
+    staleTime: 5_000,
   })
 }
 

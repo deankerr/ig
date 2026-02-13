@@ -34,8 +34,9 @@ export function GenerationInspector() {
   }
 
   const { artifacts, ...generation } = query.data
-  const duration =
-    new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()
+  const duration = generation.completedAt
+    ? new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()
+    : null
 
   async function handleViewRequestState() {
     const data = await queryClient.fetchQuery(statusQueryOptions(generation.id))
@@ -73,12 +74,13 @@ export function GenerationInspector() {
         {/* Metadata sidebar */}
         <InspectorSidebar>
           <MetaField label="model" value={generation.model} />
+          <MetaField label="artifacts" value={`${artifacts.length} / ${generation.batch}`} />
           <MetaField
-            label="artifacts"
-            value={`${artifacts.length} / ${generation.artifactCount}`}
+            label="duration"
+            value={duration != null ? formatDuration(duration) : 'in progress'}
           />
-          <MetaField label="duration" value={formatDuration(duration)} />
           <MetaField label="created" value={<TimeAgo date={generation.createdAt} />} />
+          {generation.error && <MetaField label="error" value={generation.error} />}
 
           {/* Generation input */}
           <div className="mt-1 flex flex-col gap-1">

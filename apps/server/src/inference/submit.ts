@@ -1,19 +1,19 @@
+import type { RunwareArtifact, RunwareGeneration } from '@ig/db/schema'
 import { v7 as uuidv7 } from 'uuid'
 
 import type { Context } from '../context'
 import { resolveAutoAspectRatio } from '../services/auto-aspect-ratio'
-import type { Result } from '../utils/result'
+import { dispatch, RUNWARE_API_URL } from './dispatch'
+import * as persist from './persist'
 import { getRequest, type RequestMeta } from './request'
-import { httpError, type OutputResult, type OutputSuccess, type RequestError } from './result'
+import { httpError, type Output, type OutputSuccess } from './result'
 import {
   getContentType,
   imageInferenceWebhook,
   type ImageInferenceInput,
   type ImageInferenceResult,
 } from './schema'
-import { processItem, persistToD1 } from './webhook'
-
-const RUNWARE_API_URL = 'https://api.runware.ai/v1'
+import { storeArtifact } from './store'
 
 const aspectRatioDimensions = {
   landscape: { width: 1536, height: 1024 },
@@ -29,27 +29,8 @@ type SubmitArgs = {
 
 export type SyncResult = {
   id: string
-  generation: {
-    id: string
-    model: string
-    input: Record<string, unknown>
-    artifactCount: number
-    createdAt: Date
-    completedAt: Date
-  }
-  artifacts: Array<{
-    id: string
-    generationId: string
-    model: string
-    r2Key: string
-    contentType: string
-    width: number | null
-    height: number | null
-    seed: number
-    cost: number | undefined
-    metadata: Record<string, unknown>
-    createdAt: Date
-  }>
+  generation: Omit<RunwareGeneration, 'error' | 'metadata'>
+  artifacts: Omit<RunwareArtifact, 'metadata'>[]
 }
 
 export type SubmitResult = { id: string } | SyncResult
@@ -71,16 +52,30 @@ async function submitAsync(
   args: { id: string; input: ImageInferenceInput; tags?: Record<string, string | null> },
 ): Promise<{ id: string }> {
   const { id, input, tags } = args
+  const now = new Date()
 
-  // Init DO with minimal state — model, format, count are known upfront
+  // Init DO state — input is pre-dispatch, updated after backgroundDispatch completes
   const request = getRequest(ctx, id)
   await request.init({
     id,
     model: input.model,
+    input: { ...input },
     outputFormat: input.outputFormat,
-    expectedCount: input.numberResults,
+    batch: input.numberResults,
+    annotations: {},
     tags,
   })
+
+  // Progressive D1 projection — generation row appears immediately
+  ctx.waitUntil(
+    persist.insertGeneration(ctx.env.DB, {
+      id,
+      model: input.model,
+      input: { ...input },
+      batch: input.numberResults,
+      createdAt: now,
+    }),
+  )
 
   // Push autoAspectRatio + dispatch to background
   ctx.waitUntil(backgroundDispatch(ctx, { id, input }))
@@ -124,6 +119,20 @@ async function backgroundDispatch(ctx: Context, args: { id: string; input: Image
       error: result.ok ? undefined : result.error,
     })
 
+    // On dispatch failure, mark D1 generation as failed
+    if (!result.ok) {
+      const now = new Date()
+      await persist.failGeneration(ctx.env.DB, {
+        id,
+        error: `[dispatch] ${result.message}`,
+        completedAt: now,
+        model: input.model,
+        input: { ...input },
+        batch: input.numberResults,
+        createdAt: now,
+      })
+    }
+
     console.log('[inference:backgroundDispatch]', { id, ok: result.ok })
   } catch (err) {
     // Ensure DO gets an error state so the alarm doesn't wait 5 minutes
@@ -132,6 +141,18 @@ async function backgroundDispatch(ctx: Context, args: { id: string; input: Image
       input: {},
       annotations,
       error: httpError(RUNWARE_API_URL, 0, String(err)),
+    })
+
+    // Mark D1 generation as failed
+    const now = new Date()
+    await persist.failGeneration(ctx.env.DB, {
+      id,
+      error: `[dispatch] ${String(err)}`,
+      completedAt: now,
+      model: input.model,
+      input: { ...input },
+      batch: input.numberResults,
+      createdAt: now,
     })
   }
 }
@@ -145,6 +166,7 @@ async function submitSync(
   const { id, input: rawInput, tags } = args
   const input = { ...rawInput }
   const annotations: Record<string, unknown> = {}
+  const now = new Date()
 
   // Auto aspect ratio (blocking — sync mode waits by design)
   if (input.width === undefined && input.height === undefined) {
@@ -164,6 +186,15 @@ async function submitSync(
     throw new Error(result.message)
   }
 
+  // Progressive D1 — insert generation row
+  await persist.insertGeneration(ctx.env.DB, {
+    id,
+    model: input.model,
+    input: result.value.inferenceTask,
+    batch: input.numberResults,
+    createdAt: now,
+  })
+
   // Filter for inference results (body.data also contains the auth ack)
   const inferenceData = result.value.data.filter(
     (item) => (item as Record<string, unknown>).taskType === 'imageInference',
@@ -181,24 +212,34 @@ async function submitSync(
     raw: r as unknown as Record<string, unknown>,
   }))
 
-  const now = Date.now()
   const contentType = getContentType(input.outputFormat)
   const meta: RequestMeta = {
     id,
     model: input.model,
     input: result.value.inferenceTask,
     outputFormat: input.outputFormat,
-    expectedCount: input.numberResults,
+    batch: input.numberResults,
     annotations,
     tags,
     createdAt: now,
   }
 
-  // Process items inline (CDN fetch → R2 upload)
-  const outputs: OutputResult[] = []
+  // Process items inline (CDN fetch → R2 upload) + progressive D1 artifact writes
+  const outputs: Output[] = []
   for (const item of items) {
-    const r = await processItem(ctx, { item, contentType, now })
+    const r = await storeArtifact(ctx, { item, contentType, now })
     outputs.push(r)
+
+    // Insert artifact to D1 as it arrives
+    if (r.type === 'success') {
+      await persist.insertArtifact(ctx.env.DB, {
+        artifact: r,
+        generationId: id,
+        model: meta.model,
+        input: meta.input,
+        tags: meta.tags,
+      })
+    }
   }
 
   // Write DO state for consistency
@@ -208,22 +249,22 @@ async function submitSync(
     model: input.model,
     input: result.value.inferenceTask,
     outputFormat: input.outputFormat,
-    expectedCount: input.numberResults,
+    batch: input.numberResults,
     annotations,
     tags,
   })
   await request.confirmOutputs(outputs)
 
-  // Persist to D1
+  // Complete the D1 generation
   const state = await request.getState()
-  if (state) await persistToD1(ctx, { generationId: id, meta, state })
+  const completedAt = state?.completedAt ?? new Date()
+  await persist.completeGeneration(ctx.env.DB, { id, completedAt })
 
   // Build response
   const successes = outputs.filter((o): o is OutputSuccess => o.type === 'success')
   const inputObj = meta.input as Record<string, unknown>
   const width = typeof inputObj.width === 'number' ? inputObj.width : null
   const height = typeof inputObj.height === 'number' ? inputObj.height : null
-  const completedAt = state?.completedAt ?? now
 
   console.log('[inference:submitSync]', { id, artifacts: successes.length })
 
@@ -233,9 +274,9 @@ async function submitSync(
       id,
       model: meta.model,
       input: meta.input,
-      artifactCount: successes.length,
-      createdAt: new Date(meta.createdAt),
-      completedAt: new Date(completedAt),
+      batch: meta.batch,
+      createdAt: meta.createdAt,
+      completedAt,
     },
     artifacts: successes.map((o) => ({
       id: o.id,
@@ -246,67 +287,8 @@ async function submitSync(
       width,
       height,
       seed: o.seed,
-      cost: o.cost,
-      metadata: o.metadata,
-      createdAt: new Date(o.createdAt),
+      cost: o.cost ?? null,
+      createdAt: o.createdAt,
     })),
   }
-}
-
-// -- Runware API dispatch --
-
-type DispatchArgs = {
-  id: string
-  apiKey: string
-  webhookURL?: string
-  deliveryMethod?: 'sync' | 'async'
-  input: ImageInferenceInput
-}
-
-type DispatchResult = {
-  inferenceTask: Record<string, unknown>
-  data: unknown[]
-}
-
-async function dispatch(args: DispatchArgs): Promise<Result<DispatchResult, RequestError>> {
-  const inferenceTask: Record<string, unknown> = {
-    taskType: 'imageInference',
-    taskUUID: args.id,
-    ...args.input,
-    width: args.input.width ?? 1280,
-    height: args.input.height ?? 1280,
-    outputType: 'URL',
-    includeCost: true,
-  }
-
-  if (args.webhookURL) inferenceTask.webhookURL = args.webhookURL
-  if (args.deliveryMethod) inferenceTask.deliveryMethod = args.deliveryMethod
-
-  const response = await fetch(RUNWARE_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify([{ taskType: 'authentication', apiKey: args.apiKey }, inferenceTask]),
-  })
-
-  if (!response.ok) {
-    return {
-      ok: false,
-      error: httpError(RUNWARE_API_URL, response.status, await response.text()),
-      message: `Runware API error: ${response.status}`,
-    }
-  }
-
-  const body = (await response.json()) as {
-    data?: unknown[]
-    errors?: Array<{ code: string; message: string }>
-  }
-  if (body.errors?.length) {
-    return {
-      ok: false,
-      error: { code: 'api_rejected', errors: body.errors },
-      message: `Runware error: ${body.errors.map((e) => e.message).join(', ')}`,
-    }
-  }
-
-  return { ok: true, value: { inferenceTask, data: body.data ?? [] } }
 }
