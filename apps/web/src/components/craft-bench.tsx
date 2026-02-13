@@ -114,7 +114,7 @@ export function CraftBench() {
         console.log('[craft-bench:submitted]', { id: data.id })
         toast.success('Request submitted')
         // Invalidate generation list so the new in-progress row appears
-        queryClient.invalidateQueries({ queryKey: orpc.browse.key() })
+        queryClient.invalidateQueries({ queryKey: orpc.generations.key() })
       },
       onError: (error) => {
         toast.error(`Failed: ${error.message}`)

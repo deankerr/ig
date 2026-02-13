@@ -70,7 +70,7 @@ export function ArtifactInspector() {
         onSuccess: () => {
           console.log('[artifact-inspector:deleted]', { id })
           toast.success('Artifact deleted')
-          queryClient.invalidateQueries({ queryKey: orpc.browse.key() })
+          queryClient.invalidateQueries({ queryKey: orpc.artifacts.key() })
           close()
         },
         onError: (error) => {

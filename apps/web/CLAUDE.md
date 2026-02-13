@@ -292,11 +292,6 @@ src/
 │   │   ├── status-badge.tsx
 │   │   └── tag-input.tsx
 │   └── ui/                   # shadcn/ui primitives
-├── queries/                   # TanStack Query options (oRPC-backed)
-│   ├── artifacts.ts           # listArtifacts, getArtifact
-│   ├── generations.ts         # listGenerations, getGeneration
-│   ├── inference.ts           # createImage mutation, getStatus polling
-│   └── health.ts              # healthCheck
 ├── hooks/
 │   ├── use-copy-to-clipboard.ts
 │   ├── use-infinite-scroll.ts

@@ -85,12 +85,12 @@ Use the OpenAPI endpoints (all POST, JSON body) — not the oRPC wire format. Th
 
 ```bash
 # Mutations (require x-api-key)
-curl -X POST $BASE_URL/api/inference/createImage \
+curl -X POST $BASE_URL/api/generations/create \
   -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
   -d '{"model":"civitai:4384@128713","positivePrompt":"a cat","sync":true}'
 
 # Queries (public)
-curl -X POST $BASE_URL/api/inference/getStatus \
+curl -X POST $BASE_URL/api/generations/status \
   -H "Content-Type: application/json" \
   -d '{"id":"<generation-id>"}'
 ```
@@ -126,7 +126,7 @@ Leave the tail running — don't kill it after a task. The output is useful for 
 
 ```bash
 # Sync success
-curl -s -X POST "$BASE_URL/api/inference/createImage" \
+curl -s -X POST "$BASE_URL/api/generations/create" \
   -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
   -d '{"model":"runware:400@4","positivePrompt":"a cat","sync":true}' | jq .
 
@@ -137,12 +137,12 @@ curl -s -X POST "$BASE_URL/api/inference/createImage" \
 # same as above with "width":1,"height":1
 
 # Async — returns ID immediately, check D1 after
-curl -s -X POST "$BASE_URL/api/inference/createImage" \
+curl -s -X POST "$BASE_URL/api/generations/create" \
   -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
   -d '{"model":"runware:400@4","positivePrompt":"a cat"}' | jq .
 
 # Verify D1 state
-curl -s -X POST "$BASE_URL/api/browse/listGenerations" \
+curl -s -X POST "$BASE_URL/api/generations/list" \
   -H "Content-Type: application/json" -d '{"limit":5}' \
   | jq '.items[] | {id, batch, error, completedAt, artifacts: (.artifacts | length)}'
 ```

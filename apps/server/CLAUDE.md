@@ -34,9 +34,12 @@ src/
 ├── context.ts            # Context creation (env + headers)
 ├── orpc.ts               # Procedure definitions (public, apiKey-protected)
 ├── models.ts             # Runware model catalog search (standalone)
-├── routers/              # oRPC routers
+├── routers/              # oRPC routers (entity-based)
 │   ├── index.ts          # App router (combines all routers)
-│   └── inference.ts      # Inference endpoints (submit, status, model search)
+│   ├── generations.ts    # create, list, get, status, delete
+│   ├── artifacts.ts      # list, get, delete, setTags, removeTags
+│   ├── models.ts         # search
+│   └── utils.ts          # Pagination cursors, batch tag fetching
 ├── routes/               # Hono routes (file serving from R2)
 ├── inference/            # Inference request system (see its CLAUDE.md)
 │   ├── request.ts        # InferenceDO + typed client

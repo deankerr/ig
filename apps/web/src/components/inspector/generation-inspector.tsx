@@ -62,7 +62,8 @@ export function GenerationInspector() {
         onSuccess: () => {
           console.log('[generation-inspector:deleted]', { id })
           toast.success('Generation deleted')
-          queryClient.invalidateQueries({ queryKey: orpc.browse.key() })
+          queryClient.invalidateQueries({ queryKey: orpc.generations.key() })
+          queryClient.invalidateQueries({ queryKey: orpc.artifacts.key() })
           close()
         },
         onError: (error) => {

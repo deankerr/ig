@@ -1,9 +1,9 @@
 import { orpc } from '@/lib/api'
 
-// -- Browse --
+// -- Artifacts --
 
 export function listArtifactsOptions() {
-  return orpc.browse.listArtifacts.infiniteOptions({
+  return orpc.artifacts.list.infiniteOptions({
     input: (cursor) => ({ cursor, limit: 20 }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -12,11 +12,13 @@ export function listArtifactsOptions() {
 }
 
 export function getArtifactOptions(id: string) {
-  return orpc.browse.getArtifact.queryOptions({ input: { id } })
+  return orpc.artifacts.get.queryOptions({ input: { id } })
 }
 
+// -- Generations --
+
 export function listGenerationsOptions() {
-  return orpc.browse.listGenerations.infiniteOptions({
+  return orpc.generations.list.infiniteOptions({
     input: (cursor) => ({ cursor, limit: 20 }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -25,13 +27,13 @@ export function listGenerationsOptions() {
 }
 
 export function getGenerationOptions(id: string) {
-  return orpc.browse.getGeneration.queryOptions({ input: { id } })
+  return orpc.generations.get.queryOptions({ input: { id } })
 }
 
 // -- Inference --
 
 export function createImageMutation() {
-  return orpc.inference.createImage.mutationOptions()
+  return orpc.generations.create.mutationOptions()
 }
 
 // Client-side safety net — stop polling if the server timeout clearly passed.
@@ -39,7 +41,7 @@ export function createImageMutation() {
 const STALE_AFTER_MS = 6 * 60 * 1000
 
 export function statusQueryOptions(id: string) {
-  return orpc.inference.getStatus.queryOptions({
+  return orpc.generations.status.queryOptions({
     input: { id },
     refetchInterval: (query) => {
       const data = query.state.data
@@ -54,11 +56,11 @@ export function statusQueryOptions(id: string) {
 // -- Admin --
 
 export function deleteArtifactMutation() {
-  return orpc.admin.deleteArtifact.mutationOptions()
+  return orpc.artifacts.delete.mutationOptions()
 }
 
 export function deleteGenerationMutation() {
-  return orpc.admin.deleteGeneration.mutationOptions()
+  return orpc.generations.delete.mutationOptions()
 }
 
 // -- Health --
