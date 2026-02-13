@@ -30,7 +30,6 @@ bun run deploy        # Deploy to Cloudflare via Alchemy
 
 - Run `bun run check` to verify your work.
 - Do not deploy unless specifically asked.
-- Webhooks require a public URL, so local development uses the remote server.
 - LSP diagnostics are often stale in this project - `bun run check` is the source of truth.
 
 ## Features
@@ -75,14 +74,30 @@ The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. 
 
 ## Context
 
-`Context` from `apps/server/src/context.ts` is the standard context passed to internal functions. Contains `env: Env` and `headers: Headers`. Functions that need bindings accept `(ctx: Context, args)` — not individual bindings.
+`Context` from `apps/server/src/context.ts` is the standard context passed to internal functions. Contains `env: Env`, `headers: Headers`, and `waitUntil` for background work. Functions that need bindings accept `(ctx: Context, args)` — not individual bindings.
 
 ## API
 
-- **REST** (`/api/*`) — OpenAPI spec at `/api/.well-known/openapi.json`
-- **RPC** (`/rpc/*`) — oRPC endpoints
+- **REST** (`/api/*`) — Scalar docs at `/api`, OpenAPI spec at `/api/spec.json`
+- **RPC** (`/rpc/*`) — oRPC endpoints (used by the web app via RPCLink)
 - **Webhooks** (`/webhooks/runware`) — provider callbacks
 - **Auth**: Mutations require `x-api-key` header. Queries are public.
+
+### Curling the server
+
+Use the OpenAPI endpoints (all POST, JSON body) — not the oRPC wire format. The base URL is `http://localhost:3220` locally, or `https://server.{stage}.{baseDomain}` for remote dev (see `packages/infra/config.ts`). The dev stage defaults to the OS username (e.g. `dean`).
+
+```bash
+# Mutations (require x-api-key)
+curl -X POST $BASE_URL/api/inference/createImage \
+  -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
+  -d '{"model":"civitai:4384@128713","positivePrompt":"a cat","sync":true}'
+
+# Queries (public)
+curl -X POST $BASE_URL/api/inference/getStatus \
+  -H "Content-Type: application/json" \
+  -d '{"id":"<generation-id>"}'
+```
 
 ## Database
 
@@ -98,3 +113,11 @@ Alchemy (`packages/infra/alchemy.run.ts`) defines all Cloudflare resources:
 - D1Database, R2Bucket, Worker, DurableObjectNamespace, Ai, Images
 - State stored remotely (survives local deletion)
 - URLs derived from stage name
+
+## Models
+
+These models are fast and cost practically nothing. Use them when testing inference functionality.
+
+- `runware:400@4` FLUX.2 [klein] 4B
+- `rundiffusion:120964@131579` RunDiffusionXL (SDXL)
+- `civitai:4384@128713` DreamShaper (SD1.5)

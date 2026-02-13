@@ -41,11 +41,17 @@ export type RequestState = RequestMeta & {
 export type InitArgs = {
   id: string
   model: string
-  input: Record<string, unknown>
+  input?: Record<string, unknown>
   outputFormat: ImageInferenceInput['outputFormat']
   expectedCount: number
-  annotations: Record<string, unknown>
+  annotations?: Record<string, unknown>
   tags?: Record<string, string | null>
+  error?: RequestError
+}
+
+export type SetDispatchArgs = {
+  input: Record<string, unknown>
+  annotations: Record<string, unknown>
   error?: RequestError
 }
 
@@ -87,7 +93,7 @@ export class InferenceDO extends DurableObject<Env> {
     const meta: RequestMeta = {
       id: args.id,
       model: args.model,
-      input: args.input,
+      input: args.input ?? {},
       outputFormat: args.outputFormat,
       expectedCount: args.expectedCount,
       annotations: args.annotations ?? {},
@@ -171,6 +177,20 @@ export class InferenceDO extends DurableObject<Env> {
     this.kv.put('gen', meta)
   }
 
+  /** Update request with dispatch result. Called after background dispatch completes. */
+  setDispatchResult(args: SetDispatchArgs) {
+    const meta = this.getMeta()
+    if (!meta) return
+
+    meta.input = args.input
+    meta.annotations = args.annotations
+    if (args.error) {
+      meta.error = args.error
+      meta.completedAt = Date.now()
+    }
+    this.kv.put('gen', meta)
+  }
+
   /** Read current state for client polling. */
   getState(): RequestState | null {
     const meta = this.getMeta()
@@ -196,6 +216,7 @@ export class InferenceDO extends DurableObject<Env> {
  *  collapses sync DO methods to `never`. This defines the actual RPC contract. */
 type RequestClient = {
   init(args: InitArgs): Promise<void>
+  setDispatchResult(args: SetDispatchArgs): Promise<void>
   recordWebhook(payload: unknown): Promise<RecordWebhookResult>
   confirmOutputs(results: OutputResult[]): Promise<ConfirmResult>
   setError(error: RequestError): Promise<void>

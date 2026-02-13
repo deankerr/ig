@@ -1,5 +1,4 @@
-import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import ReactDOM from 'react-dom/client'
 
@@ -7,13 +6,8 @@ import { BenchProvider } from './components/bench-provider'
 import Loader from './components/loader'
 import { JsonSheetProvider } from './components/shared/json-sheet'
 import { TooltipProvider } from './components/ui/tooltip'
-import { queryClient } from './lib/orpc'
+import { queryClient } from './lib/api'
 import { routeTree } from './routeTree.gen'
-
-const persister = createAsyncStoragePersister({
-  storage: window.localStorage,
-  key: 'ig-query-cache',
-})
 
 const router = createRouter({
   routeTree,
@@ -22,13 +16,13 @@ const router = createRouter({
   context: { queryClient },
   Wrap: function WrapComponent({ children }: { children: React.ReactNode }) {
     return (
-      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+      <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <JsonSheetProvider>
             <BenchProvider>{children}</BenchProvider>
           </JsonSheetProvider>
         </TooltipProvider>
-      </PersistQueryClientProvider>
+      </QueryClientProvider>
     )
   },
   scrollRestoration: true,

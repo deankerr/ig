@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button'
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { orpc, queryClient } from '@/lib/orpc'
+import { orpc, queryClient } from '@/lib/api'
+import { createImageMutation, statusQueryOptions } from '@/lib/queries'
 import * as storage from '@/lib/storage'
-import { createImageMutation, statusQueryOptions } from '@/queries/inference'
 
 const CRAFT_BENCH_EVENT = 'craft-bench-input-update'
 
@@ -210,11 +210,13 @@ function InflightGeneration({ id }: { id: string }) {
   const data = query.data
 
   // Invalidate browse queries when generation completes
+  const invalidatedRef = useRef(false)
   useEffect(() => {
-    if (data?.completedAt) {
-      void queryClient.invalidateQueries({ queryKey: orpc.browse.key() })
+    if (data?.completedAt && !invalidatedRef.current) {
+      invalidatedRef.current = true
+      queryClient.invalidateQueries({ queryKey: orpc.browse.key() })
     }
-  }, [data?.completedAt])
+  }, [data])
 
   const isComplete = !!data?.completedAt
   // Filter outputs for successful artifacts

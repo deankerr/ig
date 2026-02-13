@@ -58,7 +58,11 @@ export const rpcHandler = new RPCHandler(appRouter, {
 })
 
 app.use('/*', async (c, next) => {
-  const context: Context = { env: c.env, headers: c.req.raw.headers }
+  const context: Context = {
+    env: c.env,
+    headers: c.req.raw.headers,
+    waitUntil: c.executionCtx.waitUntil.bind(c.executionCtx),
+  }
 
   const rpcResult = await rpcHandler.handle(c.req.raw, {
     prefix: '/rpc',

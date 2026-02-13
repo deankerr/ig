@@ -1,5 +1,5 @@
 import { db } from '@ig/db'
-import { generations, runwareArtifacts } from '@ig/db/schema'
+import { runwareArtifacts } from '@ig/db/schema'
 import { env } from '@ig/env/server'
 import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -7,37 +7,9 @@ import type { Context } from 'hono'
 
 export const fileRoutes = new Hono()
 
-// * routes
-
-// Short URL for slugs: /art/{slug}.{ext}
-fileRoutes.get('/art/*', async (c) => {
-  const path = c.req.path.slice('/art/'.length)
-  const dotIndex = path.indexOf('.')
-  const slug = dotIndex === -1 ? path : path.slice(0, dotIndex)
-
-  const result = await db.select().from(generations).where(eq(generations.slug, slug)).limit(1)
-  const gen = result[0]
-  if (!gen) return c.json({ error: 'Generation not found' }, 404)
-  if (gen.status !== 'ready') {
-    return c.json({ error: 'Generation not ready', status: gen.status }, 400)
-  }
-  return serveR2Object(c, `generations/${gen.id}`, gen.contentType ?? 'application/octet-stream')
-})
-
-// Full URL with ID or slug: /generations/{id}/file*
-fileRoutes.get('/generations/:id/file*', async (c) => {
-  const id = c.req.param('id')
-  const result = await db.select().from(generations).where(eq(generations.id, id)).limit(1)
-  const gen = result[0]
-  if (!gen) return c.json({ error: 'Generation not found' }, 404)
-  if (gen.status !== 'ready') {
-    return c.json({ error: 'Generation not ready', status: gen.status }, 400)
-  }
-  return serveR2Object(c, `generations/${gen.id}`, gen.contentType ?? 'application/octet-stream')
-})
-
-// Artifact file serving: /artifacts/{id}/file*
-fileRoutes.get('/artifacts/:id/file*', async (c) => {
+// Artifact file serving: /artifacts/{id}/file
+// Optional query params for image transforms: ?w=512&h=512&f=webp&q=80&fit=cover
+fileRoutes.get('/artifacts/:id/file', async (c) => {
   const id = c.req.param('id')
   const result = await db
     .select()
@@ -90,21 +62,19 @@ function resolveOutputFormat(
   if (formatParam && formatParam !== 'auto') {
     const explicit = FORMAT_MAP[formatParam]
     if (explicit) return explicit
-    // Invalid format param, fall through to original
   }
 
   // Auto-negotiate based on Accept header
   if (formatParam === 'auto') {
     if (acceptHeader?.includes('image/avif')) return 'image/avif'
     if (acceptHeader?.includes('image/webp')) return 'image/webp'
-    // Fallback to original if supported, else jpeg
     if (TRANSFORMABLE_TYPES.includes(originalType as OutputFormat)) {
       return originalType as OutputFormat
     }
     return 'image/jpeg'
   }
 
-  // No format param - preserve original type if supported
+  // No format param — preserve original type if supported
   if (TRANSFORMABLE_TYPES.includes(originalType as OutputFormat)) {
     return originalType as OutputFormat
   }

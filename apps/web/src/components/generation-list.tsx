@@ -8,7 +8,7 @@ import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/comp
 import { Skeleton } from '@/components/ui/skeleton'
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
 import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
-import { listGenerationsOptions } from '@/queries/generations'
+import { listGenerationsOptions } from '@/lib/queries'
 
 import { ArtifactThumbnail } from './shared/artifact-thumbnail'
 

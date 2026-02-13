@@ -14,9 +14,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { healthQueryOptions } from '@/lib/queries'
 import * as storage from '@/lib/storage'
 import { serverUrl } from '@/lib/utils'
-import { healthQueryOptions } from '@/queries/health'
 
 export function ServerStatus() {
   const [open, setOpen] = useState(false)

@@ -14,10 +14,9 @@ import { ArtifactLink } from '@/components/shared/artifact-link'
 import { useJsonSheet } from '@/components/shared/json-sheet'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { Button } from '@/components/ui/button'
+import { queryClient } from '@/lib/api'
 import { formatDuration } from '@/lib/format'
-import { queryClient } from '@/lib/orpc'
-import { getGenerationOptions } from '@/queries/generations'
-import { statusQueryOptions } from '@/queries/inference'
+import { getGenerationOptions, statusQueryOptions } from '@/lib/queries'
 
 export function GenerationInspector() {
   const { id, sendToBench } = useInspector()

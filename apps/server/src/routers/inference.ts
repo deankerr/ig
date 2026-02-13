@@ -14,16 +14,16 @@ const tagsSchema = z
   .record(z.string().trim().min(1).max(MAX_KEY_LENGTH), z.string().max(MAX_VALUE_LENGTH).nullable())
   .refine((tags) => Object.keys(tags).length <= MAX_TAGS, `Cannot exceed ${MAX_TAGS} tags`)
 
-// Flat input: inference fields + ig extensions (tags, etc.) at the same level
+// Flat input: inference fields + ig extensions (tags, sync, etc.) at the same level
 const createImageSchema = imageInferenceInput.extend({
   tags: tagsSchema.optional(),
+  sync: z.boolean().optional().default(false),
 })
 
 export const inferenceRouter = {
   createImage: apiKeyProcedure.input(createImageSchema).handler(async ({ input, context }) => {
-    const { tags, ...inferenceInput } = input
-    const id = await submitRequest(context, { input: inferenceInput, tags })
-    return { id }
+    const { tags, sync, ...inferenceInput } = input
+    return submitRequest(context, { input: inferenceInput, tags, sync })
   }),
 
   getStatus: publicProcedure

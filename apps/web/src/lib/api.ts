@@ -11,9 +11,6 @@ import { serverUrl } from '@/lib/utils'
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Keep cached data for 24 hours (for localStorage persistence)
-      gcTime: 1000 * 60 * 60 * 24,
-      // Consider data stale after 5 minutes
       staleTime: 1000 * 60 * 5,
     },
   },

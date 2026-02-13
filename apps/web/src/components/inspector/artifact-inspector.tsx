@@ -14,11 +14,10 @@ import { ArtifactLink } from '@/components/shared/artifact-link'
 import { useJsonSheet } from '@/components/shared/json-sheet'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { Button } from '@/components/ui/button'
+import { queryClient } from '@/lib/api'
 import { formatDuration, formatPrice } from '@/lib/format'
-import { queryClient } from '@/lib/orpc'
+import { getArtifactOptions, statusQueryOptions } from '@/lib/queries'
 import { serverUrl } from '@/lib/utils'
-import { getArtifactOptions } from '@/queries/artifacts'
-import { statusQueryOptions } from '@/queries/inference'
 
 export function ArtifactInspector() {
   const { id, copy, sendToBench } = useInspector()

@@ -36,12 +36,16 @@ webhook.post('/', async (c) => {
     return c.body(null, 400)
   }
 
-  const ctx: Context = { env: c.env, headers: c.req.raw.headers }
+  const ctx: Context = {
+    env: c.env,
+    headers: c.req.raw.headers,
+    waitUntil: c.executionCtx.waitUntil.bind(c.executionCtx),
+  }
   const request = getRequest(ctx, generationId)
   const result = await request.recordWebhook(payload)
 
   if (result.items.length > 0) {
-    c.executionCtx.waitUntil(
+    ctx.waitUntil(
       processWebhookResults(ctx, {
         generationId,
         meta: result.meta,
@@ -81,7 +85,7 @@ async function processWebhookResults(ctx: Context, args: ProcessArgs) {
   }
 }
 
-async function processItem(
+export async function processItem(
   ctx: Context,
   args: { item: PendingItem; contentType: string; now: number },
 ): Promise<OutputResult> {
@@ -115,7 +119,7 @@ async function processItem(
 }
 
 /** Write completed generation and artifacts to D1. */
-async function persistToD1(
+export async function persistToD1(
   ctx: Context,
   args: {
     generationId: string

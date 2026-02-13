@@ -18,9 +18,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
 import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
+import { listArtifactsOptions } from '@/lib/queries'
 import * as storage from '@/lib/storage'
 import type { DisplayMode } from '@/lib/storage'
-import { listArtifactsOptions } from '@/queries/artifacts'
 
 export const ArtifactList = memo(function ArtifactList() {
   const search = useSearch({ from: '/' })
