@@ -2,7 +2,7 @@
 
 import { db } from '@ig/db'
 import { tags } from '@ig/db/schema'
-import { inArray } from 'drizzle-orm'
+import { inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 // -- Pagination --
@@ -26,7 +26,53 @@ export function decodeCursor(cursor: string) {
   return { createdAt: new Date(ms), id }
 }
 
+// -- Slugs --
+
+const SLUG_TAG = 'ig:slug'
+
+/** Slugify a string: lowercase, collapse non-alphanumerics to hyphens, trim edges. */
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+/** Extract first 12 hex chars from a UUIDv7 (full timestamp, 1ms resolution). */
+function uuidPrefix(id: string) {
+  return id.replace(/-/g, '').slice(0, 12)
+}
+
+/** If the tag record contains ig:slug, slugify and prefix with the artifact's UUIDv7 timestamp. */
+function normalizeTagValues(artifactId: string, tags: Record<string, string | null>) {
+  const slug = tags[SLUG_TAG]
+  if (slug != null) {
+    const base = slugify(slug)
+    tags[SLUG_TAG] = `${uuidPrefix(artifactId)}-${base}`
+  }
+  return tags
+}
+
 // -- Tags --
+
+/** Upsert tags for an artifact. Normalizes ig:slug values and chunks for D1 limits. */
+export async function upsertTags(artifactId: string, record: Record<string, string | null>) {
+  normalizeTagValues(artifactId, record)
+  const entries = Object.entries(record)
+  if (entries.length === 0) return
+
+  const rows = entries.map(([tag, value]) => ({ tag, value, targetId: artifactId }))
+  // D1 limit: 100 params per query, 3 columns per row → max 33 rows
+  for (let i = 0; i < rows.length; i += 33) {
+    await db
+      .insert(tags)
+      .values(rows.slice(i, i + 33))
+      .onConflictDoUpdate({
+        target: [tags.tag, tags.targetId],
+        set: { value: sql`excluded.value` },
+      })
+  }
+}
 
 type TagMap = Map<string, Record<string, string | null>>
 

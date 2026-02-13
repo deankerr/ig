@@ -3,15 +3,60 @@
 import { db } from '@ig/db'
 import { runwareArtifacts, runwareGenerations, tags } from '@ig/db/schema'
 import { ORPCError } from '@orpc/server'
-import { and, desc, eq, getTableColumns, inArray, isNull, lt, or, sql } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, inArray, isNull, lt, or } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { apiKeyProcedure, publicProcedure } from '../orpc'
-import { decodeCursor, encodeCursor, fetchTagsForArtifacts, paginationInput } from './utils'
+import {
+  decodeCursor,
+  encodeCursor,
+  fetchTagsForArtifacts,
+  paginationInput,
+  upsertTags,
+} from './utils'
 
 const MAX_TAGS = 20
 const MAX_KEY_LENGTH = 64
 const MAX_VALUE_LENGTH = 256
+
+// Shared: fetch an artifact by ID with generation, siblings, and tags
+async function getArtifactById(id: string) {
+  const [row] = await db
+    .select({
+      ...getTableColumns(runwareArtifacts),
+      generation: getTableColumns(runwareGenerations),
+    })
+    .from(runwareArtifacts)
+    .innerJoin(runwareGenerations, eq(runwareArtifacts.generationId, runwareGenerations.id))
+    .where(eq(runwareArtifacts.id, id))
+    .limit(1)
+
+  if (!row) return null
+
+  const { generation, ...artifact } = row
+
+  // Other artifacts from the same generation (excluding soft-deleted)
+  const siblings = await db
+    .select()
+    .from(runwareArtifacts)
+    .where(
+      and(
+        eq(runwareArtifacts.generationId, artifact.generationId),
+        isNull(runwareArtifacts.deletedAt),
+      ),
+    )
+    .orderBy(desc(runwareArtifacts.createdAt))
+
+  // Fetch tags for this artifact and all siblings
+  const allIds = siblings.map((s) => s.id)
+  const tagMap = await fetchTagsForArtifacts(allIds)
+
+  return {
+    artifact: { ...artifact, tags: tagMap.get(artifact.id) ?? {} },
+    generation,
+    siblings: siblings.map((s) => ({ ...s, tags: tagMap.get(s.id) ?? {} })),
+  }
+}
 
 export const artifactsRouter = {
   list: publicProcedure
@@ -63,41 +108,51 @@ export const artifactsRouter = {
     .route({ spec: { security: [] } })
     .input(z.object({ id: z.string() }))
     .handler(async ({ input }) => {
-      // Artifact + parent generation in one join
-      const [row] = await db
+      return getArtifactById(input.id)
+    }),
+
+  // List artifacts matching a tag key and optional value
+  listByTag: publicProcedure
+    .route({ spec: { security: [] } })
+    .input(
+      z.object({
+        tag: z.string(),
+        value: z.string().optional(),
+        limit: z.number().int().min(1).max(100).optional().default(20),
+      }),
+    )
+    .handler(async ({ input }) => {
+      // Find artifact IDs matching the tag
+      const tagCondition =
+        input.value != null
+          ? and(eq(tags.tag, input.tag), eq(tags.value, input.value))
+          : eq(tags.tag, input.tag)
+
+      const tagRows = await db
+        .select({ targetId: tags.targetId })
+        .from(tags)
+        .where(tagCondition)
+        .limit(input.limit)
+
+      if (tagRows.length === 0) return { items: [] }
+
+      const artifactIds = tagRows.map((r) => r.targetId)
+
+      // Fetch artifacts with generation context
+      const items = await db
         .select({
           ...getTableColumns(runwareArtifacts),
           generation: getTableColumns(runwareGenerations),
         })
         .from(runwareArtifacts)
         .innerJoin(runwareGenerations, eq(runwareArtifacts.generationId, runwareGenerations.id))
-        .where(eq(runwareArtifacts.id, input.id))
-        .limit(1)
-
-      if (!row) return null
-
-      const { generation, ...artifact } = row
-
-      // Other artifacts from the same generation (excluding soft-deleted)
-      const siblings = await db
-        .select()
-        .from(runwareArtifacts)
-        .where(
-          and(
-            eq(runwareArtifacts.generationId, artifact.generationId),
-            isNull(runwareArtifacts.deletedAt),
-          ),
-        )
+        .where(and(inArray(runwareArtifacts.id, artifactIds), isNull(runwareArtifacts.deletedAt)))
         .orderBy(desc(runwareArtifacts.createdAt))
 
-      // Fetch tags for this artifact and all siblings
-      const allIds = siblings.map((s) => s.id)
-      const tagMap = await fetchTagsForArtifacts(allIds)
-
+      // Merge tags
+      const tagMap = await fetchTagsForArtifacts(items.map((i) => i.id))
       return {
-        artifact: { ...artifact, tags: tagMap.get(artifact.id) ?? {} },
-        generation,
-        siblings: siblings.map((s) => ({ ...s, tags: tagMap.get(s.id) ?? {} })),
+        items: items.map((i) => ({ ...i, tags: tagMap.get(i.id) ?? {} })),
       }
     }),
 
@@ -147,31 +202,17 @@ export const artifactsRouter = {
         }),
       )
       .handler(async ({ input }) => {
-        const entries = Object.entries(input.tags)
-        if (entries.length === 0) return { count: 0 }
-        if (entries.length > MAX_TAGS)
+        const count = Object.keys(input.tags).length
+        if (count === 0) return { count: 0 }
+        if (count > MAX_TAGS)
           throw new ORPCError('BAD_REQUEST', {
             message: `Cannot exceed ${MAX_TAGS} tags per operation`,
           })
 
-        console.log('[artifacts:tags:set] upserting', {
-          artifactId: input.artifactId,
-          count: entries.length,
-        })
+        console.log('[artifacts:tags:set] upserting', { artifactId: input.artifactId, count })
+        await upsertTags(input.artifactId, input.tags)
 
-        const rows = entries.map(([tag, value]) => ({ tag, value, targetId: input.artifactId }))
-        // D1 limit: 100 params per query, 3 columns per row → max 33 rows
-        for (let i = 0; i < rows.length; i += 33) {
-          await db
-            .insert(tags)
-            .values(rows.slice(i, i + 33))
-            .onConflictDoUpdate({
-              target: [tags.tag, tags.targetId],
-              set: { value: sql`excluded.value` },
-            })
-        }
-
-        return { count: entries.length }
+        return { count }
       }),
 
     // Remove tags by key names

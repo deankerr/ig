@@ -15,6 +15,10 @@ export function getArtifactOptions(id: string) {
   return orpc.artifacts.get.queryOptions({ input: { id } })
 }
 
+export function listArtifactsByTagOptions(tag: string, value?: string) {
+  return orpc.artifacts.listByTag.queryOptions({ input: { tag, value } })
+}
+
 // -- Generations --
 
 export function listGenerationsOptions() {

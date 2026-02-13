@@ -1,15 +1,41 @@
 import { db } from '@ig/db'
-import { runwareArtifacts } from '@ig/db/schema'
+import { runwareArtifacts, tags } from '@ig/db/schema'
 import { env } from '@ig/env/server'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 
 export const fileRoutes = new Hono()
 
-// Artifact file serving: /artifacts/{id}/file
+// Slug-based file serving: /a/{slug}[.ext]
+// Resolves ig:slug tag → artifact, then serves the file
+fileRoutes.get('/a/*', async (c) => {
+  const path = c.req.path.slice('/a/'.length)
+  const dot = path.indexOf('.')
+  const slug = dot === -1 ? path : path.slice(0, dot)
+
+  // Resolve slug → artifact ID via tag
+  const [tagRow] = await db
+    .select({ targetId: tags.targetId })
+    .from(tags)
+    .where(and(eq(tags.tag, 'ig:slug'), eq(tags.value, slug)))
+    .limit(1)
+  if (!tagRow) return c.json({ error: 'Not found' }, 404)
+
+  // Fetch artifact for R2 key and content type
+  const [artifact] = await db
+    .select({ r2Key: runwareArtifacts.r2Key, contentType: runwareArtifacts.contentType })
+    .from(runwareArtifacts)
+    .where(eq(runwareArtifacts.id, tagRow.targetId))
+    .limit(1)
+  if (!artifact) return c.json({ error: 'Artifact not found' }, 404)
+
+  return serveR2Object(c, artifact.r2Key, artifact.contentType)
+})
+
+// Artifact file serving: /artifacts/{id}/file[.ext]
 // Optional query params for image transforms: ?w=512&h=512&f=webp&q=80&fit=cover
-fileRoutes.get('/artifacts/:id/file', async (c) => {
+fileRoutes.get('/artifacts/:id/file*', async (c) => {
   const id = c.req.param('id')
   const result = await db
     .select()

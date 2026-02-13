@@ -6,6 +6,7 @@ import type { NewRunwareGeneration } from '@ig/db/schema'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 
+import { upsertTags } from '../routers/utils'
 import type { OutputSuccess } from './result'
 
 /** INSERT generation row on submission (no completedAt). */
@@ -54,17 +55,7 @@ export async function insertArtifact(db: D1Database, args: InsertArtifactArgs) {
     })
 
     // Persist tags for this artifact
-    if (tags && Object.keys(tags).length > 0) {
-      const tagRows = Object.entries(tags).map(([tag, value]) => ({
-        tag,
-        value,
-        targetId: artifact.id,
-      }))
-      // D1 limit: 100 params per query, 3 columns per row → max 33 rows
-      for (let i = 0; i < tagRows.length; i += 33) {
-        await d1.insert(schema.tags).values(tagRows.slice(i, i + 33))
-      }
-    }
+    if (tags) await upsertTags(artifact.id, tags)
 
     console.log('[persist:insertArtifact]', { id: artifact.id, generationId })
   } catch (err) {
