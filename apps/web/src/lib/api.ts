@@ -1,8 +1,8 @@
+import type { AppRouterClient } from '@ig/server/src/routers'
 import { createORPCClient } from '@orpc/client'
 import { RPCLink } from '@orpc/client/fetch'
 import { createTanstackQueryUtils } from '@orpc/tanstack-query'
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
-import type { AppRouterClient } from 'server/src/routers'
 import { toast } from 'sonner'
 
 import * as storage from '@/lib/storage'
