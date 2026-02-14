@@ -204,7 +204,7 @@ export class InferenceDO extends DurableObject<Env> {
     this.kv.put(KV.meta, meta)
 
     // Persist timeout to D1
-    await persist.failGeneration(this.env.DB, {
+    await persist.failGeneration(this.env.DATABASE, {
       id: meta.id,
       error: `[timeout] received ${outputs.length}/${meta.batch}`,
       completedAt: now,
@@ -231,6 +231,6 @@ type RequestClient = {
 }
 
 export function getRequest(ctx: Context, id: string) {
-  const ns = ctx.env.GENERATION_DO
+  const ns = ctx.env.INFERENCE_DO
   return ns.get(ns.idFromName(id)) as unknown as RequestClient
 }

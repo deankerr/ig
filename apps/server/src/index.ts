@@ -100,9 +100,7 @@ app.get('/favicon.ico', (c) => {
   })
 })
 
-// Exported as GenerationDO to match the existing Cloudflare binding className.
-// Will rename when we migrate the infra config.
-export { InferenceDO as GenerationDO } from './inference/request'
+export { InferenceDO } from './inference/request'
 
 export default {
   fetch: app.fetch,

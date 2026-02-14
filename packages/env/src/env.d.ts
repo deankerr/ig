@@ -5,10 +5,14 @@
 declare global {
   interface Env {
     AI: Ai
-    DB: D1Database
-    GENERATIONS_BUCKET: R2Bucket
+    DATABASE: D1Database
+    ARTIFACTS_BUCKET: R2Bucket
     IMAGES: ImagesBinding
-    GENERATION_DO: DurableObjectNamespace
+    INFERENCE_DO: DurableObjectNamespace
+
+    OLDDB: D1Database
+    OLDBUCKET: R2Bucket
+
     API_KEY: string
     PUBLIC_URL: string
     RUNWARE_KEY: string
@@ -19,10 +23,14 @@ declare module 'cloudflare:workers' {
   namespace Cloudflare {
     export interface Env {
       AI: Ai
-      DB: D1Database
-      GENERATIONS_BUCKET: R2Bucket
+      DATABASE: D1Database
+      ARTIFACTS_BUCKET: R2Bucket
       IMAGES: ImagesBinding
-      GENERATION_DO: DurableObjectNamespace
+      INFERENCE_DO: DurableObjectNamespace
+
+      OLDDB: D1Database
+      OLDBUCKET: R2Bucket
+
       API_KEY: string
       PUBLIC_URL: string
       RUNWARE_KEY: string

@@ -1,5 +1,5 @@
 import { db } from '@ig/db'
-import { runwareArtifacts, tags } from '@ig/db/schema'
+import { artifacts, tags } from '@ig/db/schema'
 import { env } from '@ig/env/server'
 import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -24,9 +24,9 @@ fileRoutes.get('/a/*', async (c) => {
 
   // Fetch artifact for R2 key and content type
   const [artifact] = await db
-    .select({ r2Key: runwareArtifacts.r2Key, contentType: runwareArtifacts.contentType })
-    .from(runwareArtifacts)
-    .where(eq(runwareArtifacts.id, tagRow.targetId))
+    .select({ r2Key: artifacts.r2Key, contentType: artifacts.contentType })
+    .from(artifacts)
+    .where(eq(artifacts.id, tagRow.targetId))
     .limit(1)
   if (!artifact) return c.json({ error: 'Artifact not found' }, 404)
 
@@ -37,11 +37,7 @@ fileRoutes.get('/a/*', async (c) => {
 // Optional query params for image transforms: ?w=512&h=512&f=webp&q=80&fit=cover
 fileRoutes.get('/artifacts/:id/file*', async (c) => {
   const id = c.req.param('id')
-  const result = await db
-    .select()
-    .from(runwareArtifacts)
-    .where(eq(runwareArtifacts.id, id))
-    .limit(1)
+  const result = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1)
   const artifact = result[0]
   if (!artifact) return c.json({ error: 'Artifact not found' }, 404)
   return serveR2Object(c, artifact.r2Key, artifact.contentType)
@@ -131,7 +127,7 @@ function parseTransformParams(c: Context, originalType: string) {
 // * shared handler
 
 async function serveR2Object(c: Context, r2Key: string, contentType: string) {
-  const object = await env.GENERATIONS_BUCKET.get(r2Key)
+  const object = await env.ARTIFACTS_BUCKET.get(r2Key)
   if (!object) return c.json({ error: 'File not found' }, 404)
 
   const canTransform = TRANSFORMABLE_TYPES.includes(contentType as OutputFormat)

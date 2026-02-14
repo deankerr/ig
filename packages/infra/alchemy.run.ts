@@ -33,22 +33,36 @@ const domain = (service: 'server' | 'web') => {
   return `${service}.${app.stage}.${stageConfig.development.baseDomain}`
 }
 
-const db = await D1Database('database', {
-  migrationsDir: '../../packages/db/src/migrations',
+// original - transfer out
+const olddb = await D1Database('db', {
+  name: 'ig-database-prod-1',
+  adopt: true,
+  delete: false,
 })
 
-const generationsBucket = await R2Bucket('generations', {
+const oldbucket = await R2Bucket('generations', {
+  name: 'ig-generations-prod-1',
+  adopt: true,
+  delete: false,
   empty: !productionStages.has(app.stage),
 })
 
-const images = Images()
+// new
+const database = await D1Database('database', {
+  migrationsDir: '../../packages/db/src/migrations',
+})
 
-const ai = Ai()
+const artifactsBucket = await R2Bucket('artifacts', {
+  empty: !productionStages.has(app.stage),
+})
 
-const generationDO = DurableObjectNamespace('generation-do', {
-  className: 'GenerationDO',
+const inferenceDO = DurableObjectNamespace('inference', {
+  className: 'InferenceDO',
   sqlite: true,
 })
+
+const images = Images()
+const ai = Ai()
 
 export const server = await Worker('server', {
   url: false,
@@ -61,15 +75,18 @@ export const server = await Worker('server', {
   },
   bindings: {
     AI: ai,
-    DB: db,
-    GENERATIONS_BUCKET: generationsBucket,
-    IMAGES: images,
+    ARTIFACTS_BUCKET: artifactsBucket,
+    DATABASE: database,
+    INFERENCE_DO: inferenceDO,
 
-    GENERATION_DO: generationDO,
+    IMAGES: images,
 
     API_KEY: alchemy.secret.env.API_KEY!,
     PUBLIC_URL: `https://${domain('server')}`,
     RUNWARE_KEY: alchemy.secret.env.RUNWARE_KEY!,
+
+    OLDDB: olddb,
+    OLDBUCKET: oldbucket,
   },
   dev: {
     port: 3220,
@@ -93,6 +110,6 @@ export const web = await Vite('web', {
 })
 
 console.log(`Server: ${url(server)}`)
-console.log(`Web:    ${url(web)}`, web.bindings.VITE_SERVER_URL)
+console.log(`Web:    ${url(web)}`, `(-> ${web.bindings.VITE_SERVER_URL})`)
 
 await app.finalize()

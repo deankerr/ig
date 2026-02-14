@@ -5,78 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1768643212179,
-      "tag": "0000_exotic_mentor",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1769139436899,
-      "tag": "0001_high_ulik",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1769149632751,
-      "tag": "0002_heavy_harry_osborn",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1769156664630,
-      "tag": "0003_fixed_random",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1769176502797,
-      "tag": "0004_slow_onslaught",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1769242387166,
-      "tag": "0005_lush_tyrannus",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1769266032379,
-      "tag": "0006_woozy_sheva_callister",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1769360000000,
-      "tag": "0007_model_sync_columns",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1769760000000,
-      "tag": "0008_rename_endpoint_to_model",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1770959488824,
-      "tag": "0009_rainy_bushwacker",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1770995024740,
-      "tag": "0010_lyrical_moira_mactaggert",
+      "when": 1771047686924,
+      "tag": "0000_redundant_brood",
       "breakpoints": true
     }
   ]

@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm'
 import { sqliteTable, text, primaryKey, index } from 'drizzle-orm/sqlite-core'
 
-import { runwareArtifacts, runwareGenerations } from './runware'
+import { artifacts, generations } from './runware'
 
 export const tags = sqliteTable(
   'tags',
@@ -10,7 +10,7 @@ export const tags = sqliteTable(
     value: text('value'),
     targetId: text('target_id')
       .notNull()
-      .references(() => runwareArtifacts.id),
+      .references(() => artifacts.id),
   },
   (table) => [
     primaryKey({ columns: [table.tag, table.targetId] }),
@@ -26,17 +26,17 @@ export type NewTag = typeof tags.$inferInsert
 // -- Relations --
 
 export const tagsRelations = relations(tags, ({ one }) => ({
-  artifact: one(runwareArtifacts, {
+  artifact: one(artifacts, {
     fields: [tags.targetId],
-    references: [runwareArtifacts.id],
+    references: [artifacts.id],
   }),
 }))
 
 // Defined here (not runware.ts) to avoid circular imports
-export const runwareArtifactsRelations = relations(runwareArtifacts, ({ one, many }) => ({
-  generation: one(runwareGenerations, {
-    fields: [runwareArtifacts.generationId],
-    references: [runwareGenerations.id],
+export const artifactsRelations = relations(artifacts, ({ one, many }) => ({
+  generation: one(generations, {
+    fields: [artifacts.generationId],
+    references: [generations.id],
   }),
   tags: many(tags),
 }))

@@ -1,7 +1,7 @@
 // Generations router — create, list, get, status, delete.
 
 import { db } from '@ig/db'
-import { runwareArtifacts, runwareGenerations, tags } from '@ig/db/schema'
+import { artifacts, generations, tags } from '@ig/db/schema'
 import { and, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm'
 import { z } from 'zod'
 
@@ -42,19 +42,16 @@ export const generationsRouter = {
       // Keyset condition: rows before the cursor position
       const cursorCondition = decoded
         ? or(
-            lt(runwareGenerations.createdAt, decoded.createdAt),
-            and(
-              eq(runwareGenerations.createdAt, decoded.createdAt),
-              lt(runwareGenerations.id, decoded.id),
-            ),
+            lt(generations.createdAt, decoded.createdAt),
+            and(eq(generations.createdAt, decoded.createdAt), lt(generations.id, decoded.id)),
           )
         : undefined
 
       // Relational query auto-loads child artifacts (excluding soft-deleted)
-      const items = await db.query.runwareGenerations.findMany({
+      const items = await db.query.generations.findMany({
         where: cursorCondition,
-        with: { artifacts: { where: isNull(runwareArtifacts.deletedAt) } },
-        orderBy: [desc(runwareGenerations.createdAt), desc(runwareGenerations.id)],
+        with: { artifacts: { where: isNull(artifacts.deletedAt) } },
+        orderBy: [desc(generations.createdAt), desc(generations.id)],
         limit: limit + 1,
       })
 
@@ -79,9 +76,9 @@ export const generationsRouter = {
     .route({ spec: { security: [] } })
     .input(z.object({ id: z.string() }))
     .handler(async ({ input }) => {
-      const generation = await db.query.runwareGenerations.findFirst({
-        where: eq(runwareGenerations.id, input.id),
-        with: { artifacts: { where: isNull(runwareArtifacts.deletedAt) } },
+      const generation = await db.query.generations.findFirst({
+        where: eq(generations.id, input.id),
+        with: { artifacts: { where: isNull(artifacts.deletedAt) } },
       })
       if (!generation) return null
 
@@ -106,12 +103,12 @@ export const generationsRouter = {
     .input(z.object({ id: z.string() }))
     .handler(async ({ input, context }) => {
       // Fetch artifacts for R2 cleanup
-      const artifacts = await db
-        .select({ id: runwareArtifacts.id, r2Key: runwareArtifacts.r2Key })
-        .from(runwareArtifacts)
-        .where(eq(runwareArtifacts.generationId, input.id))
+      const rows = await db
+        .select({ id: artifacts.id, r2Key: artifacts.r2Key })
+        .from(artifacts)
+        .where(eq(artifacts.generationId, input.id))
 
-      const artifactIds = artifacts.map((a) => a.id)
+      const artifactIds = rows.map((a) => a.id)
 
       // Delete tags for all artifacts
       if (artifactIds.length > 0) {
@@ -119,15 +116,15 @@ export const generationsRouter = {
       }
 
       // Delete R2 blobs
-      for (const artifact of artifacts) {
-        await context.env.GENERATIONS_BUCKET.delete(artifact.r2Key)
+      for (const row of rows) {
+        await context.env.ARTIFACTS_BUCKET.delete(row.r2Key)
       }
 
       // Delete artifact rows
-      await db.delete(runwareArtifacts).where(eq(runwareArtifacts.generationId, input.id))
+      await db.delete(artifacts).where(eq(artifacts.generationId, input.id))
 
       // Delete generation row
-      await db.delete(runwareGenerations).where(eq(runwareGenerations.id, input.id))
+      await db.delete(generations).where(eq(generations.id, input.id))
 
       // Clear DO storage
       const ctx: Context = {

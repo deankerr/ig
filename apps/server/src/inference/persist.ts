@@ -2,7 +2,7 @@
 // D1 failures are logged but never break the request flow. The DO remains source of truth.
 
 import * as schema from '@ig/db/schema'
-import type { NewRunwareGeneration } from '@ig/db/schema'
+import type { NewGeneration } from '@ig/db/schema'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 
@@ -10,10 +10,10 @@ import { upsertTags } from '../routers/utils'
 import type { OutputSuccess } from './result'
 
 /** INSERT generation row on submission (no completedAt). */
-export async function insertGeneration(db: D1Database, args: NewRunwareGeneration) {
+export async function insertGeneration(db: D1Database, args: NewGeneration) {
   const d1 = drizzle(db, { schema })
   try {
-    await d1.insert(schema.runwareGenerations).values(args)
+    await d1.insert(schema.generations).values(args)
     console.log('[persist:insertGeneration]', { id: args.id })
   } catch (err) {
     console.error('[persist:insertGeneration] D1 write failed', {
@@ -41,7 +41,7 @@ export async function insertArtifact(db: D1Database, args: InsertArtifactArgs) {
   const height = typeof input.height === 'number' ? input.height : undefined
 
   try {
-    await d1.insert(schema.runwareArtifacts).values({
+    await d1.insert(schema.artifacts).values({
       id: artifact.id,
       generationId,
       model,
@@ -77,9 +77,9 @@ export async function completeGeneration(db: D1Database, args: CompleteGeneratio
   const d1 = drizzle(db, { schema })
   try {
     await d1
-      .update(schema.runwareGenerations)
+      .update(schema.generations)
       .set({ completedAt: args.completedAt })
-      .where(eq(schema.runwareGenerations.id, args.id))
+      .where(eq(schema.generations.id, args.id))
     console.log('[persist:completeGeneration]', { id: args.id })
   } catch (err) {
     console.error('[persist:completeGeneration] D1 write failed', {
@@ -89,7 +89,7 @@ export async function completeGeneration(db: D1Database, args: CompleteGeneratio
   }
 }
 
-type FailGenerationArgs = NewRunwareGeneration & { error: string; completedAt: Date }
+type FailGenerationArgs = NewGeneration & { error: string; completedAt: Date }
 
 /** UPDATE generation with error + completedAt on failure/timeout.
  *  Uses upsert so it's resilient if the initial INSERT was missed. */
@@ -97,10 +97,10 @@ export async function failGeneration(db: D1Database, args: FailGenerationArgs) {
   const d1 = drizzle(db, { schema })
   try {
     await d1
-      .insert(schema.runwareGenerations)
+      .insert(schema.generations)
       .values(args)
       .onConflictDoUpdate({
-        target: schema.runwareGenerations.id,
+        target: schema.generations.id,
         set: {
           error: args.error,
           completedAt: args.completedAt,

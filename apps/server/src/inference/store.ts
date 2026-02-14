@@ -21,10 +21,10 @@ export async function storeArtifact(
 
   // Upload to R2
   const id = uuidv7()
-  const r2Key = `generations/${id}`
+  const r2Key = `artifacts/${id}`
 
   try {
-    await ctx.env.GENERATIONS_BUCKET.put(r2Key, response.body, {
+    await ctx.env.ARTIFACTS_BUCKET.put(r2Key, response.body, {
       httpMetadata: { contentType },
     })
   } catch (err) {

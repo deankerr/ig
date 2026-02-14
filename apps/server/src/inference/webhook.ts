@@ -68,7 +68,7 @@ async function processWebhookResults(ctx: Context, args: ProcessArgs) {
 
     // Progressive D1 projection — artifact row appears as it's stored
     if (result.type === 'success') {
-      await persist.insertArtifact(ctx.env.DB, {
+      await persist.insertArtifact(ctx.env.DATABASE, {
         artifact: result,
         generationId,
         model: meta.model,
@@ -86,7 +86,7 @@ async function processWebhookResults(ctx: Context, args: ProcessArgs) {
   if (complete) {
     const state = await request.getState()
     if (state?.completedAt) {
-      await persist.completeGeneration(ctx.env.DB, {
+      await persist.completeGeneration(ctx.env.DATABASE, {
         id: generationId,
         completedAt: state.completedAt,
       })

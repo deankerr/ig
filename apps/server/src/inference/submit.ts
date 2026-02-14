@@ -1,4 +1,4 @@
-import type { RunwareArtifact, RunwareGeneration } from '@ig/db/schema'
+import type { Artifact, Generation } from '@ig/db/schema'
 import { v7 as uuidv7 } from 'uuid'
 
 import type { Context } from '../context'
@@ -29,8 +29,8 @@ type SubmitArgs = {
 
 export type SyncResult = {
   id: string
-  generation: Omit<RunwareGeneration, 'error' | 'metadata'>
-  artifacts: Omit<RunwareArtifact, 'metadata' | 'deletedAt'>[]
+  generation: Omit<Generation, 'error' | 'metadata'>
+  artifacts: Omit<Artifact, 'metadata' | 'deletedAt'>[]
 }
 
 export type SubmitResult = { id: string } | SyncResult
@@ -68,7 +68,7 @@ async function submitAsync(
 
   // Progressive D1 projection — generation row appears immediately
   ctx.waitUntil(
-    persist.insertGeneration(ctx.env.DB, {
+    persist.insertGeneration(ctx.env.DATABASE, {
       id,
       model: input.model,
       input: { ...input },
@@ -122,7 +122,7 @@ async function backgroundDispatch(ctx: Context, args: { id: string; input: Image
     // On dispatch failure, mark D1 generation as failed
     if (!result.ok) {
       const now = new Date()
-      await persist.failGeneration(ctx.env.DB, {
+      await persist.failGeneration(ctx.env.DATABASE, {
         id,
         error: `[dispatch] ${result.message}`,
         completedAt: now,
@@ -145,7 +145,7 @@ async function backgroundDispatch(ctx: Context, args: { id: string; input: Image
 
     // Mark D1 generation as failed
     const now = new Date()
-    await persist.failGeneration(ctx.env.DB, {
+    await persist.failGeneration(ctx.env.DATABASE, {
       id,
       error: `[dispatch] ${String(err)}`,
       completedAt: now,
@@ -187,7 +187,7 @@ async function submitSync(
   }
 
   // Progressive D1 — insert generation row
-  await persist.insertGeneration(ctx.env.DB, {
+  await persist.insertGeneration(ctx.env.DATABASE, {
     id,
     model: input.model,
     input: result.value.inferenceTask,
@@ -232,7 +232,7 @@ async function submitSync(
 
     // Insert artifact to D1 as it arrives
     if (r.type === 'success') {
-      await persist.insertArtifact(ctx.env.DB, {
+      await persist.insertArtifact(ctx.env.DATABASE, {
         artifact: r,
         generationId: id,
         model: meta.model,
@@ -258,7 +258,7 @@ async function submitSync(
   // Complete the D1 generation
   const state = await request.getState()
   const completedAt = state?.completedAt ?? new Date()
-  await persist.completeGeneration(ctx.env.DB, { id, completedAt })
+  await persist.completeGeneration(ctx.env.DATABASE, { id, completedAt })
 
   // Build response
   const successes = outputs.filter((o): o is OutputSuccess => o.type === 'success')

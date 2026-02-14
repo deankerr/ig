@@ -1,7 +1,7 @@
 // Artifacts router — list, get, delete, tag management.
 
 import { db } from '@ig/db'
-import { runwareArtifacts, runwareGenerations, tags } from '@ig/db/schema'
+import { artifacts, generations, tags } from '@ig/db/schema'
 import { ORPCError } from '@orpc/server'
 import { and, desc, eq, getTableColumns, inArray, isNull, lt, or } from 'drizzle-orm'
 import { z } from 'zod'
@@ -23,12 +23,12 @@ const MAX_VALUE_LENGTH = 256
 async function getArtifactById(id: string) {
   const [row] = await db
     .select({
-      ...getTableColumns(runwareArtifacts),
-      generation: getTableColumns(runwareGenerations),
+      ...getTableColumns(artifacts),
+      generation: getTableColumns(generations),
     })
-    .from(runwareArtifacts)
-    .innerJoin(runwareGenerations, eq(runwareArtifacts.generationId, runwareGenerations.id))
-    .where(eq(runwareArtifacts.id, id))
+    .from(artifacts)
+    .innerJoin(generations, eq(artifacts.generationId, generations.id))
+    .where(eq(artifacts.id, id))
     .limit(1)
 
   if (!row) return null
@@ -38,14 +38,9 @@ async function getArtifactById(id: string) {
   // Other artifacts from the same generation (excluding soft-deleted)
   const siblings = await db
     .select()
-    .from(runwareArtifacts)
-    .where(
-      and(
-        eq(runwareArtifacts.generationId, artifact.generationId),
-        isNull(runwareArtifacts.deletedAt),
-      ),
-    )
-    .orderBy(desc(runwareArtifacts.createdAt))
+    .from(artifacts)
+    .where(and(eq(artifacts.generationId, artifact.generationId), isNull(artifacts.deletedAt)))
+    .orderBy(desc(artifacts.createdAt))
 
   // Fetch tags for this artifact and all siblings
   const allIds = siblings.map((s) => s.id)
@@ -69,25 +64,22 @@ export const artifactsRouter = {
       // Keyset condition: rows before the cursor position
       const cursorCondition = decoded
         ? or(
-            lt(runwareArtifacts.createdAt, decoded.createdAt),
-            and(
-              eq(runwareArtifacts.createdAt, decoded.createdAt),
-              lt(runwareArtifacts.id, decoded.id),
-            ),
+            lt(artifacts.createdAt, decoded.createdAt),
+            and(eq(artifacts.createdAt, decoded.createdAt), lt(artifacts.id, decoded.id)),
           )
         : undefined
 
       // Join generation so each artifact carries its full context
-      const notDeleted = isNull(runwareArtifacts.deletedAt)
+      const notDeleted = isNull(artifacts.deletedAt)
       const items = await db
         .select({
-          ...getTableColumns(runwareArtifacts),
-          generation: getTableColumns(runwareGenerations),
+          ...getTableColumns(artifacts),
+          generation: getTableColumns(generations),
         })
-        .from(runwareArtifacts)
-        .innerJoin(runwareGenerations, eq(runwareArtifacts.generationId, runwareGenerations.id))
+        .from(artifacts)
+        .innerJoin(generations, eq(artifacts.generationId, generations.id))
         .where(cursorCondition ? and(notDeleted, cursorCondition) : notDeleted)
-        .orderBy(desc(runwareArtifacts.createdAt), desc(runwareArtifacts.id))
+        .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
         .limit(limit + 1)
 
       // Extra row signals more pages exist
@@ -141,13 +133,13 @@ export const artifactsRouter = {
       // Fetch artifacts with generation context
       const items = await db
         .select({
-          ...getTableColumns(runwareArtifacts),
-          generation: getTableColumns(runwareGenerations),
+          ...getTableColumns(artifacts),
+          generation: getTableColumns(generations),
         })
-        .from(runwareArtifacts)
-        .innerJoin(runwareGenerations, eq(runwareArtifacts.generationId, runwareGenerations.id))
-        .where(and(inArray(runwareArtifacts.id, artifactIds), isNull(runwareArtifacts.deletedAt)))
-        .orderBy(desc(runwareArtifacts.createdAt))
+        .from(artifacts)
+        .innerJoin(generations, eq(artifacts.generationId, generations.id))
+        .where(and(inArray(artifacts.id, artifactIds), isNull(artifacts.deletedAt)))
+        .orderBy(desc(artifacts.createdAt))
 
       // Merge tags
       const tagMap = await fetchTagsForArtifacts(items.map((i) => i.id))
@@ -161,9 +153,9 @@ export const artifactsRouter = {
     .input(z.object({ id: z.string() }))
     .handler(async ({ input, context }) => {
       const [artifact] = await db
-        .select({ id: runwareArtifacts.id, r2Key: runwareArtifacts.r2Key })
-        .from(runwareArtifacts)
-        .where(eq(runwareArtifacts.id, input.id))
+        .select({ id: artifacts.id, r2Key: artifacts.r2Key })
+        .from(artifacts)
+        .where(eq(artifacts.id, input.id))
         .limit(1)
 
       if (!artifact) {
@@ -174,13 +166,10 @@ export const artifactsRouter = {
       const now = new Date()
 
       // Soft-delete artifact row
-      await db
-        .update(runwareArtifacts)
-        .set({ deletedAt: now })
-        .where(eq(runwareArtifacts.id, input.id))
+      await db.update(artifacts).set({ deletedAt: now }).where(eq(artifacts.id, input.id))
 
       // Delete R2 blob
-      await context.env.GENERATIONS_BUCKET.delete(artifact.r2Key)
+      await context.env.ARTIFACTS_BUCKET.delete(artifact.r2Key)
 
       // Delete tags
       await db.delete(tags).where(eq(tags.targetId, input.id))

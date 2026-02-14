@@ -1,1 +1,0 @@
-ALTER TABLE `runware_artifacts` ADD `deleted_at` integer;

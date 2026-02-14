@@ -1,8 +1,8 @@
 import { relations } from 'drizzle-orm'
 import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core'
 
-export const runwareGenerations = sqliteTable(
-  'runware_generations',
+export const generations = sqliteTable(
+  'generations',
   {
     id: text('id').primaryKey(),
     model: text('model').notNull(),
@@ -14,21 +14,21 @@ export const runwareGenerations = sqliteTable(
     completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
   },
   (table) => [
-    index('idx_rg_created').on(table.createdAt),
-    index('idx_rg_model_created').on(table.model, table.createdAt),
+    index('idx_gen_created').on(table.createdAt),
+    index('idx_gen_model_created').on(table.model, table.createdAt),
   ],
 )
 
-export type RunwareGeneration = typeof runwareGenerations.$inferSelect
-export type NewRunwareGeneration = typeof runwareGenerations.$inferInsert
+export type Generation = typeof generations.$inferSelect
+export type NewGeneration = typeof generations.$inferInsert
 
-export const runwareArtifacts = sqliteTable(
-  'runware_artifacts',
+export const artifacts = sqliteTable(
+  'artifacts',
   {
     id: text('id').primaryKey(),
     generationId: text('generation_id')
       .notNull()
-      .references(() => runwareGenerations.id),
+      .references(() => generations.id),
     model: text('model').notNull(),
     r2Key: text('r2_key').notNull(),
     contentType: text('content_type').notNull(),
@@ -41,20 +41,20 @@ export const runwareArtifacts = sqliteTable(
     deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
   },
   (table) => [
-    index('idx_ra_created').on(table.createdAt),
-    index('idx_ra_generation').on(table.generationId),
-    index('idx_ra_model_created').on(table.model, table.createdAt),
+    index('idx_art_created').on(table.createdAt),
+    index('idx_art_generation').on(table.generationId),
+    index('idx_art_model_created').on(table.model, table.createdAt),
   ],
 )
 
-export type RunwareArtifact = typeof runwareArtifacts.$inferSelect
-export type NewRunwareArtifact = typeof runwareArtifacts.$inferInsert
+export type Artifact = typeof artifacts.$inferSelect
+export type NewArtifact = typeof artifacts.$inferInsert
 
 // -- Relations --
 
-export const runwareGenerationsRelations = relations(runwareGenerations, ({ many }) => ({
-  artifacts: many(runwareArtifacts),
+export const generationsRelations = relations(generations, ({ many }) => ({
+  artifacts: many(artifacts),
 }))
 
-// runwareArtifactsRelations is defined in tags.ts to avoid circular imports
-// (tags table references runwareArtifacts, and the relation needs to reference tags)
+// artifactsRelations is defined in tags.ts to avoid circular imports
+// (tags table references artifacts, and the relation needs to reference tags)

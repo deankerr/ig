@@ -1,3 +1,3 @@
 # db
 
-**MAJOR REFACTOR, RETAIN THE OLD GENERATIONS TABLE SCHEMA FOR LATER**
+Drizzle ORM schema for D1. Tables: `generations`, `artifacts`, `tags`.
