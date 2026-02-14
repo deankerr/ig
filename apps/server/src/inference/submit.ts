@@ -30,7 +30,7 @@ type SubmitArgs = {
 export type SyncResult = {
   id: string
   generation: Omit<Generation, 'error' | 'metadata'>
-  artifacts: Omit<Artifact, 'metadata' | 'deletedAt'>[]
+  artifacts: (Omit<Artifact, 'metadata' | 'deletedAt'> & { tags: Record<string, string | null> })[]
 }
 
 export type SubmitResult = { id: string } | SyncResult
@@ -289,6 +289,7 @@ async function submitSync(
       seed: o.seed,
       cost: o.cost ?? null,
       createdAt: o.createdAt,
+      tags: meta.tags ?? {},
     })),
   }
 }
