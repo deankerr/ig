@@ -1,271 +1,133 @@
+// Generations router — create, list, get, status, delete.
+
 import { db } from '@ig/db'
-import { generations } from '@ig/db/schema'
-import { and, desc, eq, lt, sql } from 'drizzle-orm'
+import { artifacts, generations, tags } from '@ig/db/schema'
+import { and, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { apiKeyProcedure, publicProcedure } from '../orpc'
-import { create as createFal } from '../providers/fal'
-import { create as createRunware } from '../providers/runware'
-
-const PROVIDERS = ['fal', 'runware'] as const
+import type { Context } from '../context'
+import { getRequest } from '../inference/request'
+import { imageInferenceInput } from '../inference/schema'
+import { submitRequest } from '../inference/submit'
+import { procedure } from '../orpc'
+import { decodeCursor, encodeCursor, fetchTagsForArtifacts, paginationInput } from './utils'
 
 const MAX_TAGS = 20
-const SLUG_PREFIX_LENGTH = 12
+const MAX_KEY_LENGTH = 64
+const MAX_VALUE_LENGTH = 256
 
-const idSchema = z.uuidv7().trim()
-const modelSchema = z.string().trim().min(1)
-const cursorSchema = z.string().refine((s) => !Number.isNaN(Date.parse(s)), 'Invalid date format')
-
-const tagSchema = z.string().trim().max(256, 'Tag cannot exceed 256 characters')
-
-export type Tag = z.infer<typeof tagSchema>
-
-// Trim tags, filter empties, dedupe
 const tagsSchema = z
-  .array(tagSchema)
-  .transform((tags) => [...new Set(tags.filter(Boolean))])
-  .refine((tags) => tags.length <= MAX_TAGS, `Cannot exceed ${MAX_TAGS} tags`)
+  .record(z.string().trim().min(1).max(MAX_KEY_LENGTH), z.string().max(MAX_VALUE_LENGTH).nullable())
+  .refine((tags) => Object.keys(tags).length <= MAX_TAGS, `Cannot exceed ${MAX_TAGS} tags`)
 
-function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // remove diacritics
-    .replace(/[^a-z0-9\s_/-]/g, '') // keep only allowed chars
-    .trim()
-    .replace(/\s+/g, '-') // spaces to hyphens
-    .replace(/-+/g, '-') // collapse multiple hyphens
-    .slice(0, 100)
-}
-
-// Accept any string, slugify it, return undefined if empty
-const slugSchema = z.string().transform((s) => slugify(s) || undefined)
-
-const providers = {
-  fal: createFal,
-  runware: createRunware,
-} as const
-
-function makeSlug(id: string, slugArg?: string) {
-  return slugArg ? `${id.slice(0, SLUG_PREFIX_LENGTH)}-${slugArg}` : null
-}
-
-function mergeTags(...args: (string[] | null | undefined)[]) {
-  return [...new Set(args.flatMap((a) => a ?? []))]
-}
+// Flat input: inference fields + ig extensions (tags, sync, etc.) at the same level
+const createSchema = imageInferenceInput.extend({
+  tags: tagsSchema.optional(),
+  sync: z.boolean().optional().default(false),
+})
 
 export const generationsRouter = {
-  create: apiKeyProcedure
-    .input(
-      z.object({
-        provider: z.enum(PROVIDERS),
-        model: modelSchema,
-        input: z.record(z.string(), z.unknown()),
-        tags: tagsSchema.optional().default([]),
-        slug: slugSchema.optional(),
-        autoAspectRatio: z.boolean().optional(),
-      }),
-    )
-    .handler(async ({ input: args, context }) => {
-      const createFn = providers[args.provider]
-      return createFn(context, {
-        model: args.model,
-        input: args.input,
-        tags: args.tags,
-        slug: args.slug,
-        autoAspectRatio: args.autoAspectRatio,
-      })
-    }),
-
-  list: publicProcedure
-    .route({ spec: { security: [] } })
-    .input(
-      z.object({
-        status: z.enum(['pending', 'ready', 'failed']).optional(),
-        model: modelSchema.optional(),
-        tags: tagsSchema.optional(),
-        limit: z.number().int().min(1).max(100).optional().default(20),
-        cursor: cursorSchema.optional(),
-      }),
-    )
-    .handler(async ({ input }) => {
-      const conditions = []
-
-      if (input.status) {
-        conditions.push(eq(generations.status, input.status))
-      }
-
-      if (input.model) {
-        conditions.push(eq(generations.model, input.model))
-      }
-
-      if (input.cursor) {
-        conditions.push(lt(generations.createdAt, new Date(input.cursor)))
-      }
-
-      if (input.tags && input.tags.length > 0) {
-        for (const tag of input.tags) {
-          conditions.push(
-            sql`EXISTS (SELECT 1 FROM json_each(${generations.tags}) WHERE value = ${tag})`,
-          )
-        }
-      }
-
-      const results = await db
-        .select()
-        .from(generations)
-        .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .orderBy(desc(generations.createdAt))
-        .limit(input.limit + 1)
-
-      const hasMore = results.length > input.limit
-      const items = hasMore ? results.slice(0, input.limit) : results
-      const nextCursor = hasMore ? items[items.length - 1]?.createdAt.toISOString() : undefined
-
-      return {
-        items,
-        nextCursor,
-      }
-    }),
-
-  get: publicProcedure
-    .route({ spec: { security: [] } })
-    .input(z.object({ id: idSchema }))
-    .handler(async ({ input: args }) => {
-      const [generation] = await db
-        .select()
-        .from(generations)
-        .where(eq(generations.id, args.id))
-        .limit(1)
-
-      return generation ?? null
-    }),
-
-  update: apiKeyProcedure
-    .input(
-      z.object({
-        id: idSchema,
-        add: tagsSchema.optional().default([]),
-        remove: tagsSchema.optional().default([]),
-        slug: slugSchema.optional(),
-      }),
-    )
-    .handler(async ({ input: args }) => {
-      const existing = await db
-        .select({ tags: generations.tags, id: generations.id })
-        .from(generations)
-        .where(eq(generations.id, args.id))
-        .limit(1)
-
-      const generation = existing[0]
-      if (!generation) {
-        throw new Error('Generation not found')
-      }
-
-      const withoutRemoved = generation.tags.filter((tag: string) => !args.remove.includes(tag))
-      const tags = mergeTags(withoutRemoved, args.add)
-
-      if (tags.length > MAX_TAGS) {
-        throw new Error(`Cannot exceed ${MAX_TAGS} tags per generation`)
-      }
-
-      const slug = makeSlug(generation.id, args.slug)
-
-      await db
-        .update(generations)
-        .set({ tags, ...(slug && { slug }) })
-        .where(eq(generations.id, args.id))
-
-      console.log('generation_updated', { id: args.id, tags, slug })
-      return { id: args.id, tags, slug }
-    }),
-
-  listModels: publicProcedure.route({ spec: { security: [] } }).handler(async () => {
-    const results = await db
-      .selectDistinct({ model: generations.model })
-      .from(generations)
-      .orderBy(generations.model)
-
-    return { models: results.map((r) => r.model) }
+  create: procedure.input(createSchema).handler(async ({ input, context }) => {
+    const { tags, sync, ...inferenceInput } = input
+    return submitRequest(context, { input: inferenceInput, tags, sync })
   }),
 
-  listTags: publicProcedure.route({ spec: { security: [] } }).handler(async () => {
-    const results = await db
-      .select({ tag: sql<string>`DISTINCT value` })
-      .from(sql`${generations}, json_each(${generations.tags})`)
-      .orderBy(sql`value`)
+  list: procedure.input(paginationInput).handler(async ({ input }) => {
+    const { cursor, limit } = input
+    const decoded = cursor ? decodeCursor(cursor) : null
 
-    return { tags: results.map((r) => r.tag) }
+    // Keyset condition: rows before the cursor position
+    const cursorCondition = decoded
+      ? or(
+          lt(generations.createdAt, decoded.createdAt),
+          and(eq(generations.createdAt, decoded.createdAt), lt(generations.id, decoded.id)),
+        )
+      : undefined
+
+    // Relational query auto-loads child artifacts (excluding soft-deleted)
+    const items = await db.query.generations.findMany({
+      where: cursorCondition,
+      with: { artifacts: { where: isNull(artifacts.deletedAt) } },
+      orderBy: [desc(generations.createdAt), desc(generations.id)],
+      limit: limit + 1,
+    })
+
+    const hasMore = items.length > limit
+    if (hasMore) items.pop()
+
+    // Collect all artifact IDs and batch-fetch tags
+    const allArtifactIds = items.flatMap((g) => g.artifacts.map((a) => a.id))
+    const tagMap = await fetchTagsForArtifacts(allArtifactIds)
+    const itemsWithTags = items.map((g) => ({
+      ...g,
+      artifacts: g.artifacts.map((a) => ({ ...a, tags: tagMap.get(a.id) ?? {} })),
+    }))
+
+    const lastItem = items[items.length - 1]
+    const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.createdAt, lastItem.id) : null
+
+    return { items: itemsWithTags, nextCursor }
   }),
 
-  delete: apiKeyProcedure
-    .input(z.object({ id: idSchema }))
-    .handler(async ({ input: args, context }) => {
-      const [generation] = await db
-        .select()
-        .from(generations)
-        .where(eq(generations.id, args.id))
-        .limit(1)
+  get: procedure.input(z.object({ id: z.string() })).handler(async ({ input }) => {
+    const generation = await db.query.generations.findFirst({
+      where: eq(generations.id, input.id),
+      with: { artifacts: { where: isNull(artifacts.deletedAt) } },
+    })
+    if (!generation) return null
 
-      if (!generation) {
-        return { deleted: false }
-      }
+    // Fetch tags for all artifacts in the generation
+    const tagMap = await fetchTagsForArtifacts(generation.artifacts.map((a) => a.id))
+    return {
+      ...generation,
+      artifacts: generation.artifacts.map((a) => ({ ...a, tags: tagMap.get(a.id) ?? {} })),
+    }
+  }),
 
-      if (generation.status === 'ready') {
-        await context.env.GENERATIONS_BUCKET.delete(`generations/${args.id}`)
-      }
+  status: procedure.input(z.object({ id: z.uuid() })).handler(async ({ input, context }) => {
+    const request = getRequest(context, input.id)
+    return request.getState()
+  }),
 
-      await db.delete(generations).where(eq(generations.id, args.id))
+  // Hard-delete: destroy generation + all artifacts + R2 blobs + tags + DO state
+  delete: procedure.input(z.object({ id: z.string() })).handler(async ({ input, context }) => {
+    // Fetch artifacts for R2 cleanup
+    const rows = await db
+      .select({ id: artifacts.id, r2Key: artifacts.r2Key })
+      .from(artifacts)
+      .where(eq(artifacts.generationId, input.id))
 
-      console.log('generation_deleted', { id: args.id })
-      return { deleted: true }
-    }),
+    const artifactIds = rows.map((a) => a.id)
 
-  regenerate: apiKeyProcedure
-    .input(
-      z.object({
-        id: idSchema,
-        tags: tagsSchema.optional(),
-        slug: slugSchema.optional(),
-        autoAspectRatio: z.boolean().optional(),
-      }),
-    )
-    .handler(async ({ input: args, context }) => {
-      const existing = await db
-        .select()
-        .from(generations)
-        .where(eq(generations.id, args.id))
-        .limit(1)
+    // Delete tags for all artifacts
+    if (artifactIds.length > 0) {
+      await db.delete(tags).where(inArray(tags.targetId, artifactIds))
+    }
 
-      const original = existing[0]
-      if (!original) {
-        throw new Error('Generation not found')
-      }
+    // Delete R2 blobs
+    for (const row of rows) {
+      await context.env.ARTIFACTS_BUCKET.delete(row.r2Key)
+    }
 
-      const provider = original.provider as string
-      const createFn = providers[provider as keyof typeof providers]
-      if (!createFn) {
-        throw new Error(`Invalid provider: ${provider}`)
-      }
+    // Delete artifact rows
+    await db.delete(artifacts).where(eq(artifacts.generationId, input.id))
 
-      // Merge tags with regenerate tracking
-      const mergedTags = mergeTags(args.tags, original.tags, [`regenerate:${original.id}`])
+    // Delete generation row
+    await db.delete(generations).where(eq(generations.id, input.id))
 
-      const result = await createFn(context, {
-        model: original.model,
-        input: original.input,
-        tags: mergedTags,
-        slug: args.slug,
-        autoAspectRatio: args.autoAspectRatio,
-      })
+    // Clear DO storage
+    const ctx: Context = {
+      env: context.env,
+      headers: context.headers,
+      waitUntil: context.waitUntil,
+    }
+    const request = getRequest(ctx, input.id)
+    await request.destroy()
 
-      console.log('generation_regenerated', {
-        id: result.id,
-        originalId: args.id,
-        provider,
-        model: original.model,
-        requestId: result.requestId,
-      })
-      return { id: result.id, requestId: result.requestId, originalId: args.id }
-    }),
+    console.log('[generations:delete]', {
+      id: input.id,
+      artifacts: artifactIds.length,
+    })
+    return { id: input.id }
+  }),
 }

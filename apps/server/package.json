@@ -1,12 +1,11 @@
 {
-  "name": "server",
+  "name": "@ig/server",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
     "check-types": "tsc -b"
   },
   "dependencies": {
-    "@fal-ai/client": "catalog:",
     "@ig/db": "workspace:*",
     "@ig/env": "workspace:*",
     "@orpc/openapi": "catalog:",

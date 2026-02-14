@@ -59,56 +59,6 @@ The Button component handles icon sizing and spacing automatically. Don't manual
 
 Add `data-icon="inline-start"` or `data-icon="inline-end"` to icons for proper spacing. The button adjusts padding automatically, and `gap-*` handles the space between icon and text.
 
-```tsx
-// Icon before text
-<Button>
-  <SaveIcon data-icon="inline-start" />
-  Save changes
-</Button>
-
-// Icon after text
-<Button>
-  Continue
-  <ArrowRightIcon data-icon="inline-end" />
-</Button>
-
-// Loading state with Spinner
-<Button disabled>
-  <Spinner data-icon="inline-start" />
-  Saving...
-</Button>
-
-// Icon-only button (no data-icon needed)
-<Button size="icon-sm" variant="ghost">
-  <MoreHorizontalIcon />
-</Button>
-```
-
-**Never do this:**
-
-```tsx
-// ❌ Manual margins - Button's gap handles spacing
-<Button>
-  <SaveIcon className="mr-1.5" />
-  Save
-</Button>
-
-// ❌ Manual icon sizing - Button sets icon size per variant
-<Button>
-  <SaveIcon className="h-3 w-3" />
-  Save
-</Button>
-```
-
-**Icon sizes by button variant:**
-
-| Button size | Icon size       |
-| ----------- | --------------- |
-| `xs`        | 12px (size-3)   |
-| `sm`        | 14px (size-3.5) |
-| `default`   | 16px (size-4)   |
-| `lg`        | 16px (size-4)   |
-
 **Icon-only button sizes:**
 
 | Size      | Button dimensions |
@@ -121,19 +71,6 @@ Add `data-icon="inline-start"` or `data-icon="inline-end"` to icons for proper s
 ### Spinner
 
 Use the `Spinner` component for loading states. It's a styled `Loader2Icon` with proper accessibility attributes.
-
-```tsx
-import { Spinner } from "@/components/ui/spinner"
-
-// In a button
-<Button disabled>
-  <Spinner data-icon="inline-start" />
-  Loading...
-</Button>
-
-// Standalone
-<Spinner className="size-6" />
-```
 
 ### ButtonGroup
 
@@ -316,29 +253,52 @@ The shadcn registry system now allows anyone to easily create and distribute the
 
 - `elements/` Elements Error Boundary UI
 
-## Custom Components
+# Feature Components Structure
 
-- Just put them in the root `components/` directory.
-- If they have a logical group, create a directory for them.
+- Group components by feature in `components/` sub-folders.
+- Use the `shared/` directory for assorted common reusables.
 
-<claude-mem-context>
-# Recent Activity
+## App Outline
 
-### Jan 16, 2026
-
-| ID    | Time     | T   | Title                                                | Read |
-| ----- | -------- | --- | ---------------------------------------------------- | ---- |
-| #3297 | 11:32 PM | 🔵  | Full-Stack TypeScript Monorepo Architecture Explored | ~751 |
-
-### Jan 22, 2026
-
-| ID    | Time    | T   | Title                                               | Read |
-| ----- | ------- | --- | --------------------------------------------------- | ---- |
-| #4664 | 7:35 PM | ✅  | Updated HTML with Dark Mode and JetBrains Mono Font | ~256 |
-| #4663 | "       | 🔵  | HTML Entry Point                                    | ~185 |
-| #4660 | 7:34 PM | 🔵  | shadcn/ui Configuration                             | ~233 |
-| #4642 | 7:31 PM | 🔵  | TypeScript Configuration with Strict Mode           | ~197 |
-| #4641 | "       | 🔵  | Vite Build Configuration                            | ~165 |
-| #4640 | "       | 🔵  | Frontend Technology Stack Configuration             | ~307 |
-
-</claude-mem-context>
+```
+src/
+├── main.tsx                  # Router, providers (JsonSheet, Bench, Tooltip, QueryPersist)
+├── routes/
+│   ├── __root.tsx            # Root layout (Toaster, ReactQueryDevtools)
+│   └── index.tsx             # Single route — search params: view, artifact, generation
+├── components/
+│   ├── bench-provider.tsx      # BenchProvider + useBench (open/close, in-flight IDs)
+│   ├── app-shell.tsx          # Top-level layout: header, view switching, bench, inspector modals
+│   ├── artifact-list.tsx      # Artifact grid/list with infinite scroll + display toggle
+│   ├── generation-list.tsx    # Generation list with infinite scroll
+│   ├── craft-bench.tsx        # JSON input panel, inference submission, in-flight tracking
+│   ├── view-toggle.tsx        # Artifacts/generations tab switcher (drives ?view= param)
+│   ├── display-toggle.tsx     # Grid/list toggle for artifact view
+│   ├── api-key-settings.tsx   # API key dialog (localStorage)
+│   ├── inspector/             # Detail modal system
+│   │   ├── inspector-modal.tsx
+│   │   ├── inspector-context.tsx   # InspectorProvider (close, copy, sendToBench)
+│   │   ├── inspector-layout.tsx    # Compound layout: Header, Body, Content, Sidebar
+│   │   ├── artifact-inspector.tsx  # Artifact detail view
+│   │   ├── generation-inspector.tsx # Generation detail view
+│   │   ├── header-action.tsx       # Icon button for inspector header
+│   │   └── meta-field.tsx          # Label/value metadata row
+│   ├── shared/                # Reusable components across features
+│   │   ├── json-sheet.tsx     # JsonSheetProvider + useJsonSheet (app-level JSON viewer)
+│   │   ├── artifact-link.tsx  # Clickable artifact thumbnail (grid or inline)
+│   │   ├── artifact-thumbnail.tsx
+│   │   ├── time-ago.tsx
+│   │   ├── pulsing-dot.tsx
+│   │   ├── status-badge.tsx
+│   │   └── tag-input.tsx
+│   └── ui/                   # shadcn/ui primitives
+├── hooks/
+│   ├── use-copy-to-clipboard.ts
+│   ├── use-infinite-scroll.ts
+│   └── use-media-query.ts
+└── lib/
+    ├── orpc.ts                # oRPC client, QueryClient, RPC link
+    ├── storage.ts             # Typed localStorage access
+    ├── format.ts              # formatPrice, formatDuration
+    └── utils.ts               # serverUrl, cn()
+```

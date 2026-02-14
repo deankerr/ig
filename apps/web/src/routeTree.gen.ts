@@ -9,80 +9,38 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as PlaygroundRouteImport } from './routes/playground'
-import { Route as GenerationsRouteImport } from './routes/generations'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as GenerationsIndexRouteImport } from './routes/generations.index'
 
-const PlaygroundRoute = PlaygroundRouteImport.update({
-  id: '/playground',
-  path: '/playground',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GenerationsRoute = GenerationsRouteImport.update({
-  id: '/generations',
-  path: '/generations',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GenerationsIndexRoute = GenerationsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => GenerationsRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/generations': typeof GenerationsRouteWithChildren
-  '/playground': typeof PlaygroundRoute
-  '/generations/': typeof GenerationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/playground': typeof PlaygroundRoute
-  '/generations': typeof GenerationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/generations': typeof GenerationsRouteWithChildren
-  '/playground': typeof PlaygroundRoute
-  '/generations/': typeof GenerationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/generations' | '/playground' | '/generations/'
+  fullPaths: '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/playground' | '/generations'
-  id: '__root__' | '/' | '/generations' | '/playground' | '/generations/'
+  to: '/'
+  id: '__root__' | '/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  GenerationsRoute: typeof GenerationsRouteWithChildren
-  PlaygroundRoute: typeof PlaygroundRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/playground': {
-      id: '/playground'
-      path: '/playground'
-      fullPath: '/playground'
-      preLoaderRoute: typeof PlaygroundRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/generations': {
-      id: '/generations'
-      path: '/generations'
-      fullPath: '/generations'
-      preLoaderRoute: typeof GenerationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -90,32 +48,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/generations/': {
-      id: '/generations/'
-      path: '/'
-      fullPath: '/generations/'
-      preLoaderRoute: typeof GenerationsIndexRouteImport
-      parentRoute: typeof GenerationsRoute
-    }
   }
 }
 
-interface GenerationsRouteChildren {
-  GenerationsIndexRoute: typeof GenerationsIndexRoute
-}
-
-const GenerationsRouteChildren: GenerationsRouteChildren = {
-  GenerationsIndexRoute: GenerationsIndexRoute,
-}
-
-const GenerationsRouteWithChildren = GenerationsRoute._addFileChildren(
-  GenerationsRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  GenerationsRoute: GenerationsRouteWithChildren,
-  PlaygroundRoute: PlaygroundRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

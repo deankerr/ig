@@ -4,7 +4,7 @@
 
 import { ORPCError } from '@orpc/server'
 
-type SerializedError = Record<string, unknown>
+export type SerializedError = Record<string, unknown>
 
 /**
  * Extract a message from any error value.

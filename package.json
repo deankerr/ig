@@ -30,7 +30,7 @@
   },
   "type": "module",
   "scripts": {
-    "check": "bun run check-types && oxlint --fix && oxfmt --write",
+    "check": "bun run check-types && oxlint --fix apps packages && oxfmt --write apps packages",
     "check-types": "turbo check-types",
     "clean": "rm -rf node_modules .turbo apps/*/node_modules packages/*/node_modules packages/*/dist apps/*/dist && find . -name '*.tsbuildinfo' -not -path '*/node_modules/*' -delete",
     "db:generate": "turbo -F @ig/db db:generate",
@@ -53,6 +53,7 @@
     "oxfmt": "^0.28.0",
     "oxlint": "^1.43.0",
     "oxlint-tsgolint": "^0.11.4",
+    "shadcn": "^3.8.4",
     "turbo": "^2.8.3",
     "typescript": "catalog:"
   },

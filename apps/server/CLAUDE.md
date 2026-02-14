@@ -1,106 +1,95 @@
-# Server Package
+# Server
+
+Hono + oRPC on Cloudflare Workers.
+
+## Data Persistence Model
+
+**DO (Durable Object)** is the source of truth during a request's lifecycle. It manages active, mutable state — tracking dispatches, webhooks, outputs — and can retain data of any shape. It's queried directly for live request status.
+
+**D1** is a progressive projection of DO state into a queryable schema. Writes happen at each lifecycle transition:
+
+1. Generation row inserted when the request is submitted (no `completedAt`)
+2. Artifact rows inserted as each output is confirmed (CDN fetched, R2 stored)
+3. Generation row upserted with `completedAt` when all outputs are in, or on failure/timeout
+
+D1 is not used for inflight request management — the DO owns that. If a D1 write fails mid-request, the DO still has the full state and the data is recoverable. The generation table tolerates partial state by design.
+
+**Derived status** — generation state is derived from columns, not stored as an enum:
+
+| `completedAt` | `error` | artifacts vs batch    | State                                   |
+| ------------- | ------- | --------------------- | --------------------------------------- |
+| null          | null    | any                   | In progress                             |
+| set           | null    | batch                 | Succeeded                               |
+| set           | null    | < batch               | Partial success                         |
+| set           | set     | any                   | Failed (generation-level)               |
+| null          | null    | stale (age > timeout) | Application error (derived by consumer) |
+
+The "stale" state can't be reliably recorded in D1 because the failure mode that causes it (Worker crash, D1 write failure) is often the same one that prevents writing the error. Consumers derive it from `createdAt` + the request timeout constant.
 
 ## Structure
 
 ```
 src/
-├── index.ts              # Hono app, routes, middleware
-├── context.ts            # oRPC context creation
+├── index.ts              # Hono app, routes, oRPC handler wiring
+├── context.ts            # Context creation (env + headers)
 ├── orpc.ts               # Procedure definitions (public, apiKey-protected)
-├── routers/              # oRPC routers (generations, runware)
-├── routes/               # Hono routes (file serving)
-├── services/             # Business logic (generations, auto-aspect-ratio)
-├── providers/            # External provider integrations
-│   ├── fal/              # fal.ai (create, webhook, resolve, verify)
-│   ├── runware/          # Runware (create, webhook, resolve, schemas)
-│   ├── types.ts          # ProviderResult, ResolvedOutput
-│   └── utils.ts          # fetchUrl, decodeBase64, parseDataURI
+├── models.ts             # Runware model catalog search (standalone)
+├── routers/              # oRPC routers (entity-based)
+│   ├── index.ts          # App router (combines all routers)
+│   ├── generations.ts    # create, list, get, status, delete
+│   ├── artifacts.ts      # list, get, delete, setTags, removeTags
+│   ├── models.ts         # search
+│   └── utils.ts          # Pagination cursors, batch tag fetching
+├── routes/               # Hono routes (file serving from R2)
+├── inference/            # Inference request system (see its CLAUDE.md)
+│   ├── request.ts        # InferenceDO + typed client
+│   ├── submit.ts         # Submission orchestration (async/sync paths)
+│   ├── dispatch.ts       # Runware API call
+│   ├── webhook.ts        # Hono webhook route handler
+│   ├── store.ts          # CDN fetch → R2 upload
+│   ├── persist.ts        # D1 progressive projection (all lifecycle writes)
+│   ├── result.ts         # Result types + factories
+│   ├── schema.ts         # Runware API schemas
+│   ├── config.ts         # REQUEST_TIMEOUT_MS constant
+│   └── index.ts          # Public API
+├── services/             # Internal functions — (ctx, args) pattern
+│   └── auto-aspect-ratio.ts  # AI-powered aspect ratio selection
 └── utils/
     ├── result.ts         # Result<T, E> type
-    └── error.ts          # getErrorMessage, serializeError
+    ├── error.ts          # getErrorMessage, serializeError, error handlers
+    └── slug.ts           # UUIDv7 slug utilities (unused, kept for later)
 ```
 
 ## Result Type
 
-All fallible operations use `Result<T, E>` from `utils/result.ts`:
+Fallible operations use `Result<T, E>` from `utils/result.ts`:
 
 ```typescript
 type Result<T, E = unknown> = { ok: true; value: T } | { ok: false; message: string; error?: E }
 ```
 
-### Returning Results
-
 ```typescript
-// Success - wrap data in value
+// Returning
 return { ok: true, value: { data, contentType } }
-
-// Failure - message is required, error context is optional
 return { ok: false, message: 'HTTP 404' }
 return { ok: false, message: 'Decode failed', error: { code: 'DECODE_FAILED' } }
-```
 
-### Consuming Results
-
-```typescript
-const result = await fetchUrl(url)
-
+// Consuming
+const result = await doThing()
 if (!result.ok) {
-  // result.message - human readable
-  // result.error   - optional context (type depends on E)
   console.log(result.message, result.error)
   return
 }
-
-// result.value - the success data (type T)
-const { data, contentType } = result.value
+const { data } = result.value
 ```
-
-### Domain-Specific Results
-
-Provider types in `providers/types.ts` are specialized Results:
-
-```typescript
-// ResolvedOutput - single output from a provider
-type ResolvedOutput = Result<
-  { data: ArrayBuffer | Uint8Array; contentType: string; metadata?: Record<string, unknown> },
-  { code: string } // code stored in DB errorCode column
->
-
-// ProviderResult - overall webhook resolution
-type ProviderResult = Result<
-  { outputs: ResolvedOutput[]; requestId?: string; metadata?: Record<string, unknown> },
-  { code: string }
->
-```
-
-### Storing Errors
-
-When storing a Result in the database (e.g., providerMetadata):
-
-```typescript
-// Success - store value directly with ok marker
-providerMetadata = { autoAspectRatio: { ok: true, ...result.value } }
-
-// Failure - include message and error context
-providerMetadata = { autoAspectRatio: { ok: false, message, ...error } }
-```
-
-For serialized errors that might have unknown shape, isolate in `cause`:
-
-```typescript
-error: { cause: serializeError(error), model: MODEL_ID }
-```
-
-This prevents field collisions when spreading.
 
 ## Error Utilities
 
 ```typescript
 import { getErrorMessage, serializeError } from './utils/error'
 
-// Extract message from unknown error
-const message = getErrorMessage(error) // error instanceof Error ? error.message : String(error)
-
-// Serialize error for storage (preserves cause chain, custom properties)
-const serialized = serializeError(error) // { name, message, cause?, ...customProps }
+getErrorMessage(error) // error.message or String(error)
+serializeError(error) // { name, message, cause?, ...custom } — preserves cause chain
 ```
+
+`handleOrpcError` and `handleHonoError` are the framework error handlers — they serialize, log, and format the response.

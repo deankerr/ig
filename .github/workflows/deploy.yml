@@ -54,7 +54,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "stage=pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "stage=prod-1" >> $GITHUB_OUTPUT
+            echo "stage=prod-2" >> $GITHUB_OUTPUT
           else
             echo "stage=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
           fi

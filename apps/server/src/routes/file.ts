@@ -1,30 +1,46 @@
 import { db } from '@ig/db'
-import { generations } from '@ig/db/schema'
-import type { Generation } from '@ig/db/schema'
+import { artifacts, tags } from '@ig/db/schema'
 import { env } from '@ig/env/server'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 
 export const fileRoutes = new Hono()
 
-// * routes
+// Slug-based file serving: /a/{slug}[.ext]
+// Resolves ig:slug tag → artifact, then serves the file
+fileRoutes.get('/a/*', async (c) => {
+  const path = c.req.path.slice('/a/'.length)
+  const dot = path.indexOf('.')
+  const slug = dot === -1 ? path : path.slice(0, dot)
 
-// Short URL for slugs: /art/{slug}.{ext}
-fileRoutes.get('/art/*', async (c) => {
-  const path = c.req.path.slice('/art/'.length)
-  const dotIndex = path.indexOf('.')
-  const slug = dotIndex === -1 ? path : path.slice(0, dotIndex)
+  // Resolve slug → artifact ID via tag
+  const [tagRow] = await db
+    .select({ targetId: tags.targetId })
+    .from(tags)
+    .where(and(eq(tags.tag, 'ig:slug'), eq(tags.value, slug)))
+    .limit(1)
+  if (!tagRow) return c.json({ error: 'Not found' }, 404)
 
-  const result = await db.select().from(generations).where(eq(generations.slug, slug)).limit(1)
-  return serveGeneration(c, result[0])
+  // Fetch artifact for R2 key and content type
+  const [artifact] = await db
+    .select({ r2Key: artifacts.r2Key, contentType: artifacts.contentType })
+    .from(artifacts)
+    .where(eq(artifacts.id, tagRow.targetId))
+    .limit(1)
+  if (!artifact) return c.json({ error: 'Artifact not found' }, 404)
+
+  return serveR2Object(c, artifact.r2Key, artifact.contentType)
 })
 
-// Full URL with ID or slug: /generations/{id}/file*
-fileRoutes.get('/generations/:id/file*', async (c) => {
+// Artifact file serving: /artifacts/{id}/file[.ext]
+// Optional query params for image transforms: ?w=512&h=512&f=webp&q=80&fit=cover
+fileRoutes.get('/artifacts/:id/file*', async (c) => {
   const id = c.req.param('id')
-  const result = await db.select().from(generations).where(eq(generations.id, id)).limit(1)
-  return serveGeneration(c, result[0])
+  const result = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1)
+  const artifact = result[0]
+  if (!artifact) return c.json({ error: 'Artifact not found' }, 404)
+  return serveR2Object(c, artifact.r2Key, artifact.contentType)
 })
 
 // * image transforms
@@ -68,21 +84,19 @@ function resolveOutputFormat(
   if (formatParam && formatParam !== 'auto') {
     const explicit = FORMAT_MAP[formatParam]
     if (explicit) return explicit
-    // Invalid format param, fall through to original
   }
 
   // Auto-negotiate based on Accept header
   if (formatParam === 'auto') {
     if (acceptHeader?.includes('image/avif')) return 'image/avif'
     if (acceptHeader?.includes('image/webp')) return 'image/webp'
-    // Fallback to original if supported, else jpeg
     if (TRANSFORMABLE_TYPES.includes(originalType as OutputFormat)) {
       return originalType as OutputFormat
     }
     return 'image/jpeg'
   }
 
-  // No format param - preserve original type if supported
+  // No format param — preserve original type if supported
   if (TRANSFORMABLE_TYPES.includes(originalType as OutputFormat)) {
     return originalType as OutputFormat
   }
@@ -110,19 +124,12 @@ function parseTransformParams(c: Context, originalType: string) {
   }
 }
 
-// * handler
+// * shared handler
 
-async function serveGeneration(c: Context, generation: Generation | undefined) {
-  if (!generation) return c.json({ error: 'Generation not found' }, 404)
-  if (generation.status !== 'ready') {
-    return c.json({ error: 'Generation not ready', status: generation.status }, 400)
-  }
-
-  const r2Key = `generations/${generation.id}`
-  const object = await env.GENERATIONS_BUCKET.get(r2Key)
+async function serveR2Object(c: Context, r2Key: string, contentType: string) {
+  const object = await env.ARTIFACTS_BUCKET.get(r2Key)
   if (!object) return c.json({ error: 'File not found' }, 404)
 
-  const contentType = generation.contentType ?? 'application/octet-stream'
   const canTransform = TRANSFORMABLE_TYPES.includes(contentType as OutputFormat)
   const transform = parseTransformParams(c, contentType)
 

@@ -1,5 +1,13 @@
 import alchemy from 'alchemy'
-import { Ai, D1Database, Images, R2Bucket, Vite, Worker } from 'alchemy/cloudflare'
+import {
+  Ai,
+  D1Database,
+  DurableObjectNamespace,
+  Images,
+  R2Bucket,
+  Vite,
+  Worker,
+} from 'alchemy/cloudflare'
 import { CloudflareStateStore } from 'alchemy/state'
 import { config } from 'dotenv'
 
@@ -25,16 +33,20 @@ const domain = (service: 'server' | 'web') => {
   return `${service}.${app.stage}.${stageConfig.development.baseDomain}`
 }
 
-const db = await D1Database('database', {
+const database = await D1Database('database', {
   migrationsDir: '../../packages/db/src/migrations',
 })
 
-const generationsBucket = await R2Bucket('generations', {
+const artifactsBucket = await R2Bucket('artifacts', {
   empty: !productionStages.has(app.stage),
 })
 
-const images = Images()
+const inferenceDO = DurableObjectNamespace('inference', {
+  className: 'InferenceDO',
+  sqlite: true,
+})
 
+const images = Images()
 const ai = Ai()
 
 export const server = await Worker('server', {
@@ -48,19 +60,20 @@ export const server = await Worker('server', {
   },
   bindings: {
     AI: ai,
-    DB: db,
-    GENERATIONS_BUCKET: generationsBucket,
+    ARTIFACTS_BUCKET: artifactsBucket,
+    DATABASE: database,
+    INFERENCE_DO: inferenceDO,
+
     IMAGES: images,
 
     API_KEY: alchemy.secret.env.API_KEY!,
-    FAL_KEY: alchemy.secret.env.FAL_KEY!,
     PUBLIC_URL: `https://${domain('server')}`,
     RUNWARE_KEY: alchemy.secret.env.RUNWARE_KEY!,
   },
   dev: {
     port: 3220,
   },
-  domains: [domain('server')],
+  domains: [{ domainName: domain('server') }],
 })
 
 // In dev, Alchemy sets .url to localhost. In deploy, fall back to the domain.
@@ -72,13 +85,13 @@ export const web = await Vite('web', {
   cwd: '../../apps/web',
   assets: 'dist',
   bindings: {
-    VITE_SERVER_URL: url(server),
+    VITE_SERVER_URL: process.env.OVERRIDE_SERVER_URL ?? url(server),
     VITE_BUILD_ID: process.env.VITE_BUILD_ID ?? Date.now().toString(),
   },
-  domains: [domain('web')],
+  domains: [{ domainName: domain('web') }],
 })
 
 console.log(`Server: ${url(server)}`)
-console.log(`Web:    ${url(web)}`)
+console.log(`Web:    ${url(web)}`, `(-> ${web.bindings.VITE_SERVER_URL})`)
 
 await app.finalize()

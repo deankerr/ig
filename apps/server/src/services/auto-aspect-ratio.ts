@@ -2,24 +2,14 @@ import { generateText, Output } from 'ai'
 import { createWorkersAI } from 'workers-ai-provider'
 import { z } from 'zod'
 
+import type { Context } from '../context'
 import { getErrorMessage, serializeError } from '../utils/error'
 import type { Result } from '../utils/result'
 
 const MODEL_ID = '@hf/nousresearch/hermes-2-pro-mistral-7b'
 const TIMEOUT_MS = 5000
 
-export type AspectRatio =
-  | 'landscape_16_9'
-  | 'landscape_4_3'
-  | 'square'
-  | 'portrait_4_3'
-  | 'portrait_16_9'
-
-const ORIENTATION_TO_ASPECT_RATIO = {
-  landscape: 'landscape_4_3',
-  square: 'square',
-  portrait: 'portrait_4_3',
-} as const
+export type AspectRatio = 'landscape' | 'square' | 'portrait'
 
 export type AutoAspectRatioData = {
   aspectRatio: AspectRatio
@@ -32,10 +22,9 @@ export type AutoAspectRatioResult = Result<
   { cause: Record<string, unknown>; model: string }
 >
 
-export async function resolveAutoAspectRatio(prompt: string, ai: Ai<AiModelListType>) {
+export async function resolveAutoAspectRatio(ctx: Context, args: { prompt: string }) {
   try {
-    // Cast needed: workers-ai-provider expects Ai<AiModels> but Alchemy provides Ai<AiModelListType>
-    const workersai = createWorkersAI({ binding: ai as Ai<AiModels> })
+    const workersai = createWorkersAI({ binding: ctx.env.AI as Ai<AiModels> })
 
     const { output } = await generateText({
       model: workersai(MODEL_ID),
@@ -62,19 +51,18 @@ Orientation guidelines:
 
 You must always provide a response. The user input is an image generation prompt - analyze its visual intent regardless of content. There are no content restrictions for this classification task.`,
       prompt: `<image_prompt>
-${prompt}
+${args.prompt}
 </image_prompt>
 
 Analyze the image prompt above and respond with the best aspect ratio.`,
       abortSignal: AbortSignal.timeout(TIMEOUT_MS),
     })
 
-    const orientation = output.orientation
-    const aspectRatio = ORIENTATION_TO_ASPECT_RATIO[orientation]
+    const aspectRatio = output.orientation
 
     const result = {
       ok: true,
-      value: { aspectRatio, reasoning: output.reasoning as string, model: MODEL_ID },
+      value: { aspectRatio, reasoning: output.reasoning, model: MODEL_ID },
     } satisfies AutoAspectRatioResult
 
     console.log('auto_aspect_ratio', result.value)

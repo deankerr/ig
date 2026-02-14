@@ -1,9 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { HeadContent, Outlet, createRootRouteWithContext } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
-import Header from '@/components/header'
 import { RouteError } from '@/components/route-error'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -19,7 +17,9 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({
     meta: [
       {
-        title: 'ig-console',
+        title: import.meta.env.PROD
+          ? 'ig console'
+          : `[${import.meta.env.MODE.toUpperCase().slice(0, 3)}] ig console`,
       },
       {
         name: 'description',
@@ -39,19 +39,15 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <div className="bg-background text-foreground flex h-svh flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-hidden">
-          <Outlet />
-        </main>
-      </div>
+      <Outlet />
+
       <Toaster
         position="bottom-right"
         toastOptions={{
           className: 'font-mono text-sm border-border bg-card',
         }}
       />
-      <TanStackRouterDevtools position="bottom-left" />
+      {/* <TanStackRouterDevtools position="bottom-left" /> */}
       <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
     </>
   )
