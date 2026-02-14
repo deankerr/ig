@@ -3,11 +3,10 @@
 import { z } from 'zod'
 
 import { searchModels } from '../models'
-import { publicProcedure } from '../orpc'
+import { procedure } from '../orpc'
 
 export const modelsRouter = {
-  search: publicProcedure
-    .route({ spec: { security: [] } })
+  search: procedure
     .input(
       z.object({
         search: z.string().optional(),

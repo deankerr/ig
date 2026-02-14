@@ -1,19 +1,17 @@
 import type { RouterClient } from '@orpc/server'
 
-import { publicProcedure } from '../orpc'
+import { procedure } from '../orpc'
 import { artifactsRouter } from './artifacts'
 import { generationsRouter } from './generations'
-import { migrateRouter } from './migrate'
 import { modelsRouter } from './models'
 
 export const appRouter = {
-  healthCheck: publicProcedure.handler(() => {
+  healthCheck: procedure.handler(() => {
     return 'OK'
   }),
   generations: generationsRouter,
   artifacts: artifactsRouter,
   models: modelsRouter,
-  migrate: migrateRouter,
 }
 export type AppRouter = typeof appRouter
 export type AppRouterClient = RouterClient<typeof appRouter>

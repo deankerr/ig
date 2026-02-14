@@ -33,21 +33,6 @@ const domain = (service: 'server' | 'web') => {
   return `${service}.${app.stage}.${stageConfig.development.baseDomain}`
 }
 
-// original - transfer out
-const olddb = await D1Database('db', {
-  name: 'ig-database-prod-1',
-  adopt: true,
-  delete: false,
-})
-
-const oldbucket = await R2Bucket('generations', {
-  name: 'ig-generations-prod-1',
-  adopt: true,
-  delete: false,
-  empty: !productionStages.has(app.stage),
-})
-
-// new
 const database = await D1Database('database', {
   migrationsDir: '../../packages/db/src/migrations',
 })
@@ -84,14 +69,11 @@ export const server = await Worker('server', {
     API_KEY: alchemy.secret.env.API_KEY!,
     PUBLIC_URL: `https://${domain('server')}`,
     RUNWARE_KEY: alchemy.secret.env.RUNWARE_KEY!,
-
-    OLDDB: olddb,
-    OLDBUCKET: oldbucket,
   },
   dev: {
     port: 3220,
   },
-  domains: [domain('server')],
+  domains: [{ domainName: domain('server') }],
 })
 
 // In dev, Alchemy sets .url to localhost. In deploy, fall back to the domain.
@@ -106,7 +88,7 @@ export const web = await Vite('web', {
     VITE_SERVER_URL: process.env.OVERRIDE_SERVER_URL ?? url(server),
     VITE_BUILD_ID: process.env.VITE_BUILD_ID ?? Date.now().toString(),
   },
-  domains: [domain('web')],
+  domains: [{ domainName: domain('web') }],
 })
 
 console.log(`Server: ${url(server)}`)

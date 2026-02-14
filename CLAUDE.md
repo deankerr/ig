@@ -77,21 +77,19 @@ The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. 
 - **REST** (`/api/*`) — Scalar docs at `/api`, OpenAPI spec at `/api/spec.json`
 - **RPC** (`/rpc/*`) — oRPC endpoints (used by the web app via RPCLink)
 - **Webhooks** (`/webhooks/runware`) — provider callbacks
-- **Auth**: Mutations require `x-api-key` header. Queries are public.
+- **Auth**: All endpoints require `x-api-key` header.
 
 ### Curling the server
 
 Use the OpenAPI endpoints (all POST, JSON body) — not the oRPC wire format. The base URL is `https://server.{stage}.ig-dev.orb.town` (see `packages/infra/config.ts`). The dev stage defaults to the OS username, so the default is `https://server.{username}.ig-dev.orb.town`.
 
 ```bash
-# Mutations (require x-api-key)
 curl -X POST $BASE_URL/api/generations/create \
   -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
   -d '{"model":"civitai:4384@128713","positivePrompt":"a cat","sync":true}'
 
-# Queries (public)
 curl -X POST $BASE_URL/api/generations/status \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
   -d '{"id":"<generation-id>"}'
 ```
 

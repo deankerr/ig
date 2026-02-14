@@ -6,7 +6,7 @@ import { ORPCError } from '@orpc/server'
 import { and, desc, eq, getTableColumns, inArray, isNull, lt, or } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { apiKeyProcedure, publicProcedure } from '../orpc'
+import { procedure } from '../orpc'
 import {
   decodeCursor,
   encodeCursor,
@@ -54,58 +54,51 @@ async function getArtifactById(id: string) {
 }
 
 export const artifactsRouter = {
-  list: publicProcedure
-    .route({ spec: { security: [] } })
-    .input(paginationInput)
-    .handler(async ({ input }) => {
-      const { cursor, limit } = input
-      const decoded = cursor ? decodeCursor(cursor) : null
+  list: procedure.input(paginationInput).handler(async ({ input }) => {
+    const { cursor, limit } = input
+    const decoded = cursor ? decodeCursor(cursor) : null
 
-      // Keyset condition: rows before the cursor position
-      const cursorCondition = decoded
-        ? or(
-            lt(artifacts.createdAt, decoded.createdAt),
-            and(eq(artifacts.createdAt, decoded.createdAt), lt(artifacts.id, decoded.id)),
-          )
-        : undefined
+    // Keyset condition: rows before the cursor position
+    const cursorCondition = decoded
+      ? or(
+          lt(artifacts.createdAt, decoded.createdAt),
+          and(eq(artifacts.createdAt, decoded.createdAt), lt(artifacts.id, decoded.id)),
+        )
+      : undefined
 
-      // Join generation so each artifact carries its full context
-      const notDeleted = isNull(artifacts.deletedAt)
-      const items = await db
-        .select({
-          ...getTableColumns(artifacts),
-          generation: getTableColumns(generations),
-        })
-        .from(artifacts)
-        .innerJoin(generations, eq(artifacts.generationId, generations.id))
-        .where(cursorCondition ? and(notDeleted, cursorCondition) : notDeleted)
-        .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
-        .limit(limit + 1)
+    // Join generation so each artifact carries its full context
+    const notDeleted = isNull(artifacts.deletedAt)
+    const items = await db
+      .select({
+        ...getTableColumns(artifacts),
+        generation: getTableColumns(generations),
+      })
+      .from(artifacts)
+      .innerJoin(generations, eq(artifacts.generationId, generations.id))
+      .where(cursorCondition ? and(notDeleted, cursorCondition) : notDeleted)
+      .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
+      .limit(limit + 1)
 
-      // Extra row signals more pages exist
-      const hasMore = items.length > limit
-      if (hasMore) items.pop()
+    // Extra row signals more pages exist
+    const hasMore = items.length > limit
+    if (hasMore) items.pop()
 
-      // Merge tags onto each artifact
-      const tagMap = await fetchTagsForArtifacts(items.map((i) => i.id))
-      const itemsWithTags = items.map((i) => ({ ...i, tags: tagMap.get(i.id) ?? {} }))
+    // Merge tags onto each artifact
+    const tagMap = await fetchTagsForArtifacts(items.map((i) => i.id))
+    const itemsWithTags = items.map((i) => ({ ...i, tags: tagMap.get(i.id) ?? {} }))
 
-      const lastItem = items[items.length - 1]
-      const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.createdAt, lastItem.id) : null
+    const lastItem = items[items.length - 1]
+    const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.createdAt, lastItem.id) : null
 
-      return { items: itemsWithTags, nextCursor }
-    }),
+    return { items: itemsWithTags, nextCursor }
+  }),
 
-  get: publicProcedure
-    .route({ spec: { security: [] } })
-    .input(z.object({ id: z.string() }))
-    .handler(async ({ input }) => {
-      return getArtifactById(input.id)
-    }),
+  get: procedure.input(z.object({ id: z.string() })).handler(async ({ input }) => {
+    return getArtifactById(input.id)
+  }),
 
   // List artifacts matching a tag key and optional value
-  listByTag: publicProcedure
-    .route({ spec: { security: [] } })
+  listByTag: procedure
     .input(
       z.object({
         tag: z.string(),
@@ -149,38 +142,36 @@ export const artifactsRouter = {
     }),
 
   // Soft-delete: mark deletedAt, remove R2 blob + tags, keep D1 row
-  delete: apiKeyProcedure
-    .input(z.object({ id: z.string() }))
-    .handler(async ({ input, context }) => {
-      const [artifact] = await db
-        .select({ id: artifacts.id, r2Key: artifacts.r2Key })
-        .from(artifacts)
-        .where(eq(artifacts.id, input.id))
-        .limit(1)
+  delete: procedure.input(z.object({ id: z.string() })).handler(async ({ input, context }) => {
+    const [artifact] = await db
+      .select({ id: artifacts.id, r2Key: artifacts.r2Key })
+      .from(artifacts)
+      .where(eq(artifacts.id, input.id))
+      .limit(1)
 
-      if (!artifact) {
-        console.log('[artifacts:delete] not found', { id: input.id })
-        return { id: input.id }
-      }
-
-      const now = new Date()
-
-      // Soft-delete artifact row
-      await db.update(artifacts).set({ deletedAt: now }).where(eq(artifacts.id, input.id))
-
-      // Delete R2 blob
-      await context.env.ARTIFACTS_BUCKET.delete(artifact.r2Key)
-
-      // Delete tags
-      await db.delete(tags).where(eq(tags.targetId, input.id))
-
-      console.log('[artifacts:delete]', { id: input.id })
+    if (!artifact) {
+      console.log('[artifacts:delete] not found', { id: input.id })
       return { id: input.id }
-    }),
+    }
+
+    const now = new Date()
+
+    // Soft-delete artifact row
+    await db.update(artifacts).set({ deletedAt: now }).where(eq(artifacts.id, input.id))
+
+    // Delete R2 blob
+    await context.env.ARTIFACTS_BUCKET.delete(artifact.r2Key)
+
+    // Delete tags
+    await db.delete(tags).where(eq(tags.targetId, input.id))
+
+    console.log('[artifacts:delete]', { id: input.id })
+    return { id: input.id }
+  }),
 
   tags: {
     // Upsert tags on an artifact (creates or updates values)
-    set: apiKeyProcedure
+    set: procedure
       .input(
         z.object({
           artifactId: z.string(),
@@ -205,7 +196,7 @@ export const artifactsRouter = {
       }),
 
     // Remove tags by key names
-    remove: apiKeyProcedure
+    remove: procedure
       .input(
         z.object({
           artifactId: z.string(),

@@ -10,9 +10,6 @@ declare global {
     IMAGES: ImagesBinding
     INFERENCE_DO: DurableObjectNamespace
 
-    OLDDB: D1Database
-    OLDBUCKET: R2Bucket
-
     API_KEY: string
     PUBLIC_URL: string
     RUNWARE_KEY: string
@@ -27,9 +24,6 @@ declare module 'cloudflare:workers' {
       ARTIFACTS_BUCKET: R2Bucket
       IMAGES: ImagesBinding
       INFERENCE_DO: DurableObjectNamespace
-
-      OLDDB: D1Database
-      OLDBUCKET: R2Bucket
 
       API_KEY: string
       PUBLIC_URL: string
