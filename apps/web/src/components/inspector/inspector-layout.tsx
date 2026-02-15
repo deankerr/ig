@@ -53,7 +53,7 @@ export function InspectorContent({
 // Right column: fixed-width metadata sidebar
 export function InspectorSidebar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="w-72 shrink-0 overflow-y-auto border-l p-4">
+    <div className="w-72 shrink-0 overflow-x-hidden overflow-y-auto border-l p-4">
       <div className="flex flex-col gap-3">{children}</div>
     </div>
   )
