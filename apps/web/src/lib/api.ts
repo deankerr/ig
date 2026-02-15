@@ -17,12 +17,18 @@ export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error, query) => {
       console.error('[query error]', query.queryKey, error)
-      toast.error(`Error: ${error.message}`)
+      // Only toast on background refetch failures — initial load errors are visible in the UI
+      if (query.state.data !== undefined) {
+        toast.error(`Error: ${error.message}`)
+      }
     },
   }),
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
       console.error('[mutation error]', mutation.options.mutationKey, error)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries()
     },
   }),
 })

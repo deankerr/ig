@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
 import { BracesIcon, SendIcon, TrashIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -24,14 +23,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { orpc, queryClient } from '@/lib/api'
+import { queryClient } from '@/lib/api'
 import { formatDuration } from '@/lib/format'
-import { deleteGenerationMutation, getGenerationOptions, statusQueryOptions } from '@/lib/queries'
+import { statusQueryOptions, useDeleteGeneration, useGeneration } from '@/lib/queries'
 
 export function GenerationInspector() {
   const { id, close, sendToBench } = useInspector()
-  const query = useQuery(getGenerationOptions(id))
-  const deleteMutation = useMutation(deleteGenerationMutation())
+  const query = useGeneration(id)
+  const deleteMutation = useDeleteGeneration()
   const jsonSheet = useJsonSheet()
   const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -62,8 +61,6 @@ export function GenerationInspector() {
         onSuccess: () => {
           console.log('[generation-inspector:deleted]', { id })
           toast.success('Generation deleted')
-          queryClient.invalidateQueries({ queryKey: orpc.generations.key() })
-          queryClient.invalidateQueries({ queryKey: orpc.artifacts.key() })
           close()
         },
         onError: (error) => {

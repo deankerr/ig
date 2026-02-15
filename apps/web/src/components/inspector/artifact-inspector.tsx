@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   BracesIcon,
   ClipboardIcon,
@@ -22,15 +21,15 @@ import { ArtifactLink } from '@/components/shared/artifact-link'
 import { useJsonSheet } from '@/components/shared/json-sheet'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { Button } from '@/components/ui/button'
-import { orpc, queryClient } from '@/lib/api'
+import { queryClient } from '@/lib/api'
 import { formatDuration, formatPrice } from '@/lib/format'
-import { deleteArtifactMutation, getArtifactOptions, statusQueryOptions } from '@/lib/queries'
+import { statusQueryOptions, useArtifact, useDeleteArtifact } from '@/lib/queries'
 import { serverUrl } from '@/lib/utils'
 
 export function ArtifactInspector() {
   const { id, close, copy, sendToBench } = useInspector()
-  const query = useQuery(getArtifactOptions(id))
-  const deleteMutation = useMutation(deleteArtifactMutation())
+  const query = useArtifact(id)
+  const deleteMutation = useDeleteArtifact()
   const jsonSheet = useJsonSheet()
 
   if (query.isLoading) {
@@ -70,7 +69,6 @@ export function ArtifactInspector() {
         onSuccess: () => {
           console.log('[artifact-inspector:deleted]', { id })
           toast.success('Artifact deleted')
-          queryClient.invalidateQueries({ queryKey: orpc.artifacts.key() })
           close()
         },
         onError: (error) => {
