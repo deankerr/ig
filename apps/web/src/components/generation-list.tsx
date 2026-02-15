@@ -11,7 +11,7 @@ import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
 import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
 import { useGenerations } from '@/lib/queries'
 
-import { ArtifactThumbnail } from './shared/artifact-thumbnail'
+import { ArtifactMedia } from './shared/artifact-media'
 
 export const GenerationList = memo(function GenerationList() {
   const search = useSearch({ from: '/' })
@@ -75,7 +75,7 @@ type Generation = {
   error: string | null
   createdAt: Date
   completedAt: Date | null
-  artifacts: Array<{ id: string; cost: number | null }>
+  artifacts: Array<{ id: string; contentType: string; cost: number | null }>
 }
 
 type SearchParams = {
@@ -133,7 +133,13 @@ const GenerationRow = memo(function GenerationRow({
       {/* Artifact thumbnails */}
       <div className="flex w-full flex-wrap gap-1 py-1">
         {gen.artifacts.map((a) => (
-          <ArtifactThumbnail key={a.id} id={a.id} size="small" className="size-20" />
+          <ArtifactMedia
+            key={a.id}
+            id={a.id}
+            contentType={a.contentType}
+            width={256}
+            className="size-20"
+          />
         ))}
         {/* Placeholder slots for expected-but-not-yet-arrived artifacts */}
         {isInProgress &&

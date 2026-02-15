@@ -1,3 +1,4 @@
+import { Link, useSearch } from '@tanstack/react-router'
 import { BracesIcon, FileSearchIcon, SendIcon, TrashIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -12,7 +13,7 @@ import {
 } from '@/components/inspector/inspector-layout'
 import { MetaField } from '@/components/inspector/meta-field'
 import { Loader } from '@/components/loader'
-import { ArtifactLink } from '@/components/shared/artifact-link'
+import { ArtifactMedia } from '@/components/shared/artifact-media'
 import { useJsonSheet } from '@/components/shared/json-sheet'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,7 @@ import { statusQueryOptions, useDeleteGeneration, useGeneration } from '@/lib/qu
 
 export function GenerationInspector() {
   const { id, close, sendToBench } = useInspector()
+  const search = useSearch({ from: '/' })
   const query = useGeneration(id)
   const deleteMutation = useDeleteGeneration()
   const jsonSheet = useJsonSheet()
@@ -118,7 +120,19 @@ export function GenerationInspector() {
           {artifacts.length > 0 ? (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2">
               {artifacts.map((a) => (
-                <ArtifactLink key={a.id} id={a.id} mode="grid" />
+                <Link
+                  key={a.id}
+                  to="/"
+                  search={{ ...search, artifact: a.id }}
+                  className="hover:border-ring relative aspect-square overflow-hidden border border-transparent transition-colors"
+                >
+                  <ArtifactMedia
+                    id={a.id}
+                    contentType={a.contentType}
+                    width={512}
+                    className="h-full w-full"
+                  />
+                </Link>
               ))}
             </div>
           ) : (
