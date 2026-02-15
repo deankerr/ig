@@ -2,8 +2,7 @@ import { Link, useSearch } from '@tanstack/react-router'
 import { memo, useMemo, useState } from 'react'
 
 import { DisplayToggle } from '@/components/display-toggle'
-import { ArtifactLink } from '@/components/shared/artifact-link'
-import { ArtifactThumbnail } from '@/components/shared/artifact-thumbnail'
+import { ArtifactMedia } from '@/components/shared/artifact-media'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { Empty, EmptyDescription } from '@/components/ui/empty'
 import {
@@ -65,7 +64,19 @@ export const ArtifactList = memo(function ArtifactList() {
                 <Skeleton key={i} className="aspect-square" />
               ))
             : allArtifacts.map((artifact) => (
-                <ArtifactLink key={artifact.id} id={artifact.id} mode="grid" />
+                <Link
+                  key={artifact.id}
+                  to="/"
+                  search={{ ...search, artifact: artifact.id }}
+                  className="hover:border-ring relative aspect-square overflow-hidden border border-transparent transition-colors"
+                >
+                  <ArtifactMedia
+                    id={artifact.id}
+                    contentType={artifact.contentType}
+                    width={512}
+                    className="h-full w-full"
+                  />
+                </Link>
               ))}
         </div>
       )}
@@ -81,7 +92,11 @@ export const ArtifactList = memo(function ArtifactList() {
                   render={<Link to="/" search={{ ...search, artifact: artifact.id }} />}
                 >
                   <ItemMedia variant="image">
-                    <ArtifactThumbnail id={artifact.id} size="small" />
+                    <ArtifactMedia
+                      id={artifact.id}
+                      contentType={artifact.contentType}
+                      width={256}
+                    />
                   </ItemMedia>
                   <ItemContent>
                     <ItemTitle className="w-full">

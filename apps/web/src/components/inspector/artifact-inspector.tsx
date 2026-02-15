@@ -1,3 +1,4 @@
+import { Link, useSearch } from '@tanstack/react-router'
 import {
   BracesIcon,
   ClipboardIcon,
@@ -19,7 +20,7 @@ import {
 } from '@/components/inspector/inspector-layout'
 import { MetaField } from '@/components/inspector/meta-field'
 import { Loader } from '@/components/loader'
-import { ArtifactLink } from '@/components/shared/artifact-link'
+import { ArtifactMedia } from '@/components/shared/artifact-media'
 import { useJsonSheet } from '@/components/shared/json-sheet'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { Button } from '@/components/ui/button'
@@ -27,10 +28,11 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/
 import { queryClient } from '@/lib/api'
 import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
 import { statusQueryOptions, useArtifact, useDeleteArtifact } from '@/lib/queries'
-import { serverUrl } from '@/lib/utils'
+import { cn, serverUrl } from '@/lib/utils'
 
 export function ArtifactInspector() {
   const { id, close, copy, sendToBench } = useInspector()
+  const search = useSearch({ from: '/' })
   const query = useArtifact(id)
   const deleteMutation = useDeleteArtifact()
   const jsonSheet = useJsonSheet()
@@ -139,17 +141,34 @@ export function ArtifactInspector() {
       <InspectorBody>
         {/* Image preview + sibling strip */}
         <InspectorContent className="flex flex-col">
-          <div className="bg-muted flex flex-1 items-center justify-center overflow-hidden">
-            <img
-              src={`${imageUrl}?w=1024&f=webp`}
-              alt=""
-              className="max-h-full max-w-full object-contain"
-            />
-          </div>
+          <ArtifactMedia
+            id={artifact.id}
+            contentType={artifact.contentType}
+            width={2048}
+            fit="contain"
+            className="flex-1"
+          />
           {siblings.length > 1 && (
             <div className="flex shrink-0 justify-center gap-1 border-t p-2">
               {siblings.map((s) => (
-                <ArtifactLink key={s.id} id={s.id} active={s.id === artifact.id} />
+                <Link
+                  key={s.id}
+                  to="/"
+                  search={{ ...search, artifact: s.id }}
+                  className={cn(
+                    'border transition-colors',
+                    s.id === artifact.id
+                      ? 'border-ring'
+                      : 'hover:border-ring/50 border-transparent',
+                  )}
+                >
+                  <ArtifactMedia
+                    id={s.id}
+                    contentType={s.contentType}
+                    width={256}
+                    className="size-20"
+                  />
+                </Link>
               ))}
             </div>
           )}
