@@ -1,4 +1,3 @@
-import { useMutation } from '@tanstack/react-query'
 import { BracesIcon, SendIcon, XIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -7,8 +6,7 @@ import { useBench } from '@/components/bench-provider'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { orpc, queryClient } from '@/lib/api'
-import { createImageMutation } from '@/lib/queries'
+import { useCreateImage } from '@/lib/queries'
 import * as storage from '@/lib/storage'
 
 const CRAFT_BENCH_EVENT = 'craft-bench-input-update'
@@ -92,7 +90,7 @@ export function CraftBench() {
     return () => window.removeEventListener(CRAFT_BENCH_EVENT, handleUpdate)
   }, [])
 
-  const mutation = useMutation(createImageMutation())
+  const mutation = useCreateImage()
 
   const handleSend = useCallback(() => {
     let parsed: Record<string, unknown>
@@ -113,8 +111,6 @@ export function CraftBench() {
       onSuccess: (data) => {
         console.log('[craft-bench:submitted]', { id: data.id })
         toast.success('Request submitted')
-        // Invalidate generation list so the new in-progress row appears
-        queryClient.invalidateQueries({ queryKey: orpc.generations.key() })
       },
       onError: (error) => {
         toast.error(`Failed: ${error.message}`)

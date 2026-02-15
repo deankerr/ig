@@ -1,4 +1,3 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
 import { Link, useSearch } from '@tanstack/react-router'
 import { AlertCircleIcon } from 'lucide-react'
 import { memo, useMemo } from 'react'
@@ -10,13 +9,13 @@ import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/comp
 import { Skeleton } from '@/components/ui/skeleton'
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
 import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
-import { listGenerationsOptions } from '@/lib/queries'
+import { useGenerations } from '@/lib/queries'
 
 import { ArtifactThumbnail } from './shared/artifact-thumbnail'
 
 export const GenerationList = memo(function GenerationList() {
   const search = useSearch({ from: '/' })
-  const query = useInfiniteQuery(listGenerationsOptions())
+  const query = useGenerations()
 
   const { sentinelRef } = useInfiniteScroll({
     hasNextPage: query.hasNextPage,

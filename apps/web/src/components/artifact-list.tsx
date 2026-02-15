@@ -1,4 +1,3 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
 import { Link, useSearch } from '@tanstack/react-router'
 import { memo, useMemo, useState } from 'react'
 
@@ -18,7 +17,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
 import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
-import { listArtifactsOptions } from '@/lib/queries'
+import { useGenerations } from '@/lib/queries'
 import * as storage from '@/lib/storage'
 import type { DisplayMode } from '@/lib/storage'
 
@@ -26,7 +25,7 @@ export const ArtifactList = memo(function ArtifactList() {
   const search = useSearch({ from: '/' })
   const [display, setDisplay] = useState<DisplayMode>(storage.getDisplayMode)
 
-  const query = useInfiniteQuery(listArtifactsOptions())
+  const query = useGenerations()
 
   const { sentinelRef } = useInfiniteScroll({
     hasNextPage: query.hasNextPage,
@@ -34,7 +33,14 @@ export const ArtifactList = memo(function ArtifactList() {
     fetchNextPage: query.fetchNextPage,
   })
 
-  const allArtifacts = useMemo(() => query.data?.pages.flatMap((p) => p.items) ?? [], [query.data])
+  // Flatten artifacts from all generations, preserving parent generation context
+  const allArtifacts = useMemo(
+    () =>
+      (query.data?.pages.flatMap((p) => p.items) ?? []).flatMap((gen) =>
+        gen.artifacts.map((a) => ({ ...a, generation: gen })),
+      ),
+    [query.data],
+  )
 
   function handleDisplayChange(mode: DisplayMode) {
     setDisplay(mode)
@@ -83,7 +89,7 @@ export const ArtifactList = memo(function ArtifactList() {
                       <div className="text-muted-foreground flex grow justify-end gap-4">
                         <span>{formatPrice(artifact.cost)}</span>
                         <span>
-                          {artifact.generation?.completedAt &&
+                          {artifact.generation.completedAt &&
                             formatDuration(
                               new Date(artifact.generation.completedAt).getTime() -
                                 new Date(artifact.generation.createdAt).getTime(),

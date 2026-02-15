@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -14,7 +13,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { healthQueryOptions } from '@/lib/queries'
+import { useHealth } from '@/lib/queries'
 import * as storage from '@/lib/storage'
 import { serverUrl } from '@/lib/utils'
 
@@ -23,7 +22,7 @@ export function ServerStatus() {
   const [key, setKey] = useState('')
   const [hasKey, setHasKey] = useState(() => !!storage.getApiKey())
 
-  const health = useQuery(healthQueryOptions())
+  const health = useHealth()
 
   // Determine dot color: yellow (pending) if no key, green if healthy, red if failed
   const dotColor = !hasKey
