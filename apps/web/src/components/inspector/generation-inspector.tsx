@@ -1,4 +1,4 @@
-import { BracesIcon, SendIcon, TrashIcon } from 'lucide-react'
+import { BracesIcon, FileSearchIcon, SendIcon, TrashIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -11,6 +11,7 @@ import {
   InspectorSidebar,
 } from '@/components/inspector/inspector-layout'
 import { MetaField } from '@/components/inspector/meta-field'
+import { Loader } from '@/components/loader'
 import { ArtifactLink } from '@/components/shared/artifact-link'
 import { useJsonSheet } from '@/components/shared/json-sheet'
 import { TimeAgo } from '@/components/shared/time-ago'
@@ -23,8 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
 import { queryClient } from '@/lib/api'
-import { formatDuration } from '@/lib/format'
+import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
 import { statusQueryOptions, useDeleteGeneration, useGeneration } from '@/lib/queries'
 
 export function GenerationInspector() {
@@ -35,16 +37,39 @@ export function GenerationInspector() {
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   if (query.isLoading) {
-    return <div className="text-muted-foreground py-8 text-center text-xs">Loading...</div>
+    return (
+      <>
+        <InspectorHeader title={`generation/${id}`} />
+        <InspectorBody>
+          <InspectorContent>
+            <Loader />
+          </InspectorContent>
+          <InspectorSidebar>{null}</InspectorSidebar>
+        </InspectorBody>
+      </>
+    )
   }
 
   if (!query.data) {
     return (
-      <div className="text-muted-foreground py-8 text-center text-xs">Generation not found</div>
+      <>
+        <InspectorHeader title={`generation/${id}`} />
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FileSearchIcon />
+            </EmptyMedia>
+            <EmptyTitle>Generation not found</EmptyTitle>
+            <EmptyDescription>This generation may have been deleted.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </>
     )
   }
 
   const { artifacts, ...generation } = query.data
+  const prompt = formatPrompt(generation.input)
+  const totalCost = artifacts.reduce((sum, a) => sum + (a.cost ?? 0), 0)
   const duration = generation.completedAt
     ? new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()
     : null
@@ -97,14 +122,28 @@ export function GenerationInspector() {
               ))}
             </div>
           ) : (
-            <div className="text-muted-foreground py-8 text-center text-xs">No artifacts</div>
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>No artifacts</EmptyTitle>
+                <EmptyDescription>
+                  This generation hasn't produced any artifacts yet.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
         </InspectorContent>
 
         {/* Metadata sidebar */}
         <InspectorSidebar>
+          {prompt !== '' && (
+            <div className="flex flex-col gap-0.5 text-xs">
+              <span className="text-muted-foreground">prompt</span>
+              <span className="break-words">{prompt}</span>
+            </div>
+          )}
           <MetaField label="model" value={generation.model} />
           <MetaField label="artifacts" value={`${artifacts.length} / ${generation.batch}`} />
+          {totalCost > 0 && <MetaField label="total cost" value={formatPrice(totalCost)} />}
           <MetaField
             label="duration"
             value={duration != null ? formatDuration(duration) : 'in progress'}

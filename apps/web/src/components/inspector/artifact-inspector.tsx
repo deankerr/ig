@@ -3,6 +3,7 @@ import {
   ClipboardIcon,
   DownloadIcon,
   ExternalLinkIcon,
+  ImageOffIcon,
   SendIcon,
   TrashIcon,
 } from 'lucide-react'
@@ -17,12 +18,14 @@ import {
   InspectorSidebar,
 } from '@/components/inspector/inspector-layout'
 import { MetaField } from '@/components/inspector/meta-field'
+import { Loader } from '@/components/loader'
 import { ArtifactLink } from '@/components/shared/artifact-link'
 import { useJsonSheet } from '@/components/shared/json-sheet'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { Button } from '@/components/ui/button'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
 import { queryClient } from '@/lib/api'
-import { formatDuration, formatPrice } from '@/lib/format'
+import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
 import { statusQueryOptions, useArtifact, useDeleteArtifact } from '@/lib/queries'
 import { serverUrl } from '@/lib/utils'
 
@@ -33,15 +36,41 @@ export function ArtifactInspector() {
   const jsonSheet = useJsonSheet()
 
   if (query.isLoading) {
-    return <div className="text-muted-foreground py-8 text-center text-xs">Loading...</div>
+    return (
+      <>
+        <InspectorHeader title={`artifact/${id}`} />
+        <InspectorBody>
+          <InspectorContent>
+            <Loader />
+          </InspectorContent>
+          <InspectorSidebar>{null}</InspectorSidebar>
+        </InspectorBody>
+      </>
+    )
   }
 
   if (!query.data) {
-    return <div className="text-muted-foreground py-8 text-center text-xs">Artifact not found</div>
+    return (
+      <>
+        <InspectorHeader title={`artifact/${id}`} />
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ImageOffIcon />
+            </EmptyMedia>
+            <EmptyTitle>Artifact not found</EmptyTitle>
+            <EmptyDescription>This artifact may have been deleted.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </>
+    )
   }
 
   const { artifact, generation, siblings } = query.data
   const imageUrl = `${serverUrl.origin}/artifacts/${artifact.id}/file`
+  const slug = artifact.tags['ig:slug'] as string | undefined
+  const publicUrl = slug ? `${serverUrl.origin}/a/${slug}` : imageUrl
+  const prompt = formatPrompt(generation.input)
   const duration = generation.completedAt
     ? new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()
     : null
@@ -81,13 +110,16 @@ export function ArtifactInspector() {
   return (
     <>
       <InspectorHeader title={`artifact/${artifact.id}`}>
-        <HeaderAction label="Open in new tab" onClick={() => window.open(imageUrl, '_blank')}>
+        <HeaderAction label="Open in new tab" onClick={() => window.open(publicUrl, '_blank')}>
           <ExternalLinkIcon />
         </HeaderAction>
         <HeaderAction label="Download" onClick={handleDownload}>
           <DownloadIcon />
         </HeaderAction>
-        <HeaderAction label="Copy URL" onClick={() => copy(imageUrl, 'URL copied')}>
+        <HeaderAction
+          label={slug ? 'Copy slug URL' : 'Copy URL'}
+          onClick={() => copy(publicUrl, 'URL copied')}
+        >
           <ClipboardIcon />
         </HeaderAction>
         <HeaderAction label="Send to bench" onClick={handleSendToBench}>
@@ -125,6 +157,12 @@ export function ArtifactInspector() {
 
         {/* Metadata sidebar */}
         <InspectorSidebar>
+          {prompt !== '' && (
+            <div className="flex flex-col gap-0.5 text-xs">
+              <span className="text-muted-foreground">prompt</span>
+              <span className="break-words">{prompt}</span>
+            </div>
+          )}
           <MetaField label="model" value={artifact.model} />
           <MetaField label="content type" value={artifact.contentType} />
           {artifact.seed != null && <MetaField label="seed" value={String(artifact.seed)} />}
@@ -141,7 +179,7 @@ export function ArtifactInspector() {
               <span className="text-muted-foreground text-xs font-medium">tags</span>
               <div className="flex flex-wrap gap-1">
                 {Object.entries(artifact.tags).map(([key, value]) => (
-                  <span key={key} className="bg-muted rounded px-1.5 py-0.5 text-xs">
+                  <span key={key} className="bg-muted rounded px-1.5 py-0.5 text-xs break-all">
                     {value != null ? `${key}=${value}` : key}
                   </span>
                 ))}

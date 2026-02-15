@@ -32,6 +32,20 @@ bun run deploy        # Deploy to Cloudflare via Alchemy
 - Do not deploy unless specifically asked.
 - LSP diagnostics are often stale in this project - `bun run check` is the source of truth.
 
+### Graphite (stacked PRs)
+
+Use the Graphite CLI for all branch/PR operations — not raw git branching or `gh pr create`.
+
+```bash
+gt create -am "commit message"   # Stage all + create branch + commit
+gt modify -a                     # Amend staged changes to current branch
+gt submit                        # Push + create/update PRs (current + downstack)
+gt ss                            # Push + create/update entire stack
+gt sync                          # Pull trunk, clean merged branches, restack
+```
+
+Each branch = one commit. `gt create` makes the branch, `gt submit` makes the PR.
+
 ## Features
 
 - Organise code into directories by "feature", "service", etc.
@@ -92,6 +106,21 @@ curl -X POST $BASE_URL/api/generations/status \
   -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
   -d '{"id":"<generation-id>"}'
 ```
+
+### Artifact Slug URLs
+
+Artifacts can have human-readable URLs via the tag system. A slug is stored as a tag with key `ig:slug` in the `tags` junction table — not as a column on `artifacts`.
+
+**Format:** `{uuid-prefix}-{slugified-text}` where the prefix is the first 12 hex chars of the artifact's UUIDv7 ID (~1ms timestamp resolution, prevents collisions).
+
+**Routes:**
+
+- `GET /a/{slug}[.ext]` — resolves slug → artifact via tag lookup → serves R2 file
+- `GET /artifacts/{id}/file` — direct access by artifact ID (no tag lookup)
+
+**Flow:** Consumer passes `tags: { "ig:slug": "my description" }` when creating a generation. The server normalizes it to `{uuid-prefix}-my-description` via `normalizeTagValues()` in `routers/utils.ts`, then persists it with `upsertTags()`.
+
+**Key files:** `apps/server/src/routes/file.ts` (routing), `apps/server/src/routers/utils.ts` (slug normalization + tag persistence).
 
 ## Database
 

@@ -3,7 +3,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import ReactDOM from 'react-dom/client'
 
 import { BenchProvider } from './components/bench-provider'
-import Loader from './components/loader'
+import { Loader } from './components/loader'
 import { JsonSheetProvider } from './components/shared/json-sheet'
 import { TooltipProvider } from './components/ui/tooltip'
 import { queryClient } from './lib/api'
