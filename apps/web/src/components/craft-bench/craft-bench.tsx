@@ -1,13 +1,17 @@
-import { BracesIcon, SendIcon, XIcon } from 'lucide-react'
+import { BracesIcon, ChevronDownIcon, SendIcon, XIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { useBench } from '@/components/bench-provider'
 import { Button } from '@/components/ui/button'
+import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useCreateImage } from '@/lib/queries'
+import { useCreateImage, useModel } from '@/lib/queries'
 import * as storage from '@/lib/storage'
+
+import { ModelPicker } from './model-picker'
 
 const CRAFT_BENCH_EVENT = 'craft-bench-input-update'
 
@@ -61,9 +65,31 @@ export function setCraftBenchInput(input: Record<string, unknown>) {
   window.dispatchEvent(new CustomEvent(CRAFT_BENCH_EVENT))
 }
 
+/** Extract the current model AIR from the JSON input string. */
+function getModelFromInput(input: string): string {
+  try {
+    const parsed = JSON.parse(input) as Record<string, unknown>
+    return typeof parsed.model === 'string' ? parsed.model : ''
+  } catch {
+    return ''
+  }
+}
+
+/** Update the model field in the JSON input string. */
+function setModelInInput(input: string, model: string): string {
+  try {
+    const parsed = JSON.parse(input) as Record<string, unknown>
+    parsed.model = model
+    return JSON.stringify(parsed, null, 2)
+  } catch {
+    return input
+  }
+}
+
 export function CraftBench() {
   const { close } = useBench()
   const [input, setInput] = useState(() => tryFormatJson(storage.getBenchInput() || DEFAULT_INPUT))
+  const [pickerOpen, setPickerOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const isValidJson = useMemo(() => {
@@ -74,6 +100,10 @@ export function CraftBench() {
       return false
     }
   }, [input])
+
+  // Derive current model AIR from the JSON, resolve metadata via cache/API
+  const currentModelAir = useMemo(() => getModelFromInput(input), [input])
+  const modelQuery = useModel(currentModelAir || undefined)
 
   // Persist input to localStorage (debounced)
   useEffect(() => {
@@ -91,6 +121,10 @@ export function CraftBench() {
   }, [])
 
   const mutation = useCreateImage()
+
+  const handleModelSelect = useCallback((air: string) => {
+    setInput((prev) => setModelInInput(prev, air))
+  }, [])
 
   const handleSend = useCallback(() => {
     let parsed: Record<string, unknown>
@@ -130,6 +164,50 @@ export function CraftBench() {
           </TooltipTrigger>
           <TooltipContent>Close</TooltipContent>
         </Tooltip>
+      </div>
+
+      {/* Model selector */}
+      <div className="border-border border-b px-3 py-2">
+        <Item
+          size="sm"
+          render={<button type="button" onClick={() => setPickerOpen(true)} />}
+          className="hover:bg-muted/50 cursor-pointer text-left"
+        >
+          {modelQuery.isPending ? (
+            <>
+              <Skeleton className="size-8 rounded" />
+              <ItemContent>
+                <Skeleton className="h-4 w-24" />
+              </ItemContent>
+            </>
+          ) : modelQuery.isError || !modelQuery.data ? (
+            <>
+              <ItemMedia variant="image" className="rounded">
+                <div className="bg-muted size-full border" />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle className="text-muted-foreground">
+                  {currentModelAir || 'Select model'}
+                </ItemTitle>
+              </ItemContent>
+            </>
+          ) : (
+            <>
+              <ItemMedia variant="image" className="rounded">
+                {modelQuery.data.heroImage ? (
+                  <img src={modelQuery.data.heroImage} alt="" loading="lazy" />
+                ) : (
+                  <div className="bg-muted size-full border" />
+                )}
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>{modelQuery.data.name}</ItemTitle>
+                <ItemDescription>{modelQuery.data.version}</ItemDescription>
+              </ItemContent>
+            </>
+          )}
+          <ChevronDownIcon className="text-muted-foreground size-4 shrink-0" />
+        </Item>
       </div>
 
       {/* Input area */}
@@ -182,6 +260,9 @@ export function CraftBench() {
           </div>
         </div>
       </div>
+
+      {/* Model picker dialog */}
+      <ModelPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={handleModelSelect} />
     </div>
   )
 }
