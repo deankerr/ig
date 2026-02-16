@@ -10,6 +10,7 @@ import { procedure } from '../orpc'
 import {
   decodeCursor,
   encodeCursor,
+  enrichWithModels,
   fetchTagsForArtifacts,
   paginationInput,
   upsertTags,
@@ -19,8 +20,8 @@ const MAX_TAGS = 20
 const MAX_KEY_LENGTH = 64
 const MAX_VALUE_LENGTH = 256
 
-// Shared: fetch an artifact by ID with generation, siblings, and tags
-async function getArtifactById(id: string) {
+// Shared: fetch an artifact by ID with generation, siblings, tags, and model data
+async function getArtifactById(id: string, kv: KVNamespace) {
   const [row] = await db
     .select({
       ...getTableColumns(artifacts),
@@ -46,15 +47,24 @@ async function getArtifactById(id: string) {
   const allIds = siblings.map((s) => s.id)
   const tagMap = await fetchTagsForArtifacts(allIds)
 
+  // Enrich artifact and siblings with model data from KV
+  const allItems = [artifact, ...siblings]
+  const enrichedItems = await enrichWithModels(kv, allItems)
+  const enrichedArtifact = enrichedItems[0]!
+  const enrichedSiblings = enrichedItems.slice(1)
+
+  // Enrich generation too
+  const enrichedGeneration = (await enrichWithModels(kv, [generation]))[0]!
+
   return {
-    artifact: { ...artifact, tags: tagMap.get(artifact.id) ?? {} },
-    generation,
-    siblings: siblings.map((s) => ({ ...s, tags: tagMap.get(s.id) ?? {} })),
+    artifact: { ...enrichedArtifact, tags: tagMap.get(artifact.id) ?? {} },
+    generation: enrichedGeneration,
+    siblings: enrichedSiblings.map((s) => ({ ...s, tags: tagMap.get(s.id) ?? {} })),
   }
 }
 
 export const artifactsRouter = {
-  list: procedure.input(paginationInput).handler(async ({ input }) => {
+  list: procedure.input(paginationInput).handler(async ({ input, context }) => {
     const { cursor, limit } = input
     const decoded = cursor ? decodeCursor(cursor) : null
 
@@ -87,14 +97,17 @@ export const artifactsRouter = {
     const tagMap = await fetchTagsForArtifacts(items.map((i) => i.id))
     const itemsWithTags = items.map((i) => ({ ...i, tags: tagMap.get(i.id) ?? {} }))
 
+    // Enrich with model data from KV
+    const enriched = await enrichWithModels(context.env.CACHE, itemsWithTags)
+
     const lastItem = items[items.length - 1]
     const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.createdAt, lastItem.id) : null
 
-    return { items: itemsWithTags, nextCursor }
+    return { items: enriched, nextCursor }
   }),
 
-  get: procedure.input(z.object({ id: z.string() })).handler(async ({ input }) => {
-    return getArtifactById(input.id)
+  get: procedure.input(z.object({ id: z.string() })).handler(async ({ input, context }) => {
+    return getArtifactById(input.id, context.env.CACHE)
   }),
 
   // List artifacts matching a tag key and optional value
@@ -106,7 +119,7 @@ export const artifactsRouter = {
         limit: z.number().int().min(1).max(100).optional().default(20),
       }),
     )
-    .handler(async ({ input }) => {
+    .handler(async ({ input, context }) => {
       // Find artifact IDs matching the tag
       const tagCondition =
         input.value != null
@@ -134,11 +147,11 @@ export const artifactsRouter = {
         .where(and(inArray(artifacts.id, artifactIds), isNull(artifacts.deletedAt)))
         .orderBy(desc(artifacts.createdAt))
 
-      // Merge tags
+      // Merge tags and enrich with model data
       const tagMap = await fetchTagsForArtifacts(items.map((i) => i.id))
-      return {
-        items: items.map((i) => ({ ...i, tags: tagMap.get(i.id) ?? {} })),
-      }
+      const itemsWithTags = items.map((i) => ({ ...i, tags: tagMap.get(i.id) ?? {} }))
+      const enriched = await enrichWithModels(context.env.CACHE, itemsWithTags)
+      return { items: enriched }
     }),
 
   // Soft-delete: mark deletedAt, remove R2 blob + tags, keep D1 row

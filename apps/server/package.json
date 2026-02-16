@@ -6,6 +6,7 @@
     "check-types": "tsc -b"
   },
   "dependencies": {
+    "@better-fetch/fetch": "^1.1.21",
     "@ig/db": "workspace:*",
     "@ig/env": "workspace:*",
     "@orpc/openapi": "catalog:",

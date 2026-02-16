@@ -10,7 +10,13 @@ import { getRequest } from '../inference/request'
 import { imageInferenceInput } from '../inference/schema'
 import { submitRequest } from '../inference/submit'
 import { procedure } from '../orpc'
-import { decodeCursor, encodeCursor, fetchTagsForArtifacts, paginationInput } from './utils'
+import {
+  decodeCursor,
+  encodeCursor,
+  enrichWithModels,
+  fetchTagsForArtifacts,
+  paginationInput,
+} from './utils'
 
 const MAX_TAGS = 20
 const MAX_KEY_LENGTH = 64
@@ -32,7 +38,7 @@ export const generationsRouter = {
     return submitRequest(context, { input: inferenceInput, tags, sync })
   }),
 
-  list: procedure.input(paginationInput).handler(async ({ input }) => {
+  list: procedure.input(paginationInput).handler(async ({ input, context }) => {
     const { cursor, limit } = input
     const decoded = cursor ? decodeCursor(cursor) : null
 
@@ -63,13 +69,16 @@ export const generationsRouter = {
       artifacts: g.artifacts.map((a) => ({ ...a, tags: tagMap.get(a.id) ?? {} })),
     }))
 
+    // Enrich with model data from KV
+    const enriched = await enrichWithModels(context.env.CACHE, itemsWithTags)
+
     const lastItem = items[items.length - 1]
     const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.createdAt, lastItem.id) : null
 
-    return { items: itemsWithTags, nextCursor }
+    return { items: enriched, nextCursor }
   }),
 
-  get: procedure.input(z.object({ id: z.string() })).handler(async ({ input }) => {
+  get: procedure.input(z.object({ id: z.string() })).handler(async ({ input, context }) => {
     const generation = await db.query.generations.findFirst({
       where: eq(generations.id, input.id),
       with: { artifacts: { where: isNull(artifacts.deletedAt) } },
@@ -78,10 +87,14 @@ export const generationsRouter = {
 
     // Fetch tags for all artifacts in the generation
     const tagMap = await fetchTagsForArtifacts(generation.artifacts.map((a) => a.id))
-    return {
+    const withTags = {
       ...generation,
       artifacts: generation.artifacts.map((a) => ({ ...a, tags: tagMap.get(a.id) ?? {} })),
     }
+
+    // Enrich with model data from KV
+    const [enriched] = await enrichWithModels(context.env.CACHE, [withTags])
+    return enriched
   }),
 
   status: procedure.input(z.object({ id: z.uuid() })).handler(async ({ input, context }) => {
