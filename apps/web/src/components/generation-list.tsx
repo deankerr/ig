@@ -12,6 +12,7 @@ import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
 import { useGenerations } from '@/lib/queries'
 
 import { ArtifactMedia } from './shared/artifact-media'
+import { ModelLabel } from './shared/model-label'
 
 export const GenerationList = memo(function GenerationList() {
   const search = useSearch({ from: '/' })
@@ -73,6 +74,7 @@ type Generation = {
   input: Record<string, unknown>
   batch: number
   error: string | null
+
   createdAt: Date
   completedAt: Date | null
   artifacts: Array<{ id: string; contentType: string; cost: number | null }>
@@ -97,20 +99,20 @@ const GenerationRow = memo(function GenerationRow({
 
   return (
     <Item variant="outline" render={<Link to="/" search={{ ...search, generation: gen.id }} />}>
-      <ItemContent>
+      <ItemContent className="overflow-hidden">
         <ItemTitle className="w-full">
           {/* Status indicator */}
           {isStale && <PulsingDot color="failed" pulse={false} />}
           {isInProgress && !isStale && <PulsingDot color="pending" />}
           {hasError && <AlertCircleIcon className="text-destructive size-4" />}
 
-          {gen.model}
+          <ModelLabel air={gen.model} />
 
           <span className="text-muted-foreground">
             {gen.artifacts.length}/{gen.batch}
           </span>
 
-          <div className="text-muted-foreground flex grow justify-end gap-4">
+          <div className="text-muted-foreground ml-auto flex shrink-0 gap-4">
             <span>{formatPrice(gen.artifacts.reduce((sum, a) => sum + (a.cost ?? 0), 0))}</span>
             {gen.completedAt ? (
               <span>
