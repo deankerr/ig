@@ -1,9 +1,11 @@
-// Shared router utilities — pagination and tag fetching.
+// Shared router utilities — pagination, tag fetching, model enrichment.
 
 import { db } from '@ig/db'
 import { tags } from '@ig/db/schema'
 import { inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
+
+import { type RunwareModel, getModels } from '../services/models'
 
 // -- Pagination --
 
@@ -73,6 +75,20 @@ export async function upsertTags(artifactId: string, record: Record<string, stri
       })
   }
 }
+
+// -- Model enrichment --
+
+/** Batch-read model data from KV and attach to items that have a `model` AIR field. */
+export async function enrichWithModels<T extends { model: string }>(
+  kv: KVNamespace,
+  items: T[],
+): Promise<(T & { modelData: RunwareModel | null })[]> {
+  const airs = items.map((item) => item.model)
+  const modelMap = await getModels(kv, airs)
+  return items.map((item) => ({ ...item, modelData: modelMap.get(item.model) ?? null }))
+}
+
+// -- Tags --
 
 type TagMap = Map<string, Record<string, string | null>>
 

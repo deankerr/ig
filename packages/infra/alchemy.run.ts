@@ -4,6 +4,7 @@ import {
   D1Database,
   DurableObjectNamespace,
   Images,
+  KVNamespace,
   R2Bucket,
   Vite,
   Worker,
@@ -46,6 +47,8 @@ const inferenceDO = DurableObjectNamespace('inference', {
   sqlite: true,
 })
 
+const cache = await KVNamespace('cache')
+
 const images = Images()
 const ai = Ai()
 
@@ -64,6 +67,7 @@ export const server = await Worker('server', {
     DATABASE: database,
     INFERENCE_DO: inferenceDO,
 
+    CACHE: cache,
     IMAGES: images,
 
     API_KEY: alchemy.secret.env.API_KEY!,

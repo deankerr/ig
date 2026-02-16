@@ -101,6 +101,7 @@ app.get('/favicon.ico', (c) => {
 })
 
 export { InferenceDO } from './inference/request'
+export type { RunwareModel } from './services/models'
 
 export default {
   fetch: app.fetch,

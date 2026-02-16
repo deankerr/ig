@@ -5,6 +5,7 @@
 declare global {
   interface Env {
     AI: Ai
+    CACHE: KVNamespace
     DATABASE: D1Database
     ARTIFACTS_BUCKET: R2Bucket
     IMAGES: ImagesBinding
@@ -20,6 +21,7 @@ declare module 'cloudflare:workers' {
   namespace Cloudflare {
     export interface Env {
       AI: Ai
+      CACHE: KVNamespace
       DATABASE: D1Database
       ARTIFACTS_BUCKET: R2Bucket
       IMAGES: ImagesBinding

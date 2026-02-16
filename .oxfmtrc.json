@@ -1,5 +1,5 @@
 {
-  "ignorePatterns": ["**/routeTree.gen.ts", ".agents", ".claude"],
+  "ignorePatterns": ["**/routeTree.gen.ts", ".agents", ".claude", "**/.alchemy/**"],
   "semi": false,
   "singleQuote": true,
   "experimentalSortImports": {
