@@ -30,6 +30,8 @@ import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
 import { statusQueryOptions, useArtifact, useDeleteArtifact } from '@/lib/queries'
 import { cn, serverUrl } from '@/lib/utils'
 
+import { ModelField } from '../shared/model-field'
+
 export function ArtifactInspector() {
   const { id, close, copy, sendToBench } = useInspector()
   const search = useSearch({ from: '/' })
@@ -182,7 +184,7 @@ export function ArtifactInspector() {
               <span className="break-words">{prompt}</span>
             </div>
           )}
-          <MetaField label="model" value={artifact.model} />
+          <ModelField air={artifact.model} />
           <MetaField label="content type" value={artifact.contentType} />
           {artifact.seed != null && <MetaField label="seed" value={String(artifact.seed)} />}
           {artifact.cost != null && <MetaField label="cost" value={formatPrice(artifact.cost)} />}

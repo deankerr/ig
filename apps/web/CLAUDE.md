@@ -8,6 +8,18 @@ Developer-focused admin UI for generation management and observability.
 
 We use the latest shadcn/ui which now supports **Base UI** primitives, which is the spiritual successor to Radix. Most patterns are familiar, but there are few differences.
 
+## Custom Components
+
+- Group components by feature in `components/` sub-folders.
+- Use the `shared/` directory for assorted common reusables.
+- Follow the shadcn/ui philosophy to building composable components.
+- **Most custom components should spread props, and pass through className using the `cn` helper to merge defaults.**
+- Use the `Icon` suffix on lucide imports to avoid naming clashes, e.g. `SearchIcon`, not `Search`
+
+## Models
+
+- Always show the model `version` with the `name`.
+
 ## Component Installation
 
 Install shadcn components as needed using the registry.
@@ -108,11 +120,3 @@ We run dark mode only. The light theme colors have been removed from our CSS. Ho
 The shadcn registry system now allows anyone to easily create and distribute their own custom shadcn compatible component libraries, which will create a folder in the `components` directory with their namespace. These tend to be more complex components for a specific purpose. We can customise them directly if required, but avoid this unless truly necessary to preserve their APIs as documented.
 
 - `elements/` Elements Error Boundary UI
-
-## Custom Components
-
-- Group components by feature in `components/` sub-folders.
-- Use the `shared/` directory for assorted common reusables.
-- Follow the shadcn/ui philosophy to building composable components
-- Most custom components should spread props, and pass through className using the `cn` helper to merge defaults.
-- Use the `Icon` suffix on lucide imports to avoid naming clashes, e.g. `SearchIcon`, not `Search`

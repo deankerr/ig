@@ -20,6 +20,8 @@ import { useGenerations } from '@/lib/queries'
 import * as storage from '@/lib/storage'
 import type { DisplayMode } from '@/lib/storage'
 
+import { ModelLabel } from './shared/model-label'
+
 export const ArtifactList = memo(function ArtifactList() {
   const search = useSearch({ from: '/' })
   const [display, setDisplay] = useState<DisplayMode>(storage.getDisplayMode)
@@ -98,10 +100,10 @@ export const ArtifactList = memo(function ArtifactList() {
                       width={256}
                     />
                   </ItemMedia>
-                  <ItemContent>
+                  <ItemContent className="overflow-hidden">
                     <ItemTitle className="w-full">
-                      {artifact.model}
-                      <div className="text-muted-foreground flex grow justify-end gap-4">
+                      <ModelLabel air={artifact.model} />
+                      <div className="text-muted-foreground ml-auto flex shrink-0 gap-4">
                         <span>{formatPrice(artifact.cost)}</span>
                         <span>
                           {artifact.generation.completedAt &&

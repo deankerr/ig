@@ -95,15 +95,17 @@ The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. 
 
 ### Curling the server
 
-Use the OpenAPI endpoints (all POST, JSON body) — not the oRPC wire format. The base URL is `https://server.{stage}.ig-dev.orb.town` (see `packages/infra/config.ts`). The dev stage defaults to the OS username, so the default is `https://server.{username}.ig-dev.orb.town`.
+Source `.env` first — it provides `DEV_SERVER_URL` and `API_KEY`:
 
 ```bash
-curl -X POST $BASE_URL/api/generations/create \
-  -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
+source .env
+
+curl -s -X POST "${DEV_SERVER_URL}/api/generations/create" \
+  -H "Content-Type: application/json" -H "x-api-key: ${API_KEY}" \
   -d '{"model":"civitai:4384@128713","positivePrompt":"a cat","sync":true}'
 
-curl -X POST $BASE_URL/api/generations/status \
-  -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
+curl -s -X POST "${DEV_SERVER_URL}/api/generations/status" \
+  -H "Content-Type: application/json" -H "x-api-key: ${API_KEY}" \
   -d '{"id":"<generation-id>"}'
 ```
 
@@ -147,14 +149,16 @@ Use this procedure to verify inference end-to-end after changes. All testing is 
 
 Leave the tail running — don't kill it after a task. The output is useful for both of us to observe.
 
-**Setup:** `BASE_URL=https://server.{username}.ig-dev.orb.town` and `API_KEY` from `.env`.
+**Setup:** `source .env` — provides `DEV_SERVER_URL` and `API_KEY`.
 
 **Test matrix:** sync and async, batch of 1 and 3, success and error cases.
 
 ```bash
+source .env
+
 # Sync success
-curl -s -X POST "$BASE_URL/api/generations/create" \
-  -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
+curl -s -X POST "${DEV_SERVER_URL}/api/generations/create" \
+  -H "Content-Type: application/json" -H "x-api-key: ${API_KEY}" \
   -d '{"model":"runware:400@4","positivePrompt":"a cat","sync":true}' | jq .
 
 # Sync success, batch of 3
@@ -164,13 +168,14 @@ curl -s -X POST "$BASE_URL/api/generations/create" \
 # same as above with "width":1,"height":1
 
 # Async — returns ID immediately, check D1 after
-curl -s -X POST "$BASE_URL/api/generations/create" \
-  -H "Content-Type: application/json" -H "x-api-key: $API_KEY" \
+curl -s -X POST "${DEV_SERVER_URL}/api/generations/create" \
+  -H "Content-Type: application/json" -H "x-api-key: ${API_KEY}" \
   -d '{"model":"runware:400@4","positivePrompt":"a cat"}' | jq .
 
 # Verify D1 state
-curl -s -X POST "$BASE_URL/api/generations/list" \
-  -H "Content-Type: application/json" -d '{"limit":5}' \
+curl -s -X POST "${DEV_SERVER_URL}/api/generations/list" \
+  -H "Content-Type: application/json" -H "x-api-key: ${API_KEY}" \
+  -d '{"limit":5}' \
   | jq '.items[] | {id, batch, error, completedAt, artifacts: (.artifacts | length)}'
 ```
 

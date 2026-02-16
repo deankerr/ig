@@ -30,6 +30,8 @@ import { queryClient } from '@/lib/api'
 import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
 import { statusQueryOptions, useDeleteGeneration, useGeneration } from '@/lib/queries'
 
+import { ModelField } from '../shared/model-field'
+
 export function GenerationInspector() {
   const { id, close, sendToBench } = useInspector()
   const search = useSearch({ from: '/' })
@@ -155,7 +157,7 @@ export function GenerationInspector() {
               <span className="break-words">{prompt}</span>
             </div>
           )}
-          <MetaField label="model" value={generation.model} />
+          <ModelField air={generation.model} />
           <MetaField label="artifacts" value={`${artifacts.length} / ${generation.batch}`} />
           {totalCost > 0 && <MetaField label="total cost" value={formatPrice(totalCost)} />}
           <MetaField
