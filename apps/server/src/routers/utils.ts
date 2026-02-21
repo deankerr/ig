@@ -31,12 +31,14 @@ export function decodeCursor(cursor: string) {
 // -- Slugs --
 
 const SLUG_TAG = 'ig:slug'
+const SLUG_MAX_LENGTH = 128
 
-/** Slugify a string: lowercase, collapse non-alphanumerics to hyphens, trim edges. */
+/** Slugify a string: lowercase, collapse non-alphanumerics to hyphens, truncate, trim edges. */
 function slugify(value: string) {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
+    .slice(0, SLUG_MAX_LENGTH)
     .replace(/^-+|-+$/g, '')
 }
 
