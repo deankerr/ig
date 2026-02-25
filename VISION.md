@@ -23,28 +23,3 @@ Consumers include traditional web apps, Discord bots, CLI tools - anything I bui
 **Store everything, ask questions later.** R2 is cheap. Keep inputs, outputs, errors, metrics. You'll want them eventually.
 
 **Simple until proven otherwise.** No complex features until there's a real need. Iterate based on actual usage.
-
-## Stack
-
-- **Cloudflare Workers** - API, webhook handlers
-- **D1** - Artifact records, queries
-- **R2** - Blob storage for outputs
-
-## Boundaries
-
-ig is deliberately limited in scope:
-
-- **Not multi-user** - no auth, no permissions, no tenancy. Consumers handle their own users.
-- **Not a workflow engine** - single inference requests only. Chaining is consumer's job.
-- **Not real-time** - async by nature. Consumers poll or wait for completion.
-
-## Hypothetical Consumer Apps
-
-- **Semantic search** - Embeddings, vector storage, similarity queries
-- **Multi-User Generative AI App** - Handles all of the user management aspects
-- **Discord bot** - Uses tags to group by channel, user, etc.
-
-**Resources:**
-
-- [Runware API docs](https://docs.runware.ai/)
-- [Runware image inference](https://docs.runware.ai/en/image-inference/text-to-image)

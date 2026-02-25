@@ -74,8 +74,8 @@ export function ArtifactInspector() {
   const imageUrl = `${serverUrl.origin}/artifacts/${artifact.id}/file`
   const slug = artifact.tags['ig:slug'] as string | undefined
   const publicUrl = slug ? `${serverUrl.origin}/a/${slug}` : imageUrl
-  const prompt = formatPrompt(generation.input)
-  const duration = generation.completedAt
+  const prompt = generation ? formatPrompt(generation.input) : null
+  const duration = generation?.completedAt
     ? new Date(generation.completedAt).getTime() - new Date(generation.createdAt).getTime()
     : null
 
@@ -84,15 +84,6 @@ export function ArtifactInspector() {
     a.href = imageUrl
     a.download = `${artifact.id}.${artifact.contentType.split('/')[1] ?? 'bin'}`
     a.click()
-  }
-
-  function handleSendToBench() {
-    sendToBench(generation.input)
-  }
-
-  async function handleViewRequestState() {
-    const data = await queryClient.fetchQuery(statusQueryOptions(generation.id))
-    jsonSheet.open(data ?? 'No DO state found', `request/${generation.id}`)
   }
 
   function handleDelete() {
@@ -126,9 +117,11 @@ export function ArtifactInspector() {
         >
           <ClipboardIcon />
         </HeaderAction>
-        <HeaderAction label="Send to bench" onClick={handleSendToBench}>
-          <SendIcon />
-        </HeaderAction>
+        {generation && (
+          <HeaderAction label="Send to bench" onClick={() => sendToBench(generation.input)}>
+            <SendIcon />
+          </HeaderAction>
+        )}
         <HeaderAction
           label="JSON"
           onClick={() => jsonSheet.open(artifact, `artifact/${artifact.id}`)}
@@ -178,7 +171,7 @@ export function ArtifactInspector() {
 
         {/* Metadata sidebar */}
         <InspectorSidebar>
-          {prompt !== '' && (
+          {prompt && (
             <div className="flex flex-col gap-0.5 text-xs">
               <span className="text-muted-foreground">prompt</span>
               <span className="break-words">{prompt}</span>
@@ -188,10 +181,7 @@ export function ArtifactInspector() {
           <MetaField label="content type" value={artifact.contentType} />
           {artifact.seed != null && <MetaField label="seed" value={String(artifact.seed)} />}
           {artifact.cost != null && <MetaField label="cost" value={formatPrice(artifact.cost)} />}
-          <MetaField
-            label="duration"
-            value={duration != null ? formatDuration(duration) : 'in progress'}
-          />
+          {duration != null && <MetaField label="duration" value={formatDuration(duration)} />}
           <MetaField label="created" value={<TimeAgo date={artifact.createdAt} />} />
 
           {/* Tags */}
@@ -208,33 +198,39 @@ export function ArtifactInspector() {
             </div>
           )}
 
-          {/* Generation input */}
-          <div className="mt-1 flex flex-col gap-1">
-            <span className="text-muted-foreground text-xs font-medium">generation input</span>
-            <pre className="bg-muted h-72 overflow-auto p-2 text-xs break-all whitespace-pre-wrap">
-              {JSON.stringify(generation.input, null, 2)}
-            </pre>
-          </div>
+          {/* Generation details (only for inference-created artifacts) */}
+          {generation && (
+            <>
+              <div className="mt-1 flex flex-col gap-1">
+                <span className="text-muted-foreground text-xs font-medium">generation input</span>
+                <pre className="bg-muted h-72 overflow-auto p-2 text-xs break-all whitespace-pre-wrap">
+                  {JSON.stringify(generation.input, null, 2)}
+                </pre>
+              </div>
 
-          {/* Links to related records */}
-          <div className="mt-1 flex flex-col items-start gap-1">
-            <Button
-              variant="link"
-              size="sm"
-              className="text-foreground underline decoration-dotted"
-              onClick={() => jsonSheet.open(generation, `generation/${generation.id}`)}
-            >
-              view generation record
-            </Button>
-            <Button
-              variant="link"
-              size="sm"
-              className="text-foreground underline decoration-dotted"
-              onClick={handleViewRequestState}
-            >
-              view DO request state
-            </Button>
-          </div>
+              <div className="mt-1 flex flex-col items-start gap-1">
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="text-foreground underline decoration-dotted"
+                  onClick={() => jsonSheet.open(generation, `generation/${generation.id}`)}
+                >
+                  view generation record
+                </Button>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="text-foreground underline decoration-dotted"
+                  onClick={async () => {
+                    const data = await queryClient.fetchQuery(statusQueryOptions(generation.id))
+                    jsonSheet.open(data ?? 'No DO state found', `request/${generation.id}`)
+                  }}
+                >
+                  view DO request state
+                </Button>
+              </div>
+            </>
+          )}
         </InspectorSidebar>
       </InspectorBody>
     </>

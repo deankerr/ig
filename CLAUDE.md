@@ -6,6 +6,28 @@ Always read @VISION.md for a high level understanding of the project.
 
 Experimental with low-traffic production deployment. Breaking changes are acceptable.
 
+### Focus Stories
+
+Image-To-Image Workflow:
+
+- IRC chatbot users want to edit images from external URLs
+- auto aspect ratio sizing is always used, there is currently no method to use a set size
+- Any url they supply in the prompt is passed to referenceImages
+- we need to be able to specify the size of the output that will match an input image (i.e. the first one)
+- pixel values need to be converted to value runware width/height values (divisible by 64)
+- clients should not be expected to manage this themselves
+- the CF Images binding can be used to determine if a file is an image, and its width/height
+
+File Storage:
+
+- It would be good to accept arbitrary file uploads, as well as "fetch URL content to artifact"
+- These could just be artifacts, but without an associated 'generation'
+
+Notes:
+
+- This does not involve Runware's Image Upload feature; it's currently rare that the same image is being used more than once.
+- Helpers/workflows around calculating/transforming sizes should be kept decoupled from any specific process.
+
 ## Structure
 
 ```
@@ -19,18 +41,9 @@ packages/infra/  # Alchemy infrastructure-as-code
 ## Commands
 
 ```bash
-bun run dev           # Start server via Alchemy
-bun run check         # check-types + lint + format (with auto-fix)
-bun run clean         # Remove node_modules, build artifacts, caches
-bun run db:generate   # Generate Drizzle migrations
+bun run check         # check-types + fix + format
 bun run deploy        # Deploy to Cloudflare via Alchemy
 ```
-
-## Workflow
-
-- Run `bun run check` to verify your work.
-- Do not deploy unless specifically asked.
-- LSP diagnostics are often stale in this project - `bun run check` is the source of truth.
 
 ### Graphite (stacked PRs)
 
@@ -53,16 +66,6 @@ Each branch = one commit. `gt create` makes the branch, `gt submit` makes the PR
 - In React, this should look like `components/` sub-directories.
   - Do not place feature-level code in a 'route' file - this should be for "page" level concerns, and/or glueing major feature components together.
 
-## Stack
-
-- **Backend**: Hono, oRPC (type-safe RPC with OpenAPI)
-- **Frontend**: React, TanStack Router + Query, Vite, shadcn/ui (Base UI)
-- **Database**: SQLite via D1, Drizzle ORM
-- **Storage**: Cloudflare R2
-- **AI Providers**: Runware (queue-based async with webhooks)
-- **Infra**: Alchemy (TypeScript IaC for Cloudflare), Durable Objects
-- **Tooling**: Turborepo, Bun, Oxlint, Oxfmt
-
 ## Env Types
 
 The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. **Do not** use Alchemy's inferred `typeof server.Env` — its `Bound<T>` conditional type chain triggers TS2589 (excessively deep type instantiation). When adding a binding in `packages/infra/alchemy.run.ts`, add the corresponding property to `env.d.ts` using the Cloudflare runtime type (`D1Database`, `R2Bucket`, `DurableObjectNamespace`, etc).
@@ -73,8 +76,6 @@ The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. 
 - **RPC** (`/rpc/*`) — oRPC endpoints (used by the web app via RPCLink)
 - **Webhooks** (`/webhooks/runware`) — provider callbacks
 - **Auth**: All endpoints require `x-api-key` header.
-
-### Curling the server
 
 ```bash
 source .env; curl -s -X POST "${DEV_SERVER_URL}/api/generations/create" \
@@ -96,13 +97,6 @@ Artifacts can have human-readable URLs via the tag system. A slug is stored as a
 **Flow:** Consumer passes `tags: { "ig:slug": "my description" }` when creating a generation. The server normalizes it to `{uuid-prefix}-my-description` via `normalizeTagValues()` in `routers/utils.ts`, then persists it with `upsertTags()`.
 
 **Key files:** `apps/server/src/routes/file.ts` (routing), `apps/server/src/routers/utils.ts` (slug normalization + tag persistence).
-
-## Database
-
-Schema in `packages/db/src/schema/`. Migrations in `packages/db/src/migrations/`.
-
-- Run `bun run db:generate` after schema changes
-- Migrations applied automatically by Alchemy on deploy
 
 ## Infrastructure
 
