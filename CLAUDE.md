@@ -53,25 +53,6 @@ Each branch = one commit. `gt create` makes the branch, `gt submit` makes the PR
 - In React, this should look like `components/` sub-directories.
   - Do not place feature-level code in a 'route' file - this should be for "page" level concerns, and/or glueing major feature components together.
 
-## In-Code Documentation
-
-Use a structured logging approach with console.log when events/actions/mutations occur, in both the server and web app. This helps us to quickly identify and resolve most issues quickly.
-
-- Use this format `console.log([module:function] optional message, { data })`.
-- Avoid logging queries which trigger often.
-- The browser devtools neatly collapses large data items - favour full object logging there.
-- Do not log during render in React, and be mindful of not spamming the buffer as a result of user actions like typing in an input.
-- The ability or ease of logging events to the console should never be a consideration when designing the flow of business logic.
-
-Comments are also valuable for navigating the code base, especially when reviewing changes.
-
-- Write a short comment at the start of each "paragraph" of code in a multi-step function.
-- Full JSDoc annotations for our main function paths are not necessary, as we are changing them often - keep it light.
-- Use `TODO` comments to clearly mark areas where functionality has been stubbed out, or is planned to be implemented in the near future.
-  - NOT for "nice to haves" or features that have not been planned or discussed.
-
-NOTE: Modules in our codebase that originated externally or are auto-generated are excluded from these requirements.
-
 ## Stack
 
 - **Backend**: Hono, oRPC (type-safe RPC with OpenAPI)
@@ -95,18 +76,10 @@ The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. 
 
 ### Curling the server
 
-Source `.env` first — it provides `DEV_SERVER_URL` and `API_KEY`:
-
 ```bash
-source .env
-
-curl -s -X POST "${DEV_SERVER_URL}/api/generations/create" \
+source .env; curl -s -X POST "${DEV_SERVER_URL}/api/generations/create" \
   -H "Content-Type: application/json" -H "x-api-key: ${API_KEY}" \
   -d '{"model":"civitai:4384@128713","positivePrompt":"a cat","sync":true}'
-
-curl -s -X POST "${DEV_SERVER_URL}/api/generations/status" \
-  -H "Content-Type: application/json" -H "x-api-key: ${API_KEY}" \
-  -d '{"id":"<generation-id>"}'
 ```
 
 ### Artifact Slug URLs
@@ -133,62 +106,16 @@ Schema in `packages/db/src/schema/`. Migrations in `packages/db/src/migrations/`
 
 ## Infrastructure
 
-Alchemy (`packages/infra/alchemy.run.ts`) defines all Cloudflare resources:
-
-- D1Database, R2Bucket, Worker, DurableObjectNamespace, Ai, Images
-- State stored remotely (survives local deletion)
-- URLs derived from stage name
-
-## Live Demo
-
-Use this procedure to verify inference end-to-end after changes. All testing is done against the remote deployment.
-
-**Deploy:** `bun run deploy`
-
-**Remote logs:** `omux run 'bunx wrangler tail ig-server-{username}'`
-
-Leave the tail running — don't kill it after a task. The output is useful for both of us to observe.
-
-**Setup:** `source .env` — provides `DEV_SERVER_URL` and `API_KEY`.
-
-**Test matrix:** sync and async, batch of 1 and 3, success and error cases.
-
-```bash
-source .env
-
-# Sync success
-curl -s -X POST "${DEV_SERVER_URL}/api/generations/create" \
-  -H "Content-Type: application/json" -H "x-api-key: ${API_KEY}" \
-  -d '{"model":"runware:400@4","positivePrompt":"a cat","sync":true}' | jq .
-
-# Sync success, batch of 3
-# same as above with "numberResults":3
-
-# Sync error (bad dimensions)
-# same as above with "width":1,"height":1
-
-# Async — returns ID immediately, check D1 after
-curl -s -X POST "${DEV_SERVER_URL}/api/generations/create" \
-  -H "Content-Type: application/json" -H "x-api-key: ${API_KEY}" \
-  -d '{"model":"runware:400@4","positivePrompt":"a cat"}' | jq .
-
-# Verify D1 state
-curl -s -X POST "${DEV_SERVER_URL}/api/generations/list" \
-  -H "Content-Type: application/json" -H "x-api-key: ${API_KEY}" \
-  -d '{"limit":5}' \
-  | jq '.items[] | {id, batch, error, completedAt, artifacts: (.artifacts | length)}'
-```
-
-**Expected behavior:**
-
-- Sync error: 400 returned to client, no D1 row
-- Async error: ID returned immediately, D1 row appears (in-progress), then updated with error + completedAt
-- Success: D1 generation row appears immediately (async) or after dispatch (sync), artifacts appear progressively, completedAt set on completion
+Alchemy (`packages/infra/alchemy.run.ts`) defines all Cloudflare resources.
 
 ## Models
 
 These models are fast and cost practically nothing. Use them when testing inference functionality.
 
-- `runware:400@4` FLUX.2 [klein] 4B
+- `runware:400@1` FLUX.2 dev
 - `rundiffusion:120964@131579` RunDiffusionXL (SDXL)
 - `civitai:4384@128713` DreamShaper (SD1.5)
+
+## Reference
+
+See @notes for Runware API schemas/docs

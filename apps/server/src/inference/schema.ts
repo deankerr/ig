@@ -12,7 +12,7 @@ const loraSchema = z.object({
   weight: z.number(),
 })
 
-export const imageInferenceInput = z.object({
+export const imageInferenceInput = z.looseObject({
   model: z.string().min(1),
   positivePrompt: z.string().min(1),
   negativePrompt: z.string().optional(),
