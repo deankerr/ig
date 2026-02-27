@@ -2,22 +2,12 @@
 
 import { db } from '@ig/db'
 import { artifacts, generations, tags } from '@ig/db/schema'
-import { ORPCError } from '@orpc/server'
 import { and, desc, eq, getTableColumns, inArray, isNull, lt, or } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { procedure } from '../orpc'
-import {
-  MAX_KEY_LENGTH,
-  MAX_TAGS,
-  MAX_VALUE_LENGTH,
-  decodeCursor,
-  encodeCursor,
-  enrichWithModels,
-  fetchTagsForArtifacts,
-  paginationInput,
-  upsertTags,
-} from './utils'
+import { tagsService, zTagsRecord } from '../services/tags'
+import { decodeCursor, encodeCursor, enrichWithModels, paginationInput } from './utils'
 
 // Shared: fetch an artifact by ID with generation, siblings, tags, and model data
 async function getArtifactById(id: string, kv: KVNamespace) {
@@ -46,7 +36,7 @@ async function getArtifactById(id: string, kv: KVNamespace) {
 
   // Fetch tags for this artifact and all siblings
   const allIds = siblings.length > 0 ? siblings.map((s) => s.id) : [artifact.id]
-  const tagMap = await fetchTagsForArtifacts(allIds)
+  const tagMap = await tagsService.fetchForArtifacts(allIds)
 
   // Enrich artifact and siblings with model data from KV
   const allItems = [artifact, ...siblings]
@@ -95,7 +85,7 @@ export const artifactsRouter = {
     if (hasMore) items.pop()
 
     // Merge tags onto each artifact
-    const tagMap = await fetchTagsForArtifacts(items.map((i) => i.id))
+    const tagMap = await tagsService.fetchForArtifacts(items.map((i) => i.id))
     const itemsWithTags = items.map((i) => ({ ...i, tags: tagMap.get(i.id) ?? {} }))
 
     // Enrich with model data from KV
@@ -149,7 +139,7 @@ export const artifactsRouter = {
         .orderBy(desc(artifacts.createdAt))
 
       // Merge tags and enrich with model data
-      const tagMap = await fetchTagsForArtifacts(items.map((i) => i.id))
+      const tagMap = await tagsService.fetchForArtifacts(items.map((i) => i.id))
       const itemsWithTags = items.map((i) => ({ ...i, tags: tagMap.get(i.id) ?? {} }))
       const enriched = await enrichWithModels(context.env.CACHE, itemsWithTags)
       return { items: enriched }
@@ -186,37 +176,20 @@ export const artifactsRouter = {
   tags: {
     // Upsert tags on an artifact (creates or updates values)
     set: procedure
-      .input(
-        z.object({
-          artifactId: z.string(),
-          tags: z.record(
-            z.string().trim().min(1).max(MAX_KEY_LENGTH),
-            z.string().max(MAX_VALUE_LENGTH).nullable(),
-          ),
-        }),
-      )
+      .input(z.object({ artifactId: z.string(), tags: zTagsRecord }))
       .handler(async ({ input }) => {
         const count = Object.keys(input.tags).length
         if (count === 0) return { count: 0 }
-        if (count > MAX_TAGS)
-          throw new ORPCError('BAD_REQUEST', {
-            message: `Cannot exceed ${MAX_TAGS} tags per operation`,
-          })
 
         console.log('[artifacts:tags:set] upserting', { artifactId: input.artifactId, count })
-        await upsertTags(input.artifactId, input.tags)
+        await tagsService.upsert(input.artifactId, input.tags)
 
         return { count }
       }),
 
     // Remove tags by key names
     remove: procedure
-      .input(
-        z.object({
-          artifactId: z.string(),
-          tags: z.array(z.string().trim().min(1).max(MAX_KEY_LENGTH)),
-        }),
-      )
+      .input(z.object({ artifactId: z.string(), tags: z.array(z.string().trim().min(1)) }))
       .handler(async ({ input }) => {
         if (input.tags.length === 0) return { count: 0 }
 
@@ -225,12 +198,8 @@ export const artifactsRouter = {
           tags: input.tags,
         })
 
-        const deleted = await db
-          .delete(tags)
-          .where(and(eq(tags.targetId, input.artifactId), inArray(tags.tag, input.tags)))
-          .returning()
-
-        return { count: deleted.length }
+        const count = await tagsService.remove(input.artifactId, input.tags)
+        return { count }
       }),
   },
 }

@@ -45,20 +45,6 @@ bun run check         # check-types + fix + format
 bun run deploy        # Deploy to Cloudflare via Alchemy
 ```
 
-### Graphite (stacked PRs)
-
-Use the Graphite CLI for all branch/PR operations — not raw git branching or `gh pr create`.
-
-```bash
-gt create -am "commit message"   # Stage all + create branch + commit
-gt modify -a                     # Amend staged changes to current branch
-gt submit                        # Push + create/update PRs (current + downstack)
-gt ss                            # Push + create/update entire stack
-gt sync                          # Pull trunk, clean merged branches, restack
-```
-
-Each branch = one commit. `gt create` makes the branch, `gt submit` makes the PR.
-
 ## Features
 
 - Organise code into directories by "feature", "service", etc.
@@ -109,6 +95,10 @@ These models are fast and cost practically nothing. Use them when testing infere
 - `runware:400@1` FLUX.2 dev
 - `rundiffusion:120964@131579` RunDiffusionXL (SDXL)
 - `civitai:4384@128713` DreamShaper (SD1.5)
+
+## Remeda
+
+Use Remeda to write clean, functional code. `import * as R from 'remeda'`
 
 ## Reference
 
