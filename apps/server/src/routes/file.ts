@@ -5,6 +5,8 @@ import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 
+import { TAG_KEYS } from '../services/tags'
+
 export const fileRoutes = new Hono()
 
 // Slug-based file serving: /a/{slug}[.ext]
@@ -18,7 +20,7 @@ fileRoutes.get('/a/*', async (c) => {
   const [tagRow] = await db
     .select({ targetId: tags.targetId })
     .from(tags)
-    .where(and(eq(tags.tag, 'ig:slug'), eq(tags.value, slug)))
+    .where(and(eq(tags.tag, TAG_KEYS.slug), eq(tags.value, slug)))
     .limit(1)
   if (!tagRow) return c.json({ error: 'Not found' }, 404)
 

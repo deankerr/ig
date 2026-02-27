@@ -6,7 +6,7 @@ import type { NewGeneration } from '@ig/db/schema'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 
-import { upsertTags } from '../routers/utils'
+import { tagsService } from '../services/tags'
 import type { OutputSuccess } from './result'
 
 /** INSERT generation row on submission (no completedAt). */
@@ -55,7 +55,7 @@ export async function insertArtifact(db: D1Database, args: InsertArtifactArgs) {
     })
 
     // Persist tags for this artifact
-    if (tags) await upsertTags(artifact.id, tags)
+    if (tags) await tagsService.upsert(artifact.id, tags)
 
     console.log('[persist:insertArtifact]', { id: artifact.id, generationId })
   } catch (err) {

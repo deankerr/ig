@@ -10,25 +10,12 @@ import { getRequest } from '../inference/request'
 import { imageInferenceInput } from '../inference/schema'
 import { submitRequest } from '../inference/submit'
 import { procedure } from '../orpc'
-import {
-  decodeCursor,
-  encodeCursor,
-  enrichWithModels,
-  fetchTagsForArtifacts,
-  paginationInput,
-} from './utils'
-
-const MAX_TAGS = 20
-const MAX_KEY_LENGTH = 64
-const MAX_VALUE_LENGTH = 256
-
-const tagsSchema = z
-  .record(z.string().trim().min(1).max(MAX_KEY_LENGTH), z.string().max(MAX_VALUE_LENGTH).nullable())
-  .refine((tags) => Object.keys(tags).length <= MAX_TAGS, `Cannot exceed ${MAX_TAGS} tags`)
+import { tagsService, zTagsRecord } from '../services/tags'
+import { decodeCursor, encodeCursor, enrichWithModels, paginationInput } from './utils'
 
 // Flat input: inference fields + ig extensions (tags, sync, etc.) at the same level
 const createSchema = imageInferenceInput.extend({
-  tags: tagsSchema.optional(),
+  tags: zTagsRecord.optional(),
   sync: z.boolean().optional().default(false),
 })
 
@@ -50,10 +37,10 @@ export const generationsRouter = {
         )
       : undefined
 
-    // Relational query auto-loads child artifacts (excluding soft-deleted)
+    // Relational query auto-loads child artifacts + tags (excluding soft-deleted)
     const items = await db.query.generations.findMany({
       where: cursorCondition,
-      with: { artifacts: { where: isNull(artifacts.deletedAt) } },
+      with: { artifacts: { where: isNull(artifacts.deletedAt), with: { tags: true } } },
       orderBy: [desc(generations.createdAt), desc(generations.id)],
       limit: limit + 1,
     })
@@ -61,12 +48,10 @@ export const generationsRouter = {
     const hasMore = items.length > limit
     if (hasMore) items.pop()
 
-    // Collect all artifact IDs and batch-fetch tags
-    const allArtifactIds = items.flatMap((g) => g.artifacts.map((a) => a.id))
-    const tagMap = await fetchTagsForArtifacts(allArtifactIds)
+    // Flatten tag rows into key-value records
     const itemsWithTags = items.map((g) => ({
       ...g,
-      artifacts: g.artifacts.map((a) => ({ ...a, tags: tagMap.get(a.id) ?? {} })),
+      artifacts: g.artifacts.map((a) => ({ ...a, tags: tagsService.toRecord(a.tags) })),
     }))
 
     // Enrich with model data from KV
@@ -81,15 +66,14 @@ export const generationsRouter = {
   get: procedure.input(z.object({ id: z.string() })).handler(async ({ input, context }) => {
     const generation = await db.query.generations.findFirst({
       where: eq(generations.id, input.id),
-      with: { artifacts: { where: isNull(artifacts.deletedAt) } },
+      with: { artifacts: { where: isNull(artifacts.deletedAt), with: { tags: true } } },
     })
     if (!generation) return null
 
-    // Fetch tags for all artifacts in the generation
-    const tagMap = await fetchTagsForArtifacts(generation.artifacts.map((a) => a.id))
+    // Flatten tag rows into key-value records
     const withTags = {
       ...generation,
-      artifacts: generation.artifacts.map((a) => ({ ...a, tags: tagMap.get(a.id) ?? {} })),
+      artifacts: generation.artifacts.map((a) => ({ ...a, tags: tagsService.toRecord(a.tags) })),
     }
 
     // Enrich with model data from KV

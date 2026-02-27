@@ -8,15 +8,13 @@ import { z } from 'zod'
 
 import { procedure } from '../orpc'
 import { detectFile } from '../services/file-detection'
-import { tagsSchema, upsertTags } from './utils'
+import { TAG_KEYS, tagsService, zTagsRecord } from '../services/tags'
 
 // 100 MB — abort ingestion beyond this
 const MAX_INGEST_BYTES = 100 * 1024 * 1024
 
 // 30 seconds — abort slow fetches
 const FETCH_TIMEOUT_MS = 30_000
-
-const SOURCE_TAG = 'ig:source'
 
 // http(s) only, domain names only (no IPs, no localhost)
 const httpUrl = z.url({ protocol: /^https?$/, hostname: z.regexes.domain })
@@ -88,8 +86,8 @@ async function ingest(
   await db.insert(schema.artifacts).values(artifact)
 
   // Merge ig:source into user-provided tags
-  const allTags = { ...args.tags, [SOURCE_TAG]: args.source }
-  await upsertTags(id, allTags)
+  const allTags = { ...args.tags, [TAG_KEYS.source]: args.source }
+  await tagsService.upsert(id, allTags)
 
   console.log('[ingest]', 'artifact created', { id, contentType, width, height })
 
@@ -102,7 +100,7 @@ export const ingestRouter = {
     .input(
       z.object({
         file: z.file(),
-        tags: tagsSchema.optional(),
+        tags: zTagsRecord.optional(),
       }),
     )
     .handler(async ({ input, context }) => {
@@ -128,7 +126,7 @@ export const ingestRouter = {
     .input(
       z.object({
         url: httpUrl,
-        tags: tagsSchema.optional(),
+        tags: zTagsRecord.optional(),
       }),
     )
     .handler(async ({ input, context }) => {

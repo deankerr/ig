@@ -39,7 +39,7 @@ src/
 │   ├── generations.ts    # create, list, get, status, delete
 │   ├── artifacts.ts      # list, get, delete, setTags, removeTags
 │   ├── models.ts         # search
-│   └── utils.ts          # Pagination cursors, batch tag fetching
+│   └── utils.ts          # Pagination cursors, model enrichment
 ├── routes/               # Hono routes (file serving from R2)
 ├── inference/            # Inference request system (see its CLAUDE.md)
 │   ├── request.ts        # InferenceDO + typed client
@@ -53,7 +53,9 @@ src/
 │   ├── config.ts         # REQUEST_TIMEOUT_MS constant
 │   └── index.ts          # Public API
 ├── services/             # Internal functions — (ctx, args) pattern
-│   └── auto-aspect-ratio.ts  # AI-powered aspect ratio selection
+│   ├── auto-aspect-ratio.ts  # AI-powered aspect ratio selection
+│   ├── file-detection.ts     # MIME type + image dimension detection from streams
+│   └── tags.ts               # Tag validation, normalization, slug building, persistence
 └── utils/
     ├── result.ts         # Result<T, E> type
     ├── error.ts          # getErrorMessage, serializeError, error handlers
