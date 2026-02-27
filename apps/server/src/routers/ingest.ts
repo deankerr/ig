@@ -9,15 +9,13 @@ import { z } from 'zod'
 import { procedure } from '../orpc'
 import { detectFile } from '../services/file-detection'
 import { TAG_KEYS, tagsService, zTagsRecord } from '../services/tags'
+import { zDomainUrl } from '../utils/validators'
 
 // 100 MB — abort ingestion beyond this
 const MAX_INGEST_BYTES = 100 * 1024 * 1024
 
 // 30 seconds — abort slow fetches
 const FETCH_TIMEOUT_MS = 30_000
-
-// http(s) only, domain names only (no IPs, no localhost)
-const httpUrl = z.url({ protocol: /^https?$/, hostname: z.regexes.domain })
 
 /** Read a response body with a hard size cap, aborting if exceeded. */
 async function readWithSizeLimit(response: Response, maxBytes: number): Promise<ArrayBuffer> {
@@ -125,7 +123,7 @@ export const ingestRouter = {
   fetch: procedure
     .input(
       z.object({
-        url: httpUrl,
+        url: zDomainUrl,
         tags: zTagsRecord.optional(),
       }),
     )

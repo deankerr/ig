@@ -2,7 +2,7 @@ import type { Artifact, Generation } from '@ig/db/schema'
 import { v7 as uuidv7 } from 'uuid'
 
 import type { Context } from '../context'
-import { resolveAutoAspectRatio } from '../services/auto-aspect-ratio'
+import { dimensionsService, type DimensionsConfig } from '../services/dimensions'
 import { dispatch, RUNWARE_API_URL } from './dispatch'
 import * as persist from './persist'
 import { getRequest, type RequestMeta } from './request'
@@ -15,14 +15,9 @@ import {
 } from './schema'
 import { storeArtifact } from './store'
 
-const aspectRatioDimensions = {
-  landscape: { width: 1536, height: 1024 },
-  portrait: { width: 1024, height: 1536 },
-  square: { width: 1280, height: 1280 },
-} as const
-
 type SubmitArgs = {
   input: ImageInferenceInput
+  dimensions?: DimensionsConfig
   tags?: Record<string, string | null>
   sync?: boolean
 }
@@ -39,19 +34,24 @@ export async function submitRequest(ctx: Context, args: SubmitArgs): Promise<Sub
   const id = uuidv7()
 
   if (args.sync) {
-    return submitSync(ctx, { id, input: args.input, tags: args.tags })
+    return submitSync(ctx, { id, input: args.input, dimensions: args.dimensions, tags: args.tags })
   }
 
-  return submitAsync(ctx, { id, input: args.input, tags: args.tags })
+  return submitAsync(ctx, { id, input: args.input, dimensions: args.dimensions, tags: args.tags })
 }
 
 // -- Async path: return ID immediately, dispatch in background --
 
 async function submitAsync(
   ctx: Context,
-  args: { id: string; input: ImageInferenceInput; tags?: Record<string, string | null> },
+  args: {
+    id: string
+    input: ImageInferenceInput
+    dimensions?: DimensionsConfig
+    tags?: Record<string, string | null>
+  },
 ): Promise<{ id: string }> {
-  const { id, input, tags } = args
+  const { id, input, dimensions, tags } = args
   const now = new Date()
 
   // Init DO state — input is pre-dispatch, updated after backgroundDispatch completes
@@ -77,28 +77,33 @@ async function submitAsync(
     }),
   )
 
-  // Push autoAspectRatio + dispatch to background
-  ctx.waitUntil(backgroundDispatch(ctx, { id, input }))
+  // Push dimensions + dispatch to background
+  ctx.waitUntil(backgroundDispatch(ctx, { id, input, dimensions }))
 
   console.log('[inference:submitAsync] returning immediately', { id })
   return { id }
 }
 
-async function backgroundDispatch(ctx: Context, args: { id: string; input: ImageInferenceInput }) {
+async function backgroundDispatch(
+  ctx: Context,
+  args: { id: string; input: ImageInferenceInput; dimensions?: DimensionsConfig },
+) {
   const { id } = args
   const input = { ...args.input }
   const annotations: Record<string, unknown> = {}
   const request = getRequest(ctx, id)
 
   try {
-    // Auto aspect ratio classification
-    if (input.width === undefined && input.height === undefined) {
-      const ar = await resolveAutoAspectRatio(ctx, { prompt: input.positivePrompt })
-      annotations.autoAspectRatio = ar
-      if (ar.ok) {
-        const dims = aspectRatioDimensions[ar.value.aspectRatio]
-        input.width = dims.width
-        input.height = dims.height
+    // Resolve output dimensions if config provided
+    if (args.dimensions !== undefined) {
+      const dims = await dimensionsService.resolve(ctx, {
+        config: args.dimensions,
+        prompt: input.positivePrompt,
+      })
+      annotations.dimensions = dims
+      if (dims.ok) {
+        input.width = dims.value.width
+        input.height = dims.value.height
       }
     }
 
@@ -161,21 +166,28 @@ async function backgroundDispatch(ctx: Context, args: { id: string; input: Image
 
 async function submitSync(
   ctx: Context,
-  args: { id: string; input: ImageInferenceInput; tags?: Record<string, string | null> },
+  args: {
+    id: string
+    input: ImageInferenceInput
+    dimensions?: DimensionsConfig
+    tags?: Record<string, string | null>
+  },
 ): Promise<SyncResult> {
-  const { id, input: rawInput, tags } = args
+  const { id, input: rawInput, dimensions, tags } = args
   const input = { ...rawInput }
   const annotations: Record<string, unknown> = {}
   const now = new Date()
 
-  // Auto aspect ratio (blocking — sync mode waits by design)
-  if (input.width === undefined && input.height === undefined) {
-    const ar = await resolveAutoAspectRatio(ctx, { prompt: input.positivePrompt })
-    annotations.autoAspectRatio = ar
-    if (ar.ok) {
-      const dims = aspectRatioDimensions[ar.value.aspectRatio]
-      input.width = dims.width
-      input.height = dims.height
+  // Resolve output dimensions if config provided
+  if (dimensions !== undefined) {
+    const dims = await dimensionsService.resolve(ctx, {
+      config: dimensions,
+      prompt: input.positivePrompt,
+    })
+    annotations.dimensions = dims
+    if (dims.ok) {
+      input.width = dims.value.width
+      input.height = dims.value.height
     }
   }
 
