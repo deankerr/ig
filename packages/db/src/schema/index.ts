@@ -28,10 +28,8 @@ export const artifacts = sqliteTable(
   'artifacts',
   {
     id: text('id').primaryKey(),
-    generationId: text('generation_id')
-      .notNull()
-      .references(() => generations.id),
-    model: text('model').notNull(),
+    generationId: text('generation_id').references(() => generations.id),
+    model: text('model'),
     r2Key: text('r2_key').notNull(),
     contentType: text('content_type').notNull(),
     width: integer('width'),

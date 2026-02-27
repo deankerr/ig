@@ -3,7 +3,7 @@ import { useModel } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 
 type ModelLabelProps = {
-  air: string
+  air: string | null
   className?: string
 }
 

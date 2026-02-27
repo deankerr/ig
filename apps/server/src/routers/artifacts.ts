@@ -28,7 +28,7 @@ async function getArtifactById(id: string, kv: KVNamespace) {
       generation: getTableColumns(generations),
     })
     .from(artifacts)
-    .innerJoin(generations, eq(artifacts.generationId, generations.id))
+    .leftJoin(generations, eq(artifacts.generationId, generations.id))
     .where(eq(artifacts.id, id))
     .limit(1)
 
@@ -37,14 +37,16 @@ async function getArtifactById(id: string, kv: KVNamespace) {
   const { generation, ...artifact } = row
 
   // Other artifacts from the same generation (excluding soft-deleted)
-  const siblings = await db
-    .select()
-    .from(artifacts)
-    .where(and(eq(artifacts.generationId, artifact.generationId), isNull(artifacts.deletedAt)))
-    .orderBy(desc(artifacts.createdAt))
+  const siblings = artifact.generationId
+    ? await db
+        .select()
+        .from(artifacts)
+        .where(and(eq(artifacts.generationId, artifact.generationId), isNull(artifacts.deletedAt)))
+        .orderBy(desc(artifacts.createdAt))
+    : []
 
   // Fetch tags for this artifact and all siblings
-  const allIds = siblings.map((s) => s.id)
+  const allIds = siblings.length > 0 ? siblings.map((s) => s.id) : [artifact.id]
   const tagMap = await fetchTagsForArtifacts(allIds)
 
   // Enrich artifact and siblings with model data from KV
@@ -53,8 +55,8 @@ async function getArtifactById(id: string, kv: KVNamespace) {
   const enrichedArtifact = enrichedItems[0]!
   const enrichedSiblings = enrichedItems.slice(1)
 
-  // Enrich generation too
-  const enrichedGeneration = (await enrichWithModels(kv, [generation]))[0]!
+  // Enrich generation if present
+  const enrichedGeneration = generation ? (await enrichWithModels(kv, [generation]))[0]! : null
 
   return {
     artifact: { ...enrichedArtifact, tags: tagMap.get(artifact.id) ?? {} },
@@ -76,7 +78,7 @@ export const artifactsRouter = {
         )
       : undefined
 
-    // Join generation so each artifact carries its full context
+    // Left join generation so standalone artifacts are included
     const notDeleted = isNull(artifacts.deletedAt)
     const items = await db
       .select({
@@ -84,7 +86,7 @@ export const artifactsRouter = {
         generation: getTableColumns(generations),
       })
       .from(artifacts)
-      .innerJoin(generations, eq(artifacts.generationId, generations.id))
+      .leftJoin(generations, eq(artifacts.generationId, generations.id))
       .where(cursorCondition ? and(notDeleted, cursorCondition) : notDeleted)
       .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
       .limit(limit + 1)
@@ -136,14 +138,14 @@ export const artifactsRouter = {
 
       const artifactIds = tagRows.map((r) => r.targetId)
 
-      // Fetch artifacts with generation context
+      // Fetch artifacts with optional generation context
       const items = await db
         .select({
           ...getTableColumns(artifacts),
           generation: getTableColumns(generations),
         })
         .from(artifacts)
-        .innerJoin(generations, eq(artifacts.generationId, generations.id))
+        .leftJoin(generations, eq(artifacts.generationId, generations.id))
         .where(and(inArray(artifacts.id, artifactIds), isNull(artifacts.deletedAt)))
         .orderBy(desc(artifacts.createdAt))
 

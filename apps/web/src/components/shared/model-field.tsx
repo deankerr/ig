@@ -3,7 +3,7 @@ import { useModel } from '@/lib/queries'
 
 /** Model display for inspector sidebars — hero image, name (line-clamped),
  *  architecture, and AIR identifier. */
-export function ModelField({ air }: { air: string }) {
+export function ModelField({ air }: { air: string | null }) {
   const { data: model, isPending } = useModel(air || undefined)
 
   if (!air) return null

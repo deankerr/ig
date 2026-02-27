@@ -81,13 +81,16 @@ export async function upsertTags(artifactId: string, record: Record<string, stri
 // -- Model enrichment --
 
 /** Batch-read model data from KV and attach to items that have a `model` AIR field. */
-export async function enrichWithModels<T extends { model: string }>(
+export async function enrichWithModels<T extends { model: string | null }>(
   kv: KVNamespace,
   items: T[],
 ): Promise<(T & { modelData: RunwareModel | null })[]> {
-  const airs = items.map((item) => item.model)
+  const airs = items.flatMap((item) => (item.model ? [item.model] : []))
   const modelMap = await getModels(kv, airs)
-  return items.map((item) => ({ ...item, modelData: modelMap.get(item.model) ?? null }))
+  return items.map((item) => ({
+    ...item,
+    modelData: item.model ? (modelMap.get(item.model) ?? null) : null,
+  }))
 }
 
 // -- Tags --

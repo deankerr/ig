@@ -7,9 +7,9 @@ import { queryClient, orpc } from '@/lib/api'
 
 /** Seed the React Query model cache from server-enriched responses.
  *  Called in `select` so the cache is warm before components render. */
-function seedModelCache(items: { model: string; modelData: RunwareModel | null }[]) {
+function seedModelCache(items: { model: string | null; modelData: RunwareModel | null }[]) {
   for (const item of items) {
-    if (!item.modelData) continue
+    if (!item.model || !item.modelData) continue
     const key = orpc.models.get.queryKey({ input: { air: item.model } })
     if (!queryClient.getQueryData(key)) {
       queryClient.setQueryData(key, item.modelData)
@@ -47,12 +47,31 @@ export function useArtifact(id: string) {
     ...orpc.artifacts.get.queryOptions({ input: { id } }),
     select: (data) => {
       if (data) {
-        // Seed from artifact, generation, and siblings
-        seedModelCache([data.artifact, data.generation, ...data.siblings])
+        // Seed from artifact, generation (if present), and siblings
+        seedModelCache([data.artifact, ...data.siblings])
+        if (data.generation) seedModelCache([data.generation])
       }
       return data
     },
   })
+}
+
+export function useArtifacts() {
+  return useInfiniteQuery(
+    orpc.artifacts.list.infiniteOptions({
+      input: (cursor) => ({ cursor, limit: 20 }),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+      staleTime: 5_000,
+      refetchInterval: 10_000,
+      select: (data) => {
+        for (const page of data.pages) {
+          seedModelCache(page.items)
+        }
+        return data
+      },
+    }),
+  )
 }
 
 export function useArtifactsByTag(tag: string, value?: string) {

@@ -16,7 +16,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
 import { formatDuration, formatPrice, formatPrompt } from '@/lib/format'
-import { useGenerations } from '@/lib/queries'
+import { useArtifacts } from '@/lib/queries'
 import * as storage from '@/lib/storage'
 import type { DisplayMode } from '@/lib/storage'
 
@@ -26,7 +26,7 @@ export const ArtifactList = memo(function ArtifactList() {
   const search = useSearch({ from: '/' })
   const [display, setDisplay] = useState<DisplayMode>(storage.getDisplayMode)
 
-  const query = useGenerations()
+  const query = useArtifacts()
 
   const { sentinelRef } = useInfiniteScroll({
     hasNextPage: query.hasNextPage,
@@ -34,14 +34,7 @@ export const ArtifactList = memo(function ArtifactList() {
     fetchNextPage: query.fetchNextPage,
   })
 
-  // Flatten artifacts from all generations, preserving parent generation context
-  const allArtifacts = useMemo(
-    () =>
-      (query.data?.pages.flatMap((p) => p.items) ?? []).flatMap((gen) =>
-        gen.artifacts.map((a) => ({ ...a, generation: gen })),
-      ),
-    [query.data],
-  )
+  const allArtifacts = useMemo(() => query.data?.pages.flatMap((p) => p.items) ?? [], [query.data])
 
   function handleDisplayChange(mode: DisplayMode) {
     setDisplay(mode)
@@ -106,7 +99,7 @@ export const ArtifactList = memo(function ArtifactList() {
                       <div className="text-muted-foreground ml-auto flex shrink-0 gap-4">
                         <span>{formatPrice(artifact.cost)}</span>
                         <span>
-                          {artifact.generation.completedAt &&
+                          {artifact.generation?.completedAt &&
                             formatDuration(
                               new Date(artifact.generation.completedAt).getTime() -
                                 new Date(artifact.generation.createdAt).getTime(),
@@ -117,7 +110,9 @@ export const ArtifactList = memo(function ArtifactList() {
                         </span>
                       </div>
                     </ItemTitle>
-                    <ItemDescription>{formatPrompt(artifact.generation.input)}</ItemDescription>
+                    {artifact.generation && (
+                      <ItemDescription>{formatPrompt(artifact.generation.input)}</ItemDescription>
+                    )}
                   </ItemContent>
                 </Item>
               ))}

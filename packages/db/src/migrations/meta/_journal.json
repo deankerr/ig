@@ -8,6 +8,20 @@
       "when": 1771047686924,
       "tag": "0000_redundant_brood",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1772019093253,
+      "tag": "0001_loving_shadow_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1772022360898,
+      "tag": "0002_worried_proteus",
+      "breakpoints": true
     }
   ]
 }
