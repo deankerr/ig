@@ -8,6 +8,9 @@ import { z } from 'zod'
 
 import { procedure } from '../orpc'
 import {
+  MAX_KEY_LENGTH,
+  MAX_TAGS,
+  MAX_VALUE_LENGTH,
   decodeCursor,
   encodeCursor,
   enrichWithModels,
@@ -15,10 +18,6 @@ import {
   paginationInput,
   upsertTags,
 } from './utils'
-
-const MAX_TAGS = 20
-const MAX_KEY_LENGTH = 64
-const MAX_VALUE_LENGTH = 256
 
 // Shared: fetch an artifact by ID with generation, siblings, tags, and model data
 async function getArtifactById(id: string, kv: KVNamespace) {

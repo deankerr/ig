@@ -71,6 +71,7 @@ export function ArtifactInspector() {
   }
 
   const { artifact, generation, siblings } = query.data
+  const source = artifact.tags['ig:source'] as string | undefined
   const imageUrl = `${serverUrl.origin}/artifacts/${artifact.id}/file`
   const slug = artifact.tags['ig:slug'] as string | undefined
   const publicUrl = slug ? `${serverUrl.origin}/a/${slug}` : imageUrl
@@ -179,10 +180,32 @@ export function ArtifactInspector() {
           )}
           <ModelField air={artifact.model} />
           <MetaField label="content type" value={artifact.contentType} />
+          {artifact.width != null && artifact.height != null && (
+            <MetaField label="dimensions" value={`${artifact.width} × ${artifact.height}`} />
+          )}
           {artifact.seed != null && <MetaField label="seed" value={String(artifact.seed)} />}
           {artifact.cost != null && <MetaField label="cost" value={formatPrice(artifact.cost)} />}
           {duration != null && <MetaField label="duration" value={formatDuration(duration)} />}
           <MetaField label="created" value={<TimeAgo date={artifact.createdAt} />} />
+
+          {/* Source provenance (ingested/generated artifacts) */}
+          {source && (
+            <div className="flex flex-col gap-0.5 text-xs">
+              <span className="text-muted-foreground">source</span>
+              {source.startsWith('http') ? (
+                <a
+                  href={source}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="break-all underline decoration-dotted"
+                >
+                  {source}
+                </a>
+              ) : (
+                <span className="break-all">{source}</span>
+              )}
+            </div>
+          )}
 
           {/* Tags */}
           {Object.keys(artifact.tags).length > 0 && (

@@ -59,6 +59,14 @@ function normalizeTagValues(artifactId: string, tags: Record<string, string | nu
 
 // -- Tags --
 
+export const MAX_TAGS = 20
+export const MAX_KEY_LENGTH = 64
+export const MAX_VALUE_LENGTH = 256
+
+export const tagsSchema = z
+  .record(z.string().trim().min(1).max(MAX_KEY_LENGTH), z.string().max(MAX_VALUE_LENGTH).nullable())
+  .refine((tags) => Object.keys(tags).length <= MAX_TAGS, `Cannot exceed ${MAX_TAGS} tags`)
+
 /** Upsert tags for an artifact. Normalizes ig:slug values and chunks for D1 limits. */
 export async function upsertTags(artifactId: string, record: Record<string, string | null>) {
   normalizeTagValues(artifactId, record)
