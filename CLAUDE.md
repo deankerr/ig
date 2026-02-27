@@ -6,28 +6,6 @@ Always read @VISION.md for a high level understanding of the project.
 
 Experimental with low-traffic production deployment. Breaking changes are acceptable.
 
-### Focus Stories
-
-Image-To-Image Workflow:
-
-- IRC chatbot users want to edit images from external URLs
-- auto aspect ratio sizing is always used, there is currently no method to use a set size
-- Any url they supply in the prompt is passed to referenceImages
-- we need to be able to specify the size of the output that will match an input image (i.e. the first one)
-- pixel values need to be converted to value runware width/height values (divisible by 64)
-- clients should not be expected to manage this themselves
-- the CF Images binding can be used to determine if a file is an image, and its width/height
-
-File Storage:
-
-- It would be good to accept arbitrary file uploads, as well as "fetch URL content to artifact"
-- These could just be artifacts, but without an associated 'generation'
-
-Notes:
-
-- This does not involve Runware's Image Upload feature; it's currently rare that the same image is being used more than once.
-- Helpers/workflows around calculating/transforming sizes should be kept decoupled from any specific process.
-
 ## Structure
 
 ```
@@ -71,18 +49,10 @@ source .env; curl -s -X POST "${DEV_SERVER_URL}/api/generations/create" \
 
 ### Artifact Slug URLs
 
-Artifacts can have human-readable URLs via the tag system. A slug is stored as a tag with key `ig:slug` in the `tags` junction table — not as a column on `artifacts`.
-
-**Format:** `{uuid-prefix}-{slugified-text}` where the prefix is the first 12 hex chars of the artifact's UUIDv7 ID (~1ms timestamp resolution, prevents collisions).
-
-**Routes:**
+The `ig:slug` tag is an optional custom path for resolving an artifact file.
 
 - `GET /a/{slug}[.ext]` — resolves slug → artifact via tag lookup → serves R2 file
 - `GET /artifacts/{id}/file` — direct access by artifact ID (no tag lookup)
-
-**Flow:** Consumer passes `tags: { "ig:slug": "my description" }` when creating a generation. The server normalizes it to `{uuid-prefix}-my-description` via `normalizeTagValues()` in `routers/utils.ts`, then persists it with `upsertTags()`.
-
-**Key files:** `apps/server/src/routes/file.ts` (routing), `apps/server/src/routers/utils.ts` (slug normalization + tag persistence).
 
 ## Infrastructure
 

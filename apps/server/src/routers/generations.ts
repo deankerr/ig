@@ -10,19 +10,21 @@ import { getRequest } from '../inference/request'
 import { imageInferenceInput } from '../inference/schema'
 import { submitRequest } from '../inference/submit'
 import { procedure } from '../orpc'
+import { dimensionsConfig } from '../services/dimensions'
 import { tagsService, zTagsRecord } from '../services/tags'
 import { decodeCursor, encodeCursor, enrichWithModels, paginationInput } from './utils'
 
 // Flat input: inference fields + ig extensions (tags, sync, etc.) at the same level
 const createSchema = imageInferenceInput.extend({
+  dimensions: dimensionsConfig,
   tags: zTagsRecord.optional(),
   sync: z.boolean().optional().default(false),
 })
 
 export const generationsRouter = {
   create: procedure.input(createSchema).handler(async ({ input, context }) => {
-    const { tags, sync, ...inferenceInput } = input
-    return submitRequest(context, { input: inferenceInput, tags, sync })
+    const { dimensions, tags, sync, ...inferenceInput } = input
+    return submitRequest(context, { input: inferenceInput, dimensions, tags, sync })
   }),
 
   list: procedure.input(paginationInput).handler(async ({ input, context }) => {

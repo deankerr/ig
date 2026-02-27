@@ -24,8 +24,8 @@ export async function dispatch(args: DispatchArgs): Promise<Result<DispatchResul
     taskType: 'imageInference',
     taskUUID: args.id,
     ...args.input,
-    width: args.input.width ?? 1280,
-    height: args.input.height ?? 1280,
+    width: args.input.width ?? 1024,
+    height: args.input.height ?? 1024,
     outputType: 'URL',
     includeCost: true,
   }
