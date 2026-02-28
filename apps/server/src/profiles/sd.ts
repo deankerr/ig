@@ -1,6 +1,6 @@
-import type { DimensionProfile } from './types'
+import type { ModelProfile } from './types'
 
-export const sd: DimensionProfile[] = [
+export const sd: ModelProfile[] = [
   // SD 1.x
   {
     match: { architecture: ['sd1x', 'sd1xlcm'] },

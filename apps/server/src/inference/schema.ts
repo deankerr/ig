@@ -24,6 +24,7 @@ export const imageInferenceInput = z.looseObject({
   CFGScale: z.number().optional(),
   clipSkip: z.number().int().optional(),
   strength: z.number().optional(),
+  referenceImages: z.array(z.url()).optional(),
   seedImage: z.string().optional(),
   maskImage: z.string().optional(),
   outputFormat: z.enum(['JPG', 'PNG', 'WEBP']).optional().default('JPG'),

@@ -2,7 +2,9 @@ import type { Artifact, Generation } from '@ig/db/schema'
 import { v7 as uuidv7 } from 'uuid'
 
 import type { Context } from '../context'
+import { profiles } from '../profiles'
 import { dimensionsService, type DimensionsConfig } from '../services/dimensions'
+import { lookupModel } from '../services/models'
 import { dispatch, RUNWARE_API_URL } from './dispatch'
 import * as persist from './persist'
 import { getRequest, type RequestMeta } from './request'
@@ -103,6 +105,9 @@ async function backgroundDispatch(
     input.width = dims.width
     input.height = dims.height
 
+    // Rewrite input fields to match provider-specific format
+    await applyProfile(ctx, input)
+
     // Dispatch to Runware with async delivery (fast ack, results via webhook)
     const webhookURL = `${ctx.env.PUBLIC_URL}/webhooks/runware?generation_id=${id}`
     const result = await dispatch({
@@ -182,6 +187,9 @@ async function submitSync(
   annotations.dimensions = dims
   input.width = dims.width
   input.height = dims.height
+
+  // Rewrite input fields to match provider-specific format
+  await applyProfile(ctx, input)
 
   // Dispatch without webhook — Runware defaults to sync delivery
   const result = await dispatch({ id, apiKey: ctx.env.RUNWARE_KEY, input })
@@ -295,5 +303,34 @@ async function submitSync(
       createdAt: o.createdAt,
       tags: meta.tags ?? {},
     })),
+  }
+}
+
+// -- Profile transforms --
+
+/** Look up the model profile and rewrite input fields to match provider-specific format. */
+async function applyProfile(ctx: Context, input: Record<string, unknown>): Promise<void> {
+  const air = input.model as string
+  const model = await lookupModel(ctx, air)
+  const profile = profiles.findProfile({ air, architecture: model?.architecture })
+  const refConfig = profile.referenceImages ?? { path: 'seedImage' as const }
+
+  // Rewrite referenceImages to the provider-specific path
+  const images = input.referenceImages as string[] | undefined
+  if (!images?.length) return
+
+  delete input.referenceImages
+  delete input.seedImage
+
+  const capped = refConfig.maxItems ? images.slice(0, refConfig.maxItems) : images
+
+  if (refConfig.path === 'seedImage') {
+    input.seedImage = capped[0]
+  } else if (refConfig.path === 'referenceImages') {
+    input.referenceImages = capped
+  } else if (refConfig.path === 'inputs.referenceImages') {
+    const inputs = (input.inputs ?? {}) as Record<string, unknown>
+    inputs.referenceImages = capped
+    input.inputs = inputs
   }
 }

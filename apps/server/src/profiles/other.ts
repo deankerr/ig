@@ -1,6 +1,6 @@
-import type { DimensionProfile } from './types'
+import type { ModelProfile } from './types'
 
-export const other: DimensionProfile[] = [
+export const other: ModelProfile[] = [
   // Z-Image / Z-Image Turbo
   {
     match: { architecture: ['z_image', 'z_image_turbo'] },

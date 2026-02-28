@@ -1,9 +1,10 @@
-import type { DimensionProfile } from './types'
+import type { ModelProfile } from './types'
 
-export const flux: DimensionProfile[] = [
+export const flux: ModelProfile[] = [
   // FLUX.1.1 Pro Ultra
   {
     match: { air: ['bfl:2@2'] },
+    referenceImages: { path: 'referenceImages' },
     sizes: {
       landscape: [[2496, 1664]],
       portrait: [[1664, 2496]],
@@ -22,6 +23,7 @@ export const flux: DimensionProfile[] = [
   // FLUX Kontext Pro
   {
     match: { architecture: ['fluxkontextpro'] },
+    referenceImages: { path: 'referenceImages' },
     sizes: {
       landscape: [[1248, 832]],
       portrait: [[832, 1248]],
@@ -40,6 +42,7 @@ export const flux: DimensionProfile[] = [
   // FLUX Kontext Max
   {
     match: { architecture: ['fluxkontextmax'] },
+    referenceImages: { path: 'referenceImages' },
     sizes: {
       landscape: [[1248, 832]],
       portrait: [[832, 1248]],
@@ -72,20 +75,37 @@ export const flux: DimensionProfile[] = [
       '9:16': [[768, 1344]],
     },
   },
-  // FLUX.2 family (Pro, Max, Flex, Dev, Klein variants)
+  // FLUX.2 Klein variants (nested inputs path)
   {
     match: {
       architecture: [
-        'flux_2_pro',
-        'flux_2_max',
-        'flux_2_flex',
-        'flux_2_dev',
         'flux_2_klein_9b',
         'flux_2_klein_9b_base',
         'flux_2_klein_4b',
         'flux_2_klein_4b_base',
       ],
     },
+    referenceImages: { path: 'inputs.referenceImages' },
+    range: { min: 256, max: 2048, divisor: 16 },
+    sizes: {
+      landscape: [[1248, 832]],
+      portrait: [[832, 1248]],
+      square: [[1024, 1024]],
+      '1:1': [[1024, 1024]],
+      '4:3': [[1184, 880]],
+      '3:4': [[880, 1184]],
+      '3:2': [[1248, 832]],
+      '2:3': [[832, 1248]],
+      '16:9': [[1392, 752]],
+      '9:16': [[752, 1392]],
+    },
+  },
+  // FLUX.2 family (Pro, Max, Flex, Dev)
+  {
+    match: {
+      architecture: ['flux_2_pro', 'flux_2_max', 'flux_2_flex', 'flux_2_dev'],
+    },
+    referenceImages: { path: 'referenceImages' },
     range: { min: 256, max: 2048, divisor: 16 },
     sizes: {
       landscape: [[1248, 832]],

@@ -10,7 +10,7 @@ import { z } from 'zod'
 
 import type { Context } from '../context'
 import type { ImageInferenceInput } from '../inference/schema'
-import { type DimensionProfile, profiles } from '../profiles'
+import { type ModelProfile, profiles } from '../profiles'
 import { getErrorMessage, serializeError } from '../utils/error'
 import type { Result } from '../utils/result'
 import { zDomainUrl } from '../utils/validators'
@@ -43,7 +43,7 @@ export type DimensionsResult = Dimensions & {
   annotations: {
     autoAspectRatio?: AutoAspectRatioResult
     imageFetch?: ImageFetchResult
-    profile?: { match: DimensionProfile['match'] }
+    profile?: { match: ModelProfile['match'] }
   }
 }
 
@@ -136,7 +136,7 @@ async function resolveDimensions(
 
 // -- Fit arbitrary dimensions to a profile's constraints --
 
-function fitToProfile(profile: DimensionProfile, width: number, height: number): Dimensions {
+function fitToProfile(profile: ModelProfile, width: number, height: number): Dimensions {
   // Fixed-size profiles → snap to closest size by aspect ratio
   if (!profile.range) return snapToClosestSize(profile, width, height)
 
@@ -145,7 +145,7 @@ function fitToProfile(profile: DimensionProfile, width: number, height: number):
 }
 
 // Find the profile size whose aspect ratio most closely matches the input
-function snapToClosestSize(profile: DimensionProfile, width: number, height: number): Dimensions {
+function snapToClosestSize(profile: ModelProfile, width: number, height: number): Dimensions {
   const targetRatio = width / height
   let best: [number, number] | undefined
   let bestDiff = Infinity

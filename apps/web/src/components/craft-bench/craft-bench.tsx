@@ -39,6 +39,7 @@ const INPUT_KEYS = new Set([
   'CFGScale',
   'clipSkip',
   'strength',
+  'referenceImages',
   'seedImage',
   'maskImage',
   'outputFormat',
