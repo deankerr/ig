@@ -11,7 +11,7 @@ No provider-specific settings.
 - AIR ID: `xai:grok-imagine@image`
 - Workflows: text-to-image, image-to-image
 - Prompt: 1+ chars
-- Reference images: up to 1
+- Image input: `referenceImages: string[]` — up to 1
 - Image-to-image: explicit dims OR `resolution` param (`"1k"`) to auto-match reference
 
 **Dimensions (supported — fixed set):**

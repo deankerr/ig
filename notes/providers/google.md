@@ -64,7 +64,7 @@ Provider-specific settings path: `providerSettings.google`
 - AIR ID: `google:4@1`
 - Workflows: text-to-image, image-to-image
 - Prompt: 2-3000 chars
-- Reference images: up to 8
+- Image input: `referenceImages: string[]` — up to 8
 - Watermarking: invisible SynthID on all outputs
 - Image-to-image: output dimensions auto-match reference aspect ratio (width/height ignored)
 
@@ -86,7 +86,7 @@ Provider-specific settings path: `providerSettings.google`
 - AIR ID: `google:4@2`
 - Workflows: text-to-image, image-to-image
 - Prompt: 3-45000 chars
-- Reference images: up to 14
+- Image input: `referenceImages: string[]` — up to 14
 - Watermarking: invisible SynthID
 - Input image: 300-2048px per side, 20MB max
 - Image-to-image: explicit dims OR `resolution` param (`"1k"` | `"2k"` | `"4k"`) to auto-match reference
@@ -109,7 +109,7 @@ Provider-specific settings path: `providerSettings.google`
 - AIR ID: `google:4@3`
 - Workflows: text-to-image, image-to-image
 - Prompt: 3-45000 chars
-- Reference images: up to 14
+- Image input: `referenceImages: string[]` — up to 14
 - Watermarking: invisible SynthID
 - Input image: 300-2048px per side, 20MB max
 - Image-to-image: explicit dims OR `resolution` param (`"0.5k"` | `"1k"` | `"2k"` | `"4k"`)

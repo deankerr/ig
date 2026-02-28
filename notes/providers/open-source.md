@@ -9,11 +9,15 @@ Covers SD1.5, SDXL, FLUX, and other open-weight architectures available through 
 - Steps: 1-100
 - CFGScale: 0-30
 
+## Image Inputs
+
+All models below support `seedImage` for image-to-image, inpainting (`seedImage` + `maskImage`), and outpainting (`seedImage` + `outpaint`). These are root-level params on the Runware request.
+
 ---
 
 ## SD1.5
 
-Base training resolution: **512x512** (~262K pixels).
+Base training resolution: **512x512** (~262K pixels). Workflows: text-to-image, image-to-image (`seedImage`).
 
 Works best near ~262K total pixels. Going significantly beyond causes composition breakdown (repeated subjects, incoherent layouts).
 
@@ -33,7 +37,7 @@ Some fine-tuned models (e.g. DreamShaper) can push to 768x768 or 640x896 but res
 
 ## SDXL
 
-Base training resolution: **1024x1024** (~1MP).
+Base training resolution: **1024x1024** (~1MP). Workflows: text-to-image, image-to-image (`seedImage`).
 
 Fine-tuned on multiple aspect ratios at ~1MP total pixels. Best results stay near this pixel budget.
 
@@ -89,6 +93,7 @@ Architecture: Flow transformer, 12B params. Arbitrary dims, multiples of 16.
 ### FLUX.1 [dev]
 
 - Open-weight, non-commercial license
+- Workflows: text-to-image, image-to-image (`seedImage`)
 - Training resolution: ~1MP, supports arbitrary aspect ratios
 - Dimensions: 256-2048px (multiples of 16), best at ~1MP
 - Steps: typically 20-50
@@ -97,6 +102,7 @@ Architecture: Flow transformer, 12B params. Arbitrary dims, multiples of 16.
 ### FLUX.1 [schnell]
 
 - Distilled version of FLUX.1 dev, Apache 2.0 licensed
+- Workflows: text-to-image, image-to-image (`seedImage`)
 - 1-4 step generation
 - Same dimension handling as dev
 
@@ -112,6 +118,7 @@ Based on the FLUX.1 architecture. Use FLUX dimensions — arbitrary, multiples o
 
 - 8.9B params, based on FLUX.1 schnell
 - **Apache 2.0** licensed (fully open, unlike FLUX.1 dev)
+- Workflows: text-to-image, image-to-image (`seedImage`)
 - Designed as a finetuning base — intentionally neutral
 - Variants: Base, HD (high-res finetune), Flash (CFG baked)
 - Same dimension handling as FLUX.1
@@ -119,6 +126,7 @@ Based on the FLUX.1 architecture. Use FLUX dimensions — arbitrary, multiples o
 ### Z-Image Turbo
 
 - 6B params, Alibaba (Tongyi-MAI), custom S3-DiT architecture
+- Workflows: text-to-image, image-to-image (`seedImage`)
 - Distilled for speed: 8 steps, sub-second inference
 - Dimensions: total pixels between 512x512 and 2048x2048, arbitrary within range
 - Strong at photorealism and bilingual text rendering (EN/CN)
@@ -126,6 +134,7 @@ Based on the FLUX.1 architecture. Use FLUX dimensions — arbitrary, multiples o
 ### Qwen Image
 
 - 20B params, Alibaba (Qwen team), MMDiT architecture
+- Workflows: text-to-image, image-to-image (`seedImage`)
 - Native resolution up to **3584x3584** without upscaling
 - Exceptional text rendering accuracy (EN + CN)
 - Also does image editing via reference images

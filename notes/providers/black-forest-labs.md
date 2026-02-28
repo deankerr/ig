@@ -83,7 +83,7 @@ Provider-specific settings path: `providerSettings.bfl`
 - AIR ID: `bfl:3@1`
 - Workflows: text-to-image, reference-to-image
 - Prompt: 2-3000 chars
-- Reference images: up to 2
+- Image input: `referenceImages: string[]` — up to 2
 - Provider settings: `promptUpsampling`, `safetyTolerance`
 
 **Dimensions (required — aspect ratio selection, not arbitrary pixels):**
@@ -101,7 +101,7 @@ Provider-specific settings path: `providerSettings.bfl`
 - AIR ID: `bfl:4@1`
 - Workflows: text-to-image, reference-to-image
 - Prompt: 2-3000 chars
-- Reference images: up to 2
+- Image input: `referenceImages: string[]` — up to 2
 - Provider settings: `promptUpsampling`, `safetyTolerance`
 - Same dimensions as Kontext [pro]
 
@@ -114,7 +114,7 @@ Provider-specific settings path: `providerSettings.bfl`
 - AIR ID: `runware:400@1`
 - Workflows: text-to-image, reference-to-image
 - Prompt: 1-32000 chars
-- Reference images: up to 4
+- Image input: `referenceImages: string[]` — up to 4
 - Dimensions: 512-2048px (multiples of 16)
 - Steps: 1-50
 - CFGScale: 1-20 (default 4)
@@ -128,7 +128,7 @@ All klein models share these specs:
 - Workflows: text-to-image, image-to-image, reference-to-image, image-editing
 - Prompt: 1-10000 chars
 - Negative prompt: 1-10000 chars (optional)
-- Reference images: up to 4
+- Image input: `inputs.referenceImages: string[]` — up to 4
 - Dimensions: 128-2048px (multiples of 16)
 - Steps: 1-50 (distilled default 4, base default 28)
 - CFGScale: 1-20 (default 3.5)
@@ -149,7 +149,7 @@ Note: when `steps` is set without `acceleration`, acceleration is not applied.
 - AIR ID: `bfl:5@1`
 - Workflows: text-to-image, reference-to-image
 - Prompt: 1-32000 chars
-- Reference images: up to 9 (total input capacity: 9MP)
+- Image input: `referenceImages: string[]` — up to 9 (total input capacity: 9MP)
 - Dimensions: 256-2048px, arbitrary (multiples of 16)
 - numberResults: 1 only (no batch generation)
 - No steps/CFGScale control (model-managed)
@@ -160,7 +160,7 @@ Note: when `steps` is set without `acceleration`, acceleration is not applied.
 - AIR ID: `bfl:7@1`
 - Workflows: text-to-image, reference-to-image
 - Prompt: 1-32000 chars
-- Reference images: up to 8
+- Image input: `referenceImages: string[]` — up to 8
 - Grounded generation: integrates real-time web info into output
 - Dimensions: 256-2048px, arbitrary (multiples of 16)
 - numberResults: 1 only (no batch generation)
@@ -172,7 +172,7 @@ Note: when `steps` is set without `acceleration`, acceleration is not applied.
 - AIR ID: `bfl:6@1`
 - Workflows: text-to-image, reference-to-image
 - Prompt: 1-32000 chars
-- Reference images: up to 10 (total input capacity: 14MP)
+- Image input: `referenceImages: string[]` — up to 10 (total input capacity: 14MP)
 - Dimensions: 256-2048px, arbitrary (multiples of 16)
 - Steps: 1-50
 - CFGScale: 1.5-10 (default 2.5) — narrower range than dev/klein

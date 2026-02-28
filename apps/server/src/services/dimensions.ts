@@ -2,6 +2,9 @@
 // Single owner of sizing — callers always go through this service.
 // Never fails — always returns dimensions. Sub-process results preserved in annotations.
 
+import { db } from '@ig/db'
+import { artifacts, tags } from '@ig/db/schema'
+import { and, eq } from 'drizzle-orm'
 import { imageDimensionsFromStream } from 'image-dimensions'
 import { z } from 'zod'
 
@@ -13,6 +16,7 @@ import type { Result } from '../utils/result'
 import { zDomainUrl } from '../utils/validators'
 import { type AutoAspectRatioResult, resolveAutoAspectRatio } from './auto-aspect-ratio'
 import { lookupModel } from './models'
+import { TAG_KEYS } from './tags'
 
 // -- Schema --
 
@@ -93,7 +97,10 @@ async function resolveDimensions(
   const profile = profiles.findProfile({ air: input.model, architecture: modelData?.architecture })
   const profileAnnotation = { match: profile.match }
 
-  const imageFetch = await fetchImageDimensions(config.from)
+  // Try local DB lookup first (our own artifacts), fall back to HTTP fetch
+  const imageFetch =
+    (await lookupLocalDimensions(ctx.env.PUBLIC_URL, config.from)) ??
+    (await fetchImageDimensions(config.from))
   if (!imageFetch.ok) {
     // Image fetch failed → fall back to profile's square size
     return {
@@ -188,6 +195,52 @@ function fitToRange(
 const roundTo = (n: number, step: number) => Math.round(n / step) * step
 const ceilTo = (n: number, step: number) => Math.ceil(n / step) * step
 const floorTo = (n: number, step: number) => Math.floor(n / step) * step
+
+// -- Look up dimensions from DB for our own hosted artifacts --
+
+async function lookupLocalDimensions(
+  publicUrl: string,
+  url: string,
+): Promise<ImageFetchResult | null> {
+  if (!url.startsWith(publicUrl)) return null
+
+  const path = url.slice(publicUrl.length)
+
+  // /artifacts/{id}/file → direct ID lookup
+  const directMatch = path.match(/^\/artifacts\/([^/]+)\/file/)
+  if (directMatch) {
+    const id = directMatch[1]!
+    const [row] = await db
+      .select({ width: artifacts.width, height: artifacts.height })
+      .from(artifacts)
+      .where(eq(artifacts.id, id))
+      .limit(1)
+    if (!row || row.width == null || row.height == null) return null
+    return { ok: true, value: { width: row.width, height: row.height, url } }
+  }
+
+  // /a/{slug} → slug tag lookup → artifact ID → dimensions
+  const slugMatch = path.match(/^\/a\/([^/.]+)/)
+  if (slugMatch) {
+    const slug = slugMatch[1]!
+    const [tagRow] = await db
+      .select({ targetId: tags.targetId })
+      .from(tags)
+      .where(and(eq(tags.tag, TAG_KEYS.slug), eq(tags.value, slug)))
+      .limit(1)
+    if (!tagRow) return null
+
+    const [row] = await db
+      .select({ width: artifacts.width, height: artifacts.height })
+      .from(artifacts)
+      .where(eq(artifacts.id, tagRow.targetId))
+      .limit(1)
+    if (!row || row.width == null || row.height == null) return null
+    return { ok: true, value: { width: row.width, height: row.height, url } }
+  }
+
+  return null
+}
 
 // -- Fetch image dimensions from URL via prefix fetch --
 

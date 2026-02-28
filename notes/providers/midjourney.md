@@ -44,7 +44,7 @@ Provider-specific settings path: `providerSettings.midjourney`
 All Midjourney models share these constraints:
 
 - **numberResults**: must be a multiple of 4 (4, 8, 12, 16, 20; default 4)
-- **Reference images**: up to 1
+- **Image input**: `inputs.referenceImages: string[]` — up to 1
 - **Provider settings**: `quality`, `stylize`, `chaos`, `weird`, `niji`
 
 **Dimensions (required — fixed set, shared across all models):**

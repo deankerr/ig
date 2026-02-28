@@ -29,12 +29,12 @@ Provider-specific settings path: `providerSettings.bytedance`
 - Workflows: image-to-image only
 - Prompt: 2-500 chars
 
-| Param             | Constraint                                     |
-| ----------------- | ---------------------------------------------- |
-| Input image       | 300-6000px per side, 10MB max                  |
-| CFGScale          | 1-10 (default 5.5)                             |
-| referenceImages   | exactly 1 (required)                           |
-| Output dimensions | inherits aspect ratio from reference, up to 4K |
+| Param             | Constraint                                      |
+| ----------------- | ----------------------------------------------- |
+| Input image       | 300-6000px per side, 10MB max                   |
+| CFGScale          | 1-10 (default 5.5)                              |
+| Image input       | `referenceImages: [url]` — exactly 1 (required) |
+| Output dimensions | inherits aspect ratio from reference, up to 4K  |
 
 Provider settings: none.
 
@@ -45,7 +45,7 @@ Provider settings: none.
 - AIR ID: `bytedance:5@0`
 - Workflows: text-to-image, image-to-image
 - Prompt: 1-2000 chars
-- Reference images: up to 14
+- Image input: `referenceImages: string[]` — up to 14
 
 **Dimension constraints:** total pixels between ~921,600 (960x960) and 16,777,216 (4096x4096). Arbitrary dimensions within this range are accepted (not limited to the recommended set below). Confirmed: 1024x1536 works.
 
@@ -68,7 +68,7 @@ Provider settings: `maxSequentialImages`.
 - AIR ID: `bytedance:seedream@4.5`
 - Workflows: text-to-image, image-to-image
 - Prompt: 1-2000 chars
-- Reference images: up to 14
+- Image input: `inputs.referenceImages: string[]` — up to 14
 
 **Input image requirements:** 14-6000px per side, aspect ratio 1:16 to 16:1, 10MB max.
 
@@ -95,7 +95,7 @@ Provider settings: `maxSequentialImages`, `optimizePromptMode`.
 - AIR ID: `bytedance:seedream@5.0-lite`
 - Workflows: text-to-image, image-to-image
 - Prompt: 1-2000 chars
-- Reference images: up to 14
+- Image input: `inputs.referenceImages: string[]` — up to 14
 - Features: real-time search integration, reasoning, domain knowledge
 
 **Input image requirements:** 14-6000px per side, aspect ratio 1:16 to 16:1, 10MB max.

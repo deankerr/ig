@@ -64,7 +64,7 @@ Provider-specific settings path: `providerSettings.openai`
 - AIR ID: `openai:1@1`
 - Workflows: text-to-image, image-to-image
 - Prompt: 1-32000 chars
-- Reference images: up to 16
+- Image input: `referenceImages: string[]` — up to 16
 - Provider settings: `quality` (`"high"` | `"auto"`, required), `background` (required)
 
 **Dimensions (supported — fixed set):**
@@ -81,7 +81,7 @@ Provider-specific settings path: `providerSettings.openai`
 - AIR ID: `openai:1@2`
 - Workflows: text-to-image, image-to-image
 - Prompt: 1-32000 chars
-- Reference images: up to 16
+- Image input: `referenceImages: string[]` — up to 16
 - ~80% cost savings vs GPT Image 1
 - Provider settings: `quality` (`"high"` | `"medium"` | `"auto"`, required), `background` (`"opaque"` | `"transparent"`, required — no `"auto"`)
 
@@ -99,7 +99,7 @@ Provider-specific settings path: `providerSettings.openai`
 - AIR ID: `openai:4@1`
 - Workflows: text-to-image, image-to-image, image-editing
 - Prompt: 2-32000 chars
-- Reference images: up to 16
+- Image input: `inputs.referenceImages: string[]` — up to 16
 - Best for text rendering and detailed design
 - Provider settings: `quality` (`"high"` | `"auto"`, required), `background` (required)
 
