@@ -1,6 +1,6 @@
-import type { DimensionProfile } from './types'
+import type { ModelProfile } from './types'
 
-export const openai: DimensionProfile[] = [
+export const openai: ModelProfile[] = [
   // DALL-E 2
   {
     match: { air: ['openai:2@2'] },
@@ -30,6 +30,7 @@ export const openai: DimensionProfile[] = [
   // GPT Image 1 / 1.5
   {
     match: { architecture: ['gpt_image_1', 'gpt_image_1_5'] },
+    referenceImages: { path: 'referenceImages' },
     sizes: {
       landscape: [[1536, 1024]],
       portrait: [[1024, 1536]],

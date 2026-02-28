@@ -1,9 +1,10 @@
-import type { DimensionProfile } from './types'
+import type { ModelProfile } from './types'
 
-export const bytedance: DimensionProfile[] = [
+export const bytedance: ModelProfile[] = [
   // Seedream 4
   {
     match: { architecture: ['seedream4'] },
+    referenceImages: { path: 'referenceImages' },
     range: { min: 960, max: 4096, divisor: 1 },
     sizes: {
       landscape: [[2496, 1664]],
@@ -47,6 +48,7 @@ export const bytedance: DimensionProfile[] = [
   // Seedream 4.5
   {
     match: { architecture: ['seedream_4_5'] },
+    referenceImages: { path: 'inputs.referenceImages' },
     range: { min: 1920, max: 4096, divisor: 1 },
     sizes: {
       landscape: [[2496, 1664]],
@@ -89,6 +91,7 @@ export const bytedance: DimensionProfile[] = [
   // Seedream 5
   {
     match: { architecture: ['seedream5'] },
+    referenceImages: { path: 'inputs.referenceImages' },
     sizes: {
       landscape: [[2496, 1664]],
       portrait: [[1664, 2496]],

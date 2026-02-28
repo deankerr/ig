@@ -1,8 +1,9 @@
-import type { DimensionProfile } from './types'
+import type { ModelProfile } from './types'
 
-export const midjourney: DimensionProfile[] = [
+export const midjourney: ModelProfile[] = [
   {
     match: { architecture: ['midjourney_v6', 'midjourney_v6_1', 'midjourney_v7'] },
+    referenceImages: { path: 'referenceImages', maxItems: 1 },
     sizes: {
       landscape: [[1344, 896]],
       portrait: [[896, 1344]],

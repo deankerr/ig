@@ -1,9 +1,10 @@
-import type { DimensionProfile } from './types'
+import type { ModelProfile } from './types'
 
-export const google: DimensionProfile[] = [
+export const google: ModelProfile[] = [
   // Imagen 3
   {
     match: { architecture: ['imagen3'] },
+    referenceImages: { path: 'referenceImages' },
     sizes: {
       landscape: [[1408, 768]],
       portrait: [[768, 1408]],
@@ -20,6 +21,7 @@ export const google: DimensionProfile[] = [
   // Imagen 3 Fast
   {
     match: { architecture: ['imagen3fast'] },
+    referenceImages: { path: 'referenceImages' },
     sizes: {
       landscape: [[1280, 896]],
       portrait: [[896, 1280]],
@@ -34,6 +36,7 @@ export const google: DimensionProfile[] = [
   // Imagen 4 variants
   {
     match: { architecture: ['imagen4preview', 'imagen4ultra', 'imagen4fast'] },
+    referenceImages: { path: 'referenceImages' },
     sizes: {
       landscape: [[1280, 896]],
       portrait: [[896, 1280]],
@@ -48,6 +51,7 @@ export const google: DimensionProfile[] = [
   // Gemini 2.5 Flash
   {
     match: { architecture: ['gemini_2_5_flash_image'] },
+    referenceImages: { path: 'referenceImages' },
     sizes: {
       landscape: [[1248, 832]],
       portrait: [[832, 1248]],
@@ -67,6 +71,7 @@ export const google: DimensionProfile[] = [
   // Gemini 3.0 Pro (multi-resolution tiers)
   {
     match: { architecture: ['gemini_3_0_pro_image'] },
+    referenceImages: { path: 'referenceImages' },
     sizes: {
       landscape: [[1264, 848]],
       portrait: [[848, 1264]],
@@ -126,6 +131,7 @@ export const google: DimensionProfile[] = [
   // Gemini 3.1 Flash (multi-resolution tiers with 512px base)
   {
     match: { architecture: ['gemini_3_1_flash_image'] },
+    referenceImages: { path: 'referenceImages' },
     sizes: {
       landscape: [[1264, 848]],
       portrait: [[848, 1264]],

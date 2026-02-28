@@ -1,5 +1,4 @@
-// Model profiles — dimension constraints per provider/architecture.
-// Run directly: bun apps/server/src/profiles/index.ts
+// Model profiles — provider-specific constraints per model/architecture.
 
 import { bytedance } from './bytedance'
 import { flux } from './flux'
@@ -8,13 +7,13 @@ import { midjourney } from './midjourney'
 import { openai } from './openai'
 import { other } from './other'
 import { sd } from './sd'
-import type { DimensionProfile } from './types'
+import type { ModelProfile } from './types'
 import { xai } from './xai'
 
-export type { DimensionProfile } from './types'
+export type { ModelProfile, ReferenceImageConfig } from './types'
 
 // Catch-all for unknown models — used directly as fallback, not in the match list
-const defaultProfile: DimensionProfile = {
+const defaultProfile: ModelProfile = {
   match: {},
   range: { min: 512, max: 2048, divisor: 16 },
   sizes: {
@@ -32,7 +31,7 @@ const defaultProfile: DimensionProfile = {
 }
 
 // Ordered list — first match wins
-const allProfiles: DimensionProfile[] = [
+const allProfiles: ModelProfile[] = [
   ...openai,
   ...flux,
   ...midjourney,
@@ -50,7 +49,7 @@ type MatchArgs = {
   architecture?: string
 }
 
-function findProfile(args: MatchArgs): DimensionProfile {
+function findProfile(args: MatchArgs): ModelProfile {
   for (const profile of allProfiles) {
     const m = profile.match
 
@@ -65,10 +64,7 @@ function findProfile(args: MatchArgs): DimensionProfile {
   return defaultProfile
 }
 
-function getDefaultSize(
-  profile: DimensionProfile,
-  ratio: string,
-): { width: number; height: number } {
+function getDefaultSize(profile: ModelProfile, ratio: string): { width: number; height: number } {
   const sizes = profile.sizes[ratio]
   const first = sizes?.[0]
   if (!first) {
@@ -81,25 +77,3 @@ function getDefaultSize(
 }
 
 export const profiles = { findProfile, getDefaultSize }
-
-// -- Demo --
-
-if (import.meta.main) {
-  const cases: MatchArgs[] = [
-    { architecture: 'midjourney_v7' },
-    { air: 'openai:2@3' },
-    { architecture: 'gemini_3_0_pro_image' },
-    { architecture: 'sdxl' },
-    { architecture: 'flux_2_pro' },
-    { architecture: 'some_unknown_model' },
-  ]
-
-  for (const args of cases) {
-    const label = args.air ?? args.architecture
-    const profile = profiles.findProfile(args)
-    console.log(`\n${label}:`)
-    for (const key of ['landscape', 'portrait', 'square'] as const) {
-      console.log(`  ${key}:`, profiles.getDefaultSize(profile, key))
-    }
-  }
-}

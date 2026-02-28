@@ -1,8 +1,9 @@
-import type { DimensionProfile } from './types'
+import type { ModelProfile } from './types'
 
-export const xai: DimensionProfile[] = [
+export const xai: ModelProfile[] = [
   {
     match: { architecture: ['grok_imagine_image'] },
+    referenceImages: { path: 'referenceImages' },
     sizes: {
       landscape: [[1296, 864]],
       portrait: [[864, 1296]],
