@@ -17,7 +17,7 @@ import { storeArtifact } from './store'
 
 type SubmitArgs = {
   input: ImageInferenceInput
-  dimensions?: DimensionsConfig
+  dimensions: DimensionsConfig
   tags?: Record<string, string | null>
   sync?: boolean
 }
@@ -47,7 +47,7 @@ async function submitAsync(
   args: {
     id: string
     input: ImageInferenceInput
-    dimensions?: DimensionsConfig
+    dimensions: DimensionsConfig
     tags?: Record<string, string | null>
   },
 ): Promise<{ id: string }> {
@@ -86,7 +86,7 @@ async function submitAsync(
 
 async function backgroundDispatch(
   ctx: Context,
-  args: { id: string; input: ImageInferenceInput; dimensions?: DimensionsConfig },
+  args: { id: string; input: ImageInferenceInput; dimensions: DimensionsConfig },
 ) {
   const { id } = args
   const input = { ...args.input }
@@ -94,18 +94,14 @@ async function backgroundDispatch(
   const request = getRequest(ctx, id)
 
   try {
-    // Resolve output dimensions if config provided
-    if (args.dimensions !== undefined) {
-      const dims = await dimensionsService.resolve(ctx, {
-        config: args.dimensions,
-        prompt: input.positivePrompt,
-      })
-      annotations.dimensions = dims
-      if (dims.ok) {
-        input.width = dims.value.width
-        input.height = dims.value.height
-      }
-    }
+    // Resolve output dimensions
+    const dims = await dimensionsService.resolve(ctx, {
+      input,
+      config: args.dimensions,
+    })
+    annotations.dimensions = dims
+    input.width = dims.width
+    input.height = dims.height
 
     // Dispatch to Runware with async delivery (fast ack, results via webhook)
     const webhookURL = `${ctx.env.PUBLIC_URL}/webhooks/runware?generation_id=${id}`
@@ -117,9 +113,9 @@ async function backgroundDispatch(
       input,
     })
 
-    // Update DO with dispatch outcome
+    // Update DO with dispatch outcome (use inferenceTask on success, resolved input on failure)
     await request.setDispatchResult({
-      input: result.ok ? result.value.inferenceTask : {},
+      input: result.ok ? result.value.inferenceTask : { ...input },
       annotations,
       error: result.ok ? undefined : result.error,
     })
@@ -143,7 +139,7 @@ async function backgroundDispatch(
     // Ensure DO gets an error state so the alarm doesn't wait 5 minutes
     console.error('[inference:backgroundDispatch] unexpected error', { id, error: err })
     await request.setDispatchResult({
-      input: {},
+      input: { ...input },
       annotations,
       error: httpError(RUNWARE_API_URL, 0, String(err)),
     })
@@ -169,7 +165,7 @@ async function submitSync(
   args: {
     id: string
     input: ImageInferenceInput
-    dimensions?: DimensionsConfig
+    dimensions: DimensionsConfig
     tags?: Record<string, string | null>
   },
 ): Promise<SyncResult> {
@@ -178,18 +174,14 @@ async function submitSync(
   const annotations: Record<string, unknown> = {}
   const now = new Date()
 
-  // Resolve output dimensions if config provided
-  if (dimensions !== undefined) {
-    const dims = await dimensionsService.resolve(ctx, {
-      config: dimensions,
-      prompt: input.positivePrompt,
-    })
-    annotations.dimensions = dims
-    if (dims.ok) {
-      input.width = dims.value.width
-      input.height = dims.value.height
-    }
-  }
+  // Resolve output dimensions
+  const dims = await dimensionsService.resolve(ctx, {
+    input,
+    config: dimensions,
+  })
+  annotations.dimensions = dims
+  input.width = dims.width
+  input.height = dims.height
 
   // Dispatch without webhook — Runware defaults to sync delivery
   const result = await dispatch({ id, apiKey: ctx.env.RUNWARE_KEY, input })
