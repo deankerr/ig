@@ -19,7 +19,7 @@ packages/infra/  # Alchemy infrastructure-as-code
 ## Commands
 
 ```bash
-bun run check         # check-types + fix + format
+bun run check         # type check + fix + format, use when work complete/as needed
 bun run deploy        # Deploy to Cloudflare via Alchemy
 ```
 
@@ -40,12 +40,8 @@ The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. 
 - **RPC** (`/rpc/*`) — oRPC endpoints (used by the web app via RPCLink)
 - **Webhooks** (`/webhooks/runware`) — provider callbacks
 - **Auth**: All endpoints require `x-api-key` header.
-
-```bash
-source .env; curl -s -X POST "${DEV_SERVER_URL}/api/generations/create" \
-  -H "Content-Type: application/json" -H "x-api-key: ${API_KEY}" \
-  -d '{"model":"civitai:4384@128713","positivePrompt":"a cat","sync":true}'
-```
+- All endpoints are POST (oRPC). REST paths mirror the router structure: `/api/generations/create`, `/api/generations/get`, etc.
+- `sync:true` blocks until the webhook returns. Works for fast models but can time out silently on slow ones. Prefer async create + poll for reliability.
 
 ### Artifact Slug URLs
 
@@ -69,6 +65,7 @@ These models are fast and cost practically nothing. Use them when testing infere
 Common production models:
 
 - `bytedance:5@0` ByteDance Seedream 4
+- `civitai:133005@782002` Juggernaut XL XI (SDXL)
 
 ## Remeda
 
