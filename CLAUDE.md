@@ -66,6 +66,10 @@ These models are fast and cost practically nothing. Use them when testing infere
 - `rundiffusion:120964@131579` RunDiffusionXL (SDXL)
 - `civitai:4384@128713` DreamShaper (SD1.5)
 
+Common production models:
+
+- `bytedance:5@0` ByteDance Seedream 4
+
 ## Remeda
 
 Use Remeda to write clean, functional code. `import * as R from 'remeda'`

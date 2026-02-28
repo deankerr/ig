@@ -195,7 +195,7 @@ async function submitSync(
   const result = await dispatch({ id, apiKey: ctx.env.RUNWARE_KEY, input })
 
   if (!result.ok) {
-    throw new Error(result.message)
+    throw new Error(result.message, { cause: result.error })
   }
 
   // Progressive D1 — insert generation row
