@@ -12,7 +12,7 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
-    "ai": "^6.0.77",
+    "ai": "^6.0.97",
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "file-type": "^21.3.0",
@@ -21,7 +21,7 @@
     "remeda": "catalog:",
     "up-fetch": "catalog:",
     "uuid": "catalog:",
-    "workers-ai-provider": "^3.0.4",
+    "workers-ai-provider": "^3.1.2",
     "zod": "catalog:"
   },
   "devDependencies": {

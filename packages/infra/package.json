@@ -4,9 +4,7 @@
   "type": "module",
   "scripts": {
     "deploy": "alchemy deploy",
-    "destroy": "alchemy destroy",
-    "dev": "alchemy dev",
-    "dev:local": "bun --env-file .env alchemy.run.ts --dev"
+    "destroy": "alchemy destroy"
   },
   "dependencies": {
     "dotenv": "catalog:",
