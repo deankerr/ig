@@ -1,13 +1,15 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["eslint", "typescript", "unicorn", "oxc", "react", "react-perf", "promise", "import"],
-  "overrides": [
-    {
-      "files": ["packages/env/**"],
-      "rules": {
-        "typescript/triple-slash-reference": "off"
-      }
-    }
+  "ignorePatterns": [
+    ".agents/skills",
+    ".claude/skills",
+    "**/.alchemy",
+    "**/_generated",
+    "**/routeTree.gen.ts",
+    "**/components/ui"
   ],
-  "ignorePatterns": ["**/routeTree.gen.ts", "**/.alchemy/**"]
+  "rules": {
+    "typescript/triple-slash-reference": "off"
+  }
 }

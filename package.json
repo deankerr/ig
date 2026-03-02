@@ -29,7 +29,7 @@
   },
   "type": "module",
   "scripts": {
-    "check": "bun run check-types && oxlint --fix apps packages && oxfmt --write apps packages",
+    "check": "bun run check-types && oxlint --fix --type-aware apps packages && oxfmt --write apps packages",
     "check-types": "turbo check-types",
     "clean": "rm -rf node_modules .turbo apps/*/node_modules packages/*/node_modules packages/*/dist apps/*/dist && find . -name '*.tsbuildinfo' -not -path '*/node_modules/*' -delete",
     "db:generate": "bun --cwd packages/db db:generate",
@@ -47,9 +47,9 @@
     "@ig/config": "workspace:*",
     "@types/node": "catalog:",
     "lefthook": "^2.1.0",
-    "oxfmt": "0.28.0",
-    "oxlint": "1.47.0",
-    "oxlint-tsgolint": "0.11.5",
+    "oxfmt": "0.35.0",
+    "oxlint": "1.50.0",
+    "oxlint-tsgolint": "0.15.0",
     "shadcn": "^3.8.5",
     "turbo": "^2.8.11",
     "typescript": "catalog:"
