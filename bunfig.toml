@@ -1,2 +1,30 @@
 [console]
 depth = 6
+
+[install]
+minimumReleaseAge = 259200 # 3 days
+minimumReleaseAgeExcludes = [
+  "@cloudflare/workers-types",
+  "@orpc/client",
+  "@orpc/contract",
+  "@orpc/interop",
+  "@orpc/json-schema",
+  "@orpc/openapi",
+  "@orpc/openapi-client",
+  "@orpc/server",
+  "@orpc/shared",
+  "@orpc/standard-server",
+  "@orpc/standard-server-aws-lambda",
+  "@orpc/standard-server-fastify",
+  "@orpc/standard-server-fetch",
+  "@orpc/standard-server-node",
+  "@orpc/standard-server-peer",
+  "@orpc/zod",
+  "@types/bun",
+  "@types/node",
+  "@types/react-dom",
+  "@types/react",
+  "bun-types",
+  "react-dom",
+  "react",
+]

@@ -6,6 +6,8 @@ Always read @VISION.md for a high level understanding of the project.
 
 Experimental with low-traffic production deployment. Breaking changes are acceptable.
 
+Local `apps/server` dev server is disabled due to issues with alchemy's dev mode. `dev:web` is configured to point at the remote dev environment, and may be used for `apps/web` changes only.
+
 ## Structure
 
 ```
@@ -69,7 +71,11 @@ Common production models:
 
 ## Remeda
 
-Use Remeda to write clean, functional code. `import * as R from 'remeda'`
+Use Remeda to write clean, functional code.
+
+- `import * as R from 'remeda'` is convenient and properly tree-shaken.
+- Excellent type narrowing makes our code safer.
+- Very useful examples: `chunk`, `first`, `only`, `splitWhen`, `hasAtLeast`, `isDeepEqual`, `isDefined`, `isNullish`, `isNotNull`, `pick`, `pickBy`, `omit`, `merge`
 
 ## Reference
 
