@@ -245,7 +245,7 @@ async function lookupLocalDimensions(
 // -- Fetch image dimensions from URL via prefix fetch --
 
 const FETCH_TIMEOUT_MS = 10_000
-const PREFIX_BYTES = 65_536
+const PREFIX_BYTES = 262_144
 
 async function fetchImageDimensions(url: string): Promise<ImageFetchResult> {
   try {
