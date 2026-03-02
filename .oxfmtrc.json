@@ -1,15 +1,15 @@
 {
-  "ignorePatterns": ["**/routeTree.gen.ts", ".agents", ".claude", "**/.alchemy/**"],
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [
+    ".agents/skills",
+    ".claude/skills",
+    "**/.alchemy",
+    "**/_generated",
+    "**/routeTree.gen.ts"
+  ],
   "semi": false,
   "singleQuote": true,
-  "experimentalSortImports": {
-    "groups": [
-      ["type-builtin", "type-external", "value-builtin", "value-external"],
-      ["type-internal", "value-internal"],
-      ["type-parent", "type-sibling", "type-index", "value-parent", "value-sibling", "value-index"],
-      "unknown"
-    ]
-  },
-  "experimentalSortPackageJson": { "sortScripts": true },
-  "experimentalTailwindcss": { "functions": ["cn"] }
+  "sortImports": {},
+  "sortPackageJson": { "sortScripts": true },
+  "tailwindcss": { "functions": ["cn", "clsx", "twMerge"] }
 }
