@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 Always read @VISION.md for a high level understanding of the project.
 
