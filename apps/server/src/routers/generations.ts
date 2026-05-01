@@ -10,13 +10,13 @@ import { getRequest } from '../inference/request'
 import { imageInferenceInput } from '../inference/schema'
 import { submitRequest } from '../inference/submit'
 import { procedure } from '../orpc'
-import { dimensionsConfig } from '../services/dimensions'
+import { dimensionsConfigSchema } from '../services/dimensions'
 import { tagsService, zTagsRecord } from '../services/tags'
 import { decodeCursor, encodeCursor, enrichWithModels, paginationInput } from './utils'
 
 // Flat input: inference fields + ig extensions (tags, sync, etc.) at the same level
 const createSchema = imageInferenceInput.extend({
-  dimensions: dimensionsConfig,
+  dimensions: dimensionsConfigSchema,
   tags: zTagsRecord.optional(),
   sync: z.boolean().optional().default(false),
 })

@@ -20,7 +20,7 @@ import { TAG_KEYS } from './tags'
 
 // -- Schema --
 
-const presets = z.enum(['default', 'auto', 'landscape', 'portrait', 'square'])
+const presets = z.enum(['auto', 'landscape', 'portrait', 'square'])
 
 const dimensionsObject = z.object({
   from: zDomainUrl,
@@ -29,8 +29,12 @@ const dimensionsObject = z.object({
   maxHeight: z.number().int().positive().optional(),
 })
 
-export const dimensionsConfig = z.union([presets, dimensionsObject]).default('default')
-export type DimensionsConfig = z.infer<typeof dimensionsConfig>
+export const dimensionsConfigSchema = z.union([presets, dimensionsObject]).optional()
+export type DimensionsConfig = z.infer<typeof dimensionsConfigSchema>
+
+const FALLBACK_PRESET = 'landscape'
+const FALLBACK_WIDTH = 1024
+const FALLBACK_HEIGHT = 1024
 
 // -- Types --
 
@@ -60,13 +64,16 @@ async function resolveDimensions(
 ): Promise<DimensionsResult> {
   const { input, config } = args
 
+  if (config === undefined) {
+    return {
+      width: input.width ?? FALLBACK_WIDTH,
+      height: input.height ?? FALLBACK_HEIGHT,
+      annotations: {},
+    }
+  }
+
   // -- String presets --
   if (typeof config === 'string') {
-    // Explicit dimensions or default → 1024x1024 fallback
-    if (config === 'default') {
-      return { width: input.width ?? 1024, height: input.height ?? 1024, annotations: {} }
-    }
-
     // Resolve orientation (auto → LLM, otherwise direct)
     let orientation: string
     let autoAspectRatio: AutoAspectRatioResult | undefined
@@ -74,7 +81,7 @@ async function resolveDimensions(
     if (config === 'auto') {
       const ar = await resolveAutoAspectRatio(ctx, { prompt: input.positivePrompt })
       autoAspectRatio = ar
-      orientation = ar.ok ? ar.value.aspectRatio : 'square'
+      orientation = ar.ok ? ar.value.aspectRatio : FALLBACK_PRESET
     } else {
       orientation = config
     }
@@ -104,7 +111,7 @@ async function resolveDimensions(
   if (!imageFetch.ok) {
     // Image fetch failed → fall back to profile's square size
     return {
-      ...profiles.getDefaultSize(profile, 'square'),
+      ...profiles.getDefaultSize(profile, FALLBACK_PRESET),
       annotations: { imageFetch, profile: profileAnnotation },
     }
   }
@@ -161,7 +168,7 @@ function snapToClosestSize(profile: ModelProfile, width: number, height: number)
   }
 
   if (best) return { width: best[0], height: best[1] }
-  return { width: 1024, height: 1024 }
+  return { width: FALLBACK_WIDTH, height: FALLBACK_HEIGHT }
 }
 
 // Snap to divisor and scale to fit within [min, max]
