@@ -8,6 +8,7 @@
     "register:commands": "bun run scripts/register-commands.ts"
   },
   "dependencies": {
+    "@ig/infra": "workspace:*",
     "@ig/server": "workspace:*",
     "@orpc/client": "catalog:",
     "hono": "catalog:",
