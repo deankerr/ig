@@ -109,7 +109,7 @@ async function resolveDimensions(
     (await lookupLocalDimensions(ctx.env.PUBLIC_URL, config.from)) ??
     (await fetchImageDimensions(config.from))
   if (!imageFetch.ok) {
-    // Image fetch failed → fall back to profile's square size
+    // Image fetch failed → fall back to profile's landscape size
     return {
       ...profiles.getDefaultSize(profile, FALLBACK_PRESET),
       annotations: { imageFetch, profile: profileAnnotation },
