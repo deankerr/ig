@@ -1,0 +1,24 @@
+{
+  "name": "discord-bot",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "check-types": "tsc -b",
+    "register:commands": "bun run scripts/register-commands.ts"
+  },
+  "dependencies": {
+    "@ig/server": "workspace:*",
+    "@orpc/client": "catalog:",
+    "hono": "catalog:",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@ig/config": "workspace:*",
+    "@types/node": "catalog:",
+    "alchemy": "catalog:",
+    "discord-api-types": "^0.38.46",
+    "typescript": "catalog:"
+  }
+}

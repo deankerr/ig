@@ -14,7 +14,6 @@
   },
   "devDependencies": {
     "@ig/config": "workspace:*",
-    "@ig/infra": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   }
