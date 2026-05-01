@@ -22,6 +22,23 @@
         "typescript": "catalog:",
       },
     },
+    "apps/discord-bot": {
+      "name": "discord-bot",
+      "dependencies": {
+        "@ig/server": "workspace:*",
+        "@orpc/client": "catalog:",
+        "hono": "catalog:",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "catalog:",
+        "@ig/config": "workspace:*",
+        "@types/node": "catalog:",
+        "alchemy": "catalog:",
+        "discord-api-types": "^0.38.46",
+        "typescript": "catalog:",
+      },
+    },
     "apps/server": {
       "name": "@ig/server",
       "dependencies": {
@@ -1109,6 +1126,10 @@
     "detect-node-es": ["detect-node-es@1.1.0", "", {}, "sha512-ypdmJU/TbBby2Dxibuv7ZLW3Bs1QEmM7nHjEANfohJLvE0XVujisn1qPJcZxg+qDucsr+bP6fLD1rPS3AhJ7EQ=="],
 
     "diff": ["diff@8.0.3", "", {}, "sha512-qejHi7bcSD4hQAZE0tNAawRK1ZtafHDmMTMkrrIGgSLl7hTnQHmKCeB45xAcbfTqK2zowkM3j3bHt/4b/ARbYQ=="],
+
+    "discord-api-types": ["discord-api-types@0.38.46", "", {}, "sha512-Ae7NcagMG+FPxwuQxGCPEHmLCKMm8YBMPWEuF5J3L+KWrlH4XGR3UoVo4Ne8bwhhHXbpf+DxDqOeW2jBFupXCQ=="],
+
+    "discord-bot": ["discord-bot@workspace:apps/discord-bot"],
 
     "dotenv": ["dotenv@17.3.1", "", {}, "sha512-IO8C/dzEb6O3F9/twg6ZLXz164a2fhTnEWb95H23Dm4OuN+92NmEAlTrupP9VW6Jm3sO26tQlqyvyi4CsnY9GA=="],
 

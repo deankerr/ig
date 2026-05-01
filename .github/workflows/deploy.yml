@@ -66,6 +66,12 @@ jobs:
           FAL_KEY: ${{ secrets.FAL_KEY }}
           RUNWARE_KEY: ${{ secrets.RUNWARE_KEY }}
           API_KEY: ${{ secrets.API_KEY }}
+          DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+          DISCORD_PUBLIC_KEY: ${{ secrets.DISCORD_PUBLIC_KEY }}
+          DISCORD_ALLOWED_CHANNEL_IDS: ${{ secrets.DISCORD_ALLOWED_CHANNEL_IDS }}
+          DISCORD_MODEL_ALLOWLIST: ${{ secrets.DISCORD_MODEL_ALLOWLIST }}
           VITE_BUILD_ID: ${{ github.sha }}
         timeout-minutes: 10
 

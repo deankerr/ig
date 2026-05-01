@@ -1,0 +1,7 @@
+{
+  "extends": "@ig/config/tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "../../packages/env/src/env.d.ts", "src/imagine/definitions.ts"]
+}

@@ -12,6 +12,7 @@ Local `apps/server` dev server is disabled due to issues with alchemy's dev mode
 
 ```
 apps/server/     # Hono + oRPC on Cloudflare Workers (port 3220)
+apps/discord-bot/ # Discord bot, uses server
 apps/web/        # React admin console (Vite, port 3221)
 packages/db/     # Drizzle ORM schema (SQLite/D1)
 packages/env/    # Cloudflare binding types (manual Env declaration)

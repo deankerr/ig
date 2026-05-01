@@ -95,7 +95,31 @@ export const web = await Vite('web', {
   domains: [{ domainName: domain('web') }],
 })
 
+export const discordBot = await Worker('discord-bot', {
+  cwd: '../../apps/discord-bot',
+  entrypoint: 'src/index.ts',
+  compatibility: 'node',
+  observability: {
+    enabled: true,
+    headSamplingRate: 1,
+  },
+  bindings: {
+    DISCORD_ALLOWED_CHANNEL_IDS: process.env.DISCORD_ALLOWED_CHANNEL_IDS!,
+    DISCORD_APPLICATION_ID: alchemy.secret.env.DISCORD_APPLICATION_ID!,
+    DISCORD_BOT_TOKEN: alchemy.secret.env.DISCORD_BOT_TOKEN!,
+    DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID!,
+    DISCORD_MODEL_ALLOWLIST: process.env.DISCORD_MODEL_ALLOWLIST!,
+    DISCORD_PUBLIC_KEY: alchemy.secret.env.DISCORD_PUBLIC_KEY!,
+    IG_API_KEY: alchemy.secret.env.API_KEY!,
+    IG_BASE_URL: process.env.OVERRIDE_SERVER_URL ?? url(server),
+  },
+  dev: {
+    port: 3222,
+  },
+})
+
 console.log(`Server: ${url(server)}`)
 console.log(`Web:    ${url(web)}`, `(-> ${web.bindings.VITE_SERVER_URL})`)
+console.log(`Bot:    ${url(discordBot)}`)
 
 await app.finalize()
