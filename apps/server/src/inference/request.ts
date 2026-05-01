@@ -8,10 +8,10 @@
  * Storage: sync KV (ctx.storage.kv) with keys "gen" and "outputs".
  */
 
+import { env, type ServerEnv } from '@ig/env/server'
 import { DurableObject } from 'cloudflare:workers'
 import { z } from 'zod'
 
-import type { Context } from '../context'
 import { REQUEST_TIMEOUT_MS } from './config'
 import * as persist from './persist'
 import { output, timeoutError, type Output, type RequestError } from './result'
@@ -69,7 +69,13 @@ export type ConfirmResult = {
 // DO storage keys — typed constants to avoid silent mismatches
 const KV = { meta: 'meta', outputs: 'outputs' } as const
 
-export class InferenceDO extends DurableObject<Env> {
+export class InferenceDO extends DurableObject {
+  declare env: ServerEnv
+
+  constructor(ctx: DurableObjectState, env: ServerEnv) {
+    super(ctx, env)
+  }
+
   private get kv() {
     return this.ctx.storage.kv
   }
@@ -230,7 +236,7 @@ type RequestClient = {
   destroy(): Promise<void>
 }
 
-export function getRequest(ctx: Context, id: string) {
-  const ns = ctx.env.INFERENCE_DO
+export function getRequest(id: string) {
+  const ns = env.INFERENCE_DO
   return ns.get(ns.idFromName(id)) as unknown as RequestClient
 }

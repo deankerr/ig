@@ -4,6 +4,7 @@
 
 import { db } from '@ig/db'
 import { artifacts, tags } from '@ig/db/schema'
+import { env } from '@ig/env/server'
 import { and, eq } from 'drizzle-orm'
 import { imageDimensionsFromStream } from 'image-dimensions'
 import { z } from 'zod'
@@ -79,7 +80,7 @@ async function resolveDimensions(
     let autoAspectRatio: AutoAspectRatioResult | undefined
 
     if (config === 'auto') {
-      const ar = await resolveAutoAspectRatio(ctx, { prompt: input.positivePrompt })
+      const ar = await resolveAutoAspectRatio({ prompt: input.positivePrompt })
       autoAspectRatio = ar
       orientation = ar.ok ? ar.value.aspectRatio : FALLBACK_PRESET
     } else {
@@ -106,7 +107,7 @@ async function resolveDimensions(
 
   // Try local DB lookup first (our own artifacts), fall back to HTTP fetch
   const imageFetch =
-    (await lookupLocalDimensions(ctx.env.PUBLIC_URL, config.from)) ??
+    (await lookupLocalDimensions(env.PUBLIC_URL, config.from)) ??
     (await fetchImageDimensions(config.from))
   if (!imageFetch.ok) {
     // Image fetch failed → fall back to profile's landscape size

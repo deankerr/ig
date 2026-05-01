@@ -46,6 +46,7 @@
         "@better-fetch/fetch": "^1.1.21",
         "@ig/db": "workspace:*",
         "@ig/env": "workspace:*",
+        "@ig/infra": "workspace:*",
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",

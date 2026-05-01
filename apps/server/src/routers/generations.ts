@@ -2,10 +2,10 @@
 
 import { db } from '@ig/db'
 import { artifacts, generations, tags } from '@ig/db/schema'
+import { env } from '@ig/env/server'
 import { and, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm'
 import { z } from 'zod'
 
-import type { Context } from '../context'
 import { getRequest } from '../inference/request'
 import { imageInferenceInput } from '../inference/schema'
 import { submitRequest } from '../inference/submit'
@@ -27,7 +27,7 @@ export const generationsRouter = {
     return submitRequest(context, { input: inferenceInput, dimensions, tags, sync })
   }),
 
-  list: procedure.input(paginationInput).handler(async ({ input, context }) => {
+  list: procedure.input(paginationInput).handler(async ({ input }) => {
     const { cursor, limit } = input
     const decoded = cursor ? decodeCursor(cursor) : null
 
@@ -57,7 +57,7 @@ export const generationsRouter = {
     }))
 
     // Enrich with model data from KV
-    const enriched = await enrichWithModels(context.env.CACHE, itemsWithTags)
+    const enriched = await enrichWithModels(env.CACHE, itemsWithTags)
 
     const lastItem = items[items.length - 1]
     const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.createdAt, lastItem.id) : null
@@ -65,7 +65,7 @@ export const generationsRouter = {
     return { items: enriched, nextCursor }
   }),
 
-  get: procedure.input(z.object({ id: z.string() })).handler(async ({ input, context }) => {
+  get: procedure.input(z.object({ id: z.string() })).handler(async ({ input }) => {
     const generation = await db.query.generations.findFirst({
       where: eq(generations.id, input.id),
       with: { artifacts: { where: isNull(artifacts.deletedAt), with: { tags: true } } },
@@ -79,17 +79,17 @@ export const generationsRouter = {
     }
 
     // Enrich with model data from KV
-    const [enriched] = await enrichWithModels(context.env.CACHE, [withTags])
+    const [enriched] = await enrichWithModels(env.CACHE, [withTags])
     return enriched
   }),
 
-  status: procedure.input(z.object({ id: z.uuid() })).handler(async ({ input, context }) => {
-    const request = getRequest(context, input.id)
+  status: procedure.input(z.object({ id: z.uuid() })).handler(async ({ input }) => {
+    const request = getRequest(input.id)
     return request.getState()
   }),
 
   // Hard-delete: destroy generation + all artifacts + R2 blobs + tags + DO state
-  delete: procedure.input(z.object({ id: z.string() })).handler(async ({ input, context }) => {
+  delete: procedure.input(z.object({ id: z.string() })).handler(async ({ input }) => {
     // Fetch artifacts for R2 cleanup
     const rows = await db
       .select({ id: artifacts.id, r2Key: artifacts.r2Key })
@@ -105,7 +105,7 @@ export const generationsRouter = {
 
     // Delete R2 blobs
     for (const row of rows) {
-      await context.env.ARTIFACTS_BUCKET.delete(row.r2Key)
+      await env.ARTIFACTS_BUCKET.delete(row.r2Key)
     }
 
     // Delete artifact rows
@@ -115,12 +115,7 @@ export const generationsRouter = {
     await db.delete(generations).where(eq(generations.id, input.id))
 
     // Clear DO storage
-    const ctx: Context = {
-      env: context.env,
-      headers: context.headers,
-      waitUntil: context.waitUntil,
-    }
-    const request = getRequest(ctx, input.id)
+    const request = getRequest(input.id)
     await request.destroy()
 
     console.log('[generations:delete]', {

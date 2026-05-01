@@ -12,7 +12,7 @@ import { appRouter } from './routers'
 import { fileRoutes } from './routes/file'
 import { handleOrpcError, handleHonoError } from './utils/error'
 
-const app = new Hono<{ Bindings: Env }>()
+const app = new Hono()
 
 // Global error handler for webhook routes and any unhandled errors
 app.onError((error, c) => {
@@ -59,7 +59,6 @@ export const rpcHandler = new RPCHandler(appRouter, {
 
 app.use('/*', async (c, next) => {
   const context: Context = {
-    env: c.env,
     headers: c.req.raw.headers,
     waitUntil: c.executionCtx.waitUntil.bind(c.executionCtx),
   }

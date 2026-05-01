@@ -1,16 +1,17 @@
 // CDN fetch → R2 upload → artifact output result.
 
+import { env } from '@ig/env/server'
 import { v7 as uuidv7 } from 'uuid'
 
-import type { Context } from '../context'
 import type { WebhookItem } from './request'
 import { output, type Output } from './result'
 
 /** Fetch image from CDN URL, upload to R2, return output result. */
-export async function storeArtifact(
-  ctx: Context,
-  args: { item: WebhookItem; contentType: string; now: Date },
-): Promise<Output> {
+export async function storeArtifact(args: {
+  item: WebhookItem
+  contentType: string
+  now: Date
+}): Promise<Output> {
   const { item, contentType, now } = args
 
   // Fetch from CDN
@@ -24,7 +25,7 @@ export async function storeArtifact(
   const r2Key = `artifacts/${id}`
 
   try {
-    await ctx.env.ARTIFACTS_BUCKET.put(r2Key, response.body, {
+    await env.ARTIFACTS_BUCKET.put(r2Key, response.body, {
       httpMetadata: { contentType },
     })
   } catch (err) {

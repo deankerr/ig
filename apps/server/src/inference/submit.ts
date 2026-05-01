@@ -1,4 +1,5 @@
 import type { Artifact, Generation } from '@ig/db/schema'
+import { env } from '@ig/env/server'
 import { v7 as uuidv7 } from 'uuid'
 
 import type { Context } from '../context'
@@ -57,7 +58,7 @@ async function submitAsync(
   const now = new Date()
 
   // Init DO state — input is pre-dispatch, updated after backgroundDispatch completes
-  const request = getRequest(ctx, id)
+  const request = getRequest(id)
   await request.init({
     id,
     model: input.model,
@@ -70,7 +71,7 @@ async function submitAsync(
 
   // Progressive D1 projection — generation row appears immediately
   ctx.waitUntil(
-    persist.insertGeneration(ctx.env.DATABASE, {
+    persist.insertGeneration(env.DATABASE, {
       id,
       model: input.model,
       input: { ...input },
@@ -93,7 +94,7 @@ async function backgroundDispatch(
   const { id } = args
   const input = { ...args.input }
   const annotations: Record<string, unknown> = {}
-  const request = getRequest(ctx, id)
+  const request = getRequest(id)
 
   try {
     // Resolve output dimensions
@@ -109,10 +110,10 @@ async function backgroundDispatch(
     await applyProfile(ctx, input)
 
     // Dispatch to Runware with async delivery (fast ack, results via webhook)
-    const webhookURL = `${ctx.env.PUBLIC_URL}/webhooks/runware?generation_id=${id}`
+    const webhookURL = `${env.PUBLIC_URL}/webhooks/runware?generation_id=${id}`
     const result = await dispatch({
       id,
-      apiKey: ctx.env.RUNWARE_KEY,
+      apiKey: env.RUNWARE_KEY,
       webhookURL,
       deliveryMethod: 'async',
       input,
@@ -128,7 +129,7 @@ async function backgroundDispatch(
     // On dispatch failure, mark D1 generation as failed
     if (!result.ok) {
       const now = new Date()
-      await persist.failGeneration(ctx.env.DATABASE, {
+      await persist.failGeneration(env.DATABASE, {
         id,
         error: `[dispatch] ${result.message}`,
         completedAt: now,
@@ -151,7 +152,7 @@ async function backgroundDispatch(
 
     // Mark D1 generation as failed
     const now = new Date()
-    await persist.failGeneration(ctx.env.DATABASE, {
+    await persist.failGeneration(env.DATABASE, {
       id,
       error: `[dispatch] ${String(err)}`,
       completedAt: now,
@@ -192,14 +193,14 @@ async function submitSync(
   await applyProfile(ctx, input)
 
   // Dispatch without webhook — Runware defaults to sync delivery
-  const result = await dispatch({ id, apiKey: ctx.env.RUNWARE_KEY, input })
+  const result = await dispatch({ id, apiKey: env.RUNWARE_KEY, input })
 
   if (!result.ok) {
     throw new Error(result.message, { cause: result.error })
   }
 
   // Progressive D1 — insert generation row
-  await persist.insertGeneration(ctx.env.DATABASE, {
+  await persist.insertGeneration(env.DATABASE, {
     id,
     model: input.model,
     input: result.value.inferenceTask,
@@ -239,12 +240,12 @@ async function submitSync(
   // Process items inline (CDN fetch → R2 upload) + progressive D1 artifact writes
   const outputs: Output[] = []
   for (const item of items) {
-    const r = await storeArtifact(ctx, { item, contentType, now })
+    const r = await storeArtifact({ item, contentType, now })
     outputs.push(r)
 
     // Insert artifact to D1 as it arrives
     if (r.type === 'success') {
-      await persist.insertArtifact(ctx.env.DATABASE, {
+      await persist.insertArtifact(env.DATABASE, {
         artifact: r,
         generationId: id,
         model: meta.model,
@@ -255,7 +256,7 @@ async function submitSync(
   }
 
   // Write DO state for consistency
-  const request = getRequest(ctx, id)
+  const request = getRequest(id)
   await request.init({
     id,
     model: input.model,
@@ -270,7 +271,7 @@ async function submitSync(
   // Complete the D1 generation
   const state = await request.getState()
   const completedAt = state?.completedAt ?? new Date()
-  await persist.completeGeneration(ctx.env.DATABASE, { id, completedAt })
+  await persist.completeGeneration(env.DATABASE, { id, completedAt })
 
   // Build response
   const successes = outputs.filter((o): o is OutputSuccess => o.type === 'success')

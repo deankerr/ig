@@ -2,6 +2,7 @@
 
 import { db } from '@ig/db'
 import * as schema from '@ig/db/schema'
+import { env } from '@ig/env/server'
 import { ORPCError } from '@orpc/server'
 import { v7 as uuidv7 } from 'uuid'
 import { z } from 'zod'
@@ -50,15 +51,12 @@ async function readWithSizeLimit(response: Response, maxBytes: number): Promise<
 }
 
 /** Detect file metadata, store to R2, insert artifact row. */
-async function ingest(
-  env: Env,
-  args: {
-    source: string
-    data: ArrayBuffer
-    contentTypeHint: string
-    tags?: Record<string, string | null>
-  },
-) {
+async function ingest(args: {
+  source: string
+  data: ArrayBuffer
+  contentTypeHint: string
+  tags?: Record<string, string | null>
+}) {
   const id = uuidv7()
   const r2Key = `artifacts/${id}`
   const now = new Date()
@@ -101,7 +99,7 @@ export const ingestRouter = {
         tags: zTagsRecord.optional(),
       }),
     )
-    .handler(async ({ input, context }) => {
+    .handler(async ({ input }) => {
       const file = input.file as File
 
       // Check size before buffering into memory
@@ -111,7 +109,7 @@ export const ingestRouter = {
         })
       }
 
-      return ingest(context.env, {
+      return ingest({
         source: file.name,
         data: await file.arrayBuffer(),
         contentTypeHint: file.type || 'application/octet-stream',
@@ -127,7 +125,7 @@ export const ingestRouter = {
         tags: zTagsRecord.optional(),
       }),
     )
-    .handler(async ({ input, context }) => {
+    .handler(async ({ input }) => {
       const response = await fetch(input.url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
       if (!response.ok) {
         throw new ORPCError('BAD_GATEWAY', {
@@ -138,7 +136,7 @@ export const ingestRouter = {
       // Stream with a hard size cap — doesn't trust content-length
       const data = await readWithSizeLimit(response, MAX_INGEST_BYTES)
 
-      return ingest(context.env, {
+      return ingest({
         source: input.url,
         data,
         contentTypeHint: response.headers.get('content-type') || 'application/octet-stream',

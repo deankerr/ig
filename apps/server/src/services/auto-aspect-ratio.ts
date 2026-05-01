@@ -1,8 +1,8 @@
+import { env } from '@ig/env/server'
 import { generateText, Output } from 'ai'
 import { createWorkersAI } from 'workers-ai-provider'
 import { z } from 'zod'
 
-import type { Context } from '../context'
 import { getErrorMessage, serializeError } from '../utils/error'
 import type { Result } from '../utils/result'
 
@@ -22,9 +22,9 @@ export type AutoAspectRatioResult = Result<
   { cause: Record<string, unknown>; model: string }
 >
 
-export async function resolveAutoAspectRatio(ctx: Context, args: { prompt: string }) {
+export async function resolveAutoAspectRatio(args: { prompt: string }) {
   try {
-    const workersai = createWorkersAI({ binding: ctx.env.AI as Ai<AiModels> })
+    const workersai = createWorkersAI({ binding: env.AI as Ai<AiModels> })
 
     const { output } = await generateText({
       model: workersai(MODEL_ID),
