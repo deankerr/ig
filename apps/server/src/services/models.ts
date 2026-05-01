@@ -2,6 +2,7 @@
 // Merges the old models.ts and services/model-cache.ts into one service.
 
 import { betterFetch } from '@better-fetch/fetch'
+import { env } from '@ig/env/server'
 import { z } from 'zod'
 
 import type { Context } from '../context'
@@ -67,7 +68,7 @@ export async function searchModels(ctx: Context, args: ModelSearchParams) {
     method: 'POST',
     output: runwareResponseSchema,
     body: [
-      { taskType: 'authentication', apiKey: ctx.env.RUNWARE_KEY },
+      { taskType: 'authentication', apiKey: env.RUNWARE_KEY },
       { taskType: 'modelSearch', taskUUID, ...args },
     ],
     throw: true,
@@ -87,7 +88,7 @@ export async function searchModels(ctx: Context, args: ModelSearchParams) {
 
   // Cache each result in KV (fire-and-forget, permanent)
   for (const model of modelSearch.results) {
-    ctx.waitUntil(cacheModel(ctx.env.CACHE, model))
+    ctx.waitUntil(cacheModel(env.CACHE, model))
   }
 
   return { results: modelSearch.results, totalResults: modelSearch.totalResults }
@@ -96,7 +97,7 @@ export async function searchModels(ctx: Context, args: ModelSearchParams) {
 /** Search for a single model by AIR. Checks KV cache first, falls back to API. */
 export async function lookupModel(ctx: Context, air: string): Promise<RunwareModel | null> {
   // Check KV first
-  const cached = await getModel(ctx.env.CACHE, air)
+  const cached = await getModel(env.CACHE, air)
   if (cached) return cached
 
   // Cache miss — search the API

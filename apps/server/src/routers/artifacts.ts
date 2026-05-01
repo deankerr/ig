@@ -2,6 +2,7 @@
 
 import { db } from '@ig/db'
 import { artifacts, generations, tags } from '@ig/db/schema'
+import { env } from '@ig/env/server'
 import { and, desc, eq, getTableColumns, inArray, isNull, lt, or } from 'drizzle-orm'
 import { z } from 'zod'
 
@@ -55,7 +56,7 @@ async function getArtifactById(id: string, kv: KVNamespace) {
 }
 
 export const artifactsRouter = {
-  list: procedure.input(paginationInput).handler(async ({ input, context }) => {
+  list: procedure.input(paginationInput).handler(async ({ input }) => {
     const { cursor, limit } = input
     const decoded = cursor ? decodeCursor(cursor) : null
 
@@ -89,7 +90,7 @@ export const artifactsRouter = {
     const itemsWithTags = items.map((i) => ({ ...i, tags: tagMap.get(i.id) ?? {} }))
 
     // Enrich with model data from KV
-    const enriched = await enrichWithModels(context.env.CACHE, itemsWithTags)
+    const enriched = await enrichWithModels(env.CACHE, itemsWithTags)
 
     const lastItem = items[items.length - 1]
     const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.createdAt, lastItem.id) : null
@@ -97,8 +98,8 @@ export const artifactsRouter = {
     return { items: enriched, nextCursor }
   }),
 
-  get: procedure.input(z.object({ id: z.string() })).handler(async ({ input, context }) => {
-    return getArtifactById(input.id, context.env.CACHE)
+  get: procedure.input(z.object({ id: z.string() })).handler(async ({ input }) => {
+    return getArtifactById(input.id, env.CACHE)
   }),
 
   // List artifacts matching a tag key and optional value
@@ -110,7 +111,7 @@ export const artifactsRouter = {
         limit: z.number().int().min(1).max(100).optional().default(20),
       }),
     )
-    .handler(async ({ input, context }) => {
+    .handler(async ({ input }) => {
       // Find artifact IDs matching the tag
       const tagCondition =
         input.value != null
@@ -141,12 +142,12 @@ export const artifactsRouter = {
       // Merge tags and enrich with model data
       const tagMap = await tagsService.fetchForArtifacts(items.map((i) => i.id))
       const itemsWithTags = items.map((i) => ({ ...i, tags: tagMap.get(i.id) ?? {} }))
-      const enriched = await enrichWithModels(context.env.CACHE, itemsWithTags)
+      const enriched = await enrichWithModels(env.CACHE, itemsWithTags)
       return { items: enriched }
     }),
 
   // Soft-delete: mark deletedAt, remove R2 blob + tags, keep D1 row
-  delete: procedure.input(z.object({ id: z.string() })).handler(async ({ input, context }) => {
+  delete: procedure.input(z.object({ id: z.string() })).handler(async ({ input }) => {
     const [artifact] = await db
       .select({ id: artifacts.id, r2Key: artifacts.r2Key })
       .from(artifacts)
@@ -164,7 +165,7 @@ export const artifactsRouter = {
     await db.update(artifacts).set({ deletedAt: now }).where(eq(artifacts.id, input.id))
 
     // Delete R2 blob
-    await context.env.ARTIFACTS_BUCKET.delete(artifact.r2Key)
+    await env.ARTIFACTS_BUCKET.delete(artifact.r2Key)
 
     // Delete tags
     await db.delete(tags).where(eq(tags.targetId, input.id))
