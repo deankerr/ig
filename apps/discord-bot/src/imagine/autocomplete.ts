@@ -4,8 +4,7 @@ import {
 } from 'discord-api-types/v10'
 import { z } from 'zod'
 
-import type { IgModelSearchResult } from '../ig'
-import { parseModelAllowlist } from './model-allowlist'
+import type { ImagineContext } from './context'
 
 const autocompleteModelOptionSchema = z.object({
   type: z.literal(ApplicationCommandOptionType.String),
@@ -24,11 +23,6 @@ const imagineAutocompleteInputSchema = z.object({
   query: z.string(),
 })
 
-export type ImagineAutocompleteContext = {
-  env: Env
-  searchModels: (query: string) => Promise<IgModelSearchResult>
-}
-
 function parseImagineAutocompleteInput(interaction: APIApplicationCommandAutocompleteInteraction) {
   const parsed = imagineAutocompleteInteractionSchema.parse(interaction)
   const focusedModelOption = parsed.data.options.find(
@@ -41,26 +35,24 @@ function parseImagineAutocompleteInput(interaction: APIApplicationCommandAutocom
 }
 
 export async function handleImagineAutocomplete(
-  ctx: ImagineAutocompleteContext,
+  ctx: ImagineContext,
   interaction: APIApplicationCommandAutocompleteInteraction,
 ) {
-  const allowlist = parseModelAllowlist(ctx.env.DISCORD_MODEL_ALLOWLIST)
-  const allowlistByAir = new Map(allowlist.map((item) => [item.air, item]))
   const { query } = parseImagineAutocompleteInput(interaction)
 
   if (!query) {
-    return allowlist
+    return ctx.models.list
       .slice(0, 25)
       .map((item) => ({ name: item.label.slice(0, 100), value: item.air }))
   }
 
-  const results = await ctx.searchModels(query)
+  const results = await ctx.ig.searchModels(query)
   return results.results
-    .filter((model) => allowlistByAir.has(model.air))
+    .filter((model) => ctx.models.byAir.has(model.air))
     .slice(0, 25)
     .map((model) => ({
       name:
-        allowlistByAir.get(model.air)?.label.slice(0, 100) ??
+        ctx.models.byAir.get(model.air)?.label.slice(0, 100) ??
         `${model.name} ${model.version}`.slice(0, 100),
       value: model.air,
     }))

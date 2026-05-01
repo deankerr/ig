@@ -25,6 +25,7 @@
     "apps/discord-bot": {
       "name": "discord-bot",
       "dependencies": {
+        "@ig/infra": "workspace:*",
         "@ig/server": "workspace:*",
         "@orpc/client": "catalog:",
         "hono": "catalog:",

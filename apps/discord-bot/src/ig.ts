@@ -1,6 +1,7 @@
 import type { AppRouterClient } from '@ig/server/src/routers'
 import { createORPCClient } from '@orpc/client'
 import { RPCLink } from '@orpc/client/fetch'
+import z from 'zod'
 
 type CreateGenerationProcedure = AppRouterClient['generations']['create']
 type GetGenerationProcedure = AppRouterClient['generations']['get']
@@ -25,11 +26,11 @@ function assertSyncGenerationResult(result: CreateGenerationResult): IgSyncGener
   throw new Error('Expected sync generation result from ig')
 }
 
-export function createIgClient(env: Env) {
+export function createIgClient(args: { baseUrl: string; apiKey: string }) {
   const link = new RPCLink({
-    url: new URL('/rpc', env.IG_BASE_URL).href,
+    url: new URL('/rpc', args.baseUrl).href,
     headers() {
-      return { 'x-api-key': env.IG_API_KEY }
+      return { 'x-api-key': args.apiKey }
     },
     fetch(url, options) {
       return fetch(url, {
@@ -54,8 +55,18 @@ export function createIgClient(env: Env) {
       return client.artifacts.get({ id })
     },
 
+    artifactFileUrl(id: string) {
+      return new URL(`/artifacts/${id}/file?f=auto`, args.baseUrl).toString()
+    },
+
     searchModels(search: string) {
       return client.models.search({ search, limit: 25 })
     },
+
+    parseDimensionValue(value?: string) {
+      return z.enum(['auto', 'landscape', 'portrait', 'square']).catch('auto').parse(value)
+    },
   }
 }
+
+export type IgClient = ReturnType<typeof createIgClient>
