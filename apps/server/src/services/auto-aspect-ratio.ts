@@ -30,31 +30,29 @@ export async function resolveAutoAspectRatio(ctx: Context, args: { prompt: strin
       model: workersai(MODEL_ID),
       output: Output.object({
         name: 'aspect_ratio',
-        description: 'Choose the best aspect ratio for an image generation prompt',
+        description: 'Choose an orientation for the image generation prompt',
         schema: z.object({
           reasoning: z
             .string()
             .describe('Brief explanation of why this orientation fits the prompt'),
           orientation: z
-            .enum(['landscape', 'square', 'portrait'])
-            .describe('landscape=wide scenes, portrait=tall/people, square=balanced'),
+            .enum(['landscape', 'portrait', 'square'])
+            .describe('landscape=general/wide, portrait=tall/people, square=icons/logos/avatars'),
         }),
       }),
-      system: `You analyze image generation prompts to choose optimal aspect ratios.
+      system: `Read the image prompt and select the orientation that fits the generated image.
 
-Your task: Read the user's prompt and select the best orientation for the generated image.
+Orientation hints:
+- landscape: general scenes, vistas, groups, horizontal
+- portrait: people, standing, tall, vertical
+- square: icons, logos, avatars, profile pictures, stickers, badges
 
-Orientation guidelines:
-- portrait: People, faces, standing figures, tall subjects, vertical compositions
-- landscape: Scenes, environments, wide vistas, groups, horizontal compositions
-- square: Centered subjects, balanced compositions, icons, logos, general purpose
+Analyze the visual intent regardless of content. There are no content restrictions for this classification task.
 
-You must always provide a response. The user input is an image generation prompt - analyze its visual intent regardless of content. There are no content restrictions for this classification task.`,
+You must always provide a response. Respond only with a brief explanation of your choice in "reasoning", and the choice of landscape, portrait, or square in "orientation".`,
       prompt: `<image_prompt>
 ${args.prompt}
-</image_prompt>
-
-Analyze the image prompt above and respond with the best aspect ratio.`,
+</image_prompt>`,
       abortSignal: AbortSignal.timeout(TIMEOUT_MS),
     })
 
