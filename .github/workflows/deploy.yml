@@ -22,14 +22,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Check types
-        run: bun run check-types
-
-      - name: Lint
-        run: bunx oxlint
-
-      - name: Format
-        run: bunx oxfmt --check
+      - name: Check
+        run: bun run check:ci
 
   deploy:
     if: github.event.action != 'closed'
@@ -63,7 +57,6 @@ jobs:
         run: bun run deploy
         env:
           ALCHEMY_STAGE: ${{ steps.stage.outputs.stage }}
-          FAL_KEY: ${{ secrets.FAL_KEY }}
           RUNWARE_KEY: ${{ secrets.RUNWARE_KEY }}
           API_KEY: ${{ secrets.API_KEY }}
           DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
