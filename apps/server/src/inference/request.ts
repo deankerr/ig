@@ -13,6 +13,7 @@ import { DurableObject } from 'cloudflare:workers'
 import { z } from 'zod'
 
 import { REQUEST_TIMEOUT_MS } from './config'
+import { publishGenerationEvent } from './events'
 import * as persist from './persist'
 import { output, timeoutError, type Output, type RequestError } from './result'
 import { imageInferenceWebhook, type ImageInferenceInput } from './schema'
@@ -219,6 +220,17 @@ export class InferenceDO extends DurableObject {
       batch: meta.batch,
       createdAt: meta.createdAt,
     })
+    await publishGenerationEvent(
+      {
+        type: 'generation.failed',
+        generationId: meta.id,
+        model: meta.model,
+        input: meta.input,
+        tags: meta.tags ?? {},
+        error: `[timeout] received ${outputs.length}/${meta.batch}`,
+      },
+      this.env.GENERATION_EVENTS,
+    )
   }
 }
 

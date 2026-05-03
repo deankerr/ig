@@ -1,7 +1,9 @@
 import type { discordBot } from '@ig/infra/alchemy.run'
 import {
+  type APIMessage,
   InteractionResponseType,
   MessageFlags,
+  type RESTPostAPIChannelMessageJSONBody,
   type RESTPatchAPIInteractionOriginalResponseJSONBody,
   type RESTPostAPIInteractionCallbackJSONBody,
 } from 'discord-api-types/v10'
@@ -72,6 +74,16 @@ export function createDiscordClient(env: typeof discordBot.Env) {
     ) {
       const path = `/webhooks/${env.DISCORD_APPLICATION_ID}/${interactionToken}/messages/@original`
       return request(path, { method: 'PATCH', body: JSON.stringify(body) })
+    },
+
+    deleteOriginalInteractionResponse(interactionToken: string) {
+      const path = `/webhooks/${env.DISCORD_APPLICATION_ID}/${interactionToken}/messages/@original`
+      return request(path, { method: 'DELETE' })
+    },
+
+    createChannelMessage(channelId: string, body: RESTPostAPIChannelMessageJSONBody) {
+      const path = `/channels/${channelId}/messages`
+      return request<APIMessage>(path, { method: 'POST', body: JSON.stringify(body) })
     },
 
     pong() {

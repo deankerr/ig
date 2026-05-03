@@ -2,14 +2,10 @@ import {
   ApplicationCommandOptionType,
   type APIChatInputApplicationCommandInteraction,
 } from 'discord-api-types/v10'
-import { ZodError, z } from 'zod'
+import { z } from 'zod'
 
 import type { IgCreateGenerationInput } from '../ig'
 import type { ImagineContext } from './context'
-
-function truncate(value: string, max = 180) {
-  return value.length <= max ? value : `${value.slice(0, max - 1)}…`
-}
 
 const promptSchema = z.string().min(1, 'Prompt is required')
 
@@ -46,15 +42,6 @@ function getReferenceImageUrl(interaction: APIChatInputApplicationCommandInterac
   return [attachment.url]
 }
 
-function getErrorMessage(error: unknown) {
-  if (error instanceof ZodError) {
-    const issue = error.issues[0]
-    return issue?.message ?? 'Invalid imagine command input'
-  }
-
-  return error instanceof Error ? error.message : 'Generation failed unexpectedly.'
-}
-
 function parseInteractionIdentity(
   ctx: ImagineContext,
   interaction: APIChatInputApplicationCommandInteraction,
@@ -88,13 +75,6 @@ function parseInteractionIdentity(
   return interactionIdentitySchema.parse(interaction)
 }
 
-function buildImagineFailureMessage(args: { generationId: string; summary: string }) {
-  return {
-    content: `${args.summary}\n\nGeneration: \`${args.generationId}\``,
-    allowed_mentions: { parse: [] },
-  }
-}
-
 async function executeImagine(
   ctx: ImagineContext,
   args: {
@@ -110,7 +90,6 @@ async function executeImagine(
     positivePrompt: args.positivePrompt,
     referenceImages: args.referenceImages,
     numberResults: 1,
-    sync: true,
     dimensions: args.dimensions,
     tags: {
       'discord:guild_id': args.identity.guildId,
@@ -118,57 +97,21 @@ async function executeImagine(
       'discord:user_id': args.identity.userId,
       'discord:username': args.identity.username,
       'discord:interaction_id': args.identity.interactionId,
+      'discord:interaction_token': args.identity.interactionToken,
       'discord:command': 'imagine',
     },
   }
 
-  try {
-    const result = await ctx.ig.createGeneration(input)
-    const [firstArtifact] = result.artifacts
-
-    if (!firstArtifact) {
-      await ctx.discord.editOriginalInteractionResponse(
-        args.identity.interactionToken,
-        buildImagineFailureMessage({
-          generationId: result.id,
-          summary: 'Generation completed without a usable artifact.',
-        }),
-      )
-      return
-    }
-
-    const resultMessage = {
-      embeds: [
-        {
-          title: truncate(args.positivePrompt),
-          description: `by ${args.identity.username}`,
-          image: { url: ctx.ig.artifactFileUrl(firstArtifact.id) },
-          fields: [
-            { name: 'Model', value: args.model.label, inline: true },
-            { name: 'Seed', value: String(firstArtifact.seed), inline: true },
-          ],
-          footer: { text: firstArtifact.id },
-        },
-      ],
-      allowed_mentions: { parse: [] },
-    }
-
-    console.log('[discord-bot:result-message]', JSON.stringify(resultMessage))
-
-    await ctx.discord.editOriginalInteractionResponse(args.identity.interactionToken, resultMessage)
-  } catch (error) {
-    const message = getErrorMessage(error)
-    await ctx.discord.editOriginalInteractionResponse(
-      args.identity.interactionToken,
-      buildImagineFailureMessage({
-        generationId: 'unknown',
-        summary: message,
-      }),
-    )
-  }
+  console.log(`[runImage:create] ${input.positivePrompt}`, {
+    model: input.model,
+    channelId: args.identity.channelId,
+    userId: args.identity.userId,
+  })
+  const result = await ctx.ig.createGeneration(input)
+  console.log(`[runImage:queued] ${input.positivePrompt}`, { id: result.id })
 }
 
-export function runImagine(
+export async function runImagine(
   ctx: ImagineContext,
   interaction: APIChatInputApplicationCommandInteraction,
 ) {
@@ -177,13 +120,11 @@ export function runImagine(
   const resolvedModel = ctx.models.resolve(requestedModel)
   const positivePrompt = promptSchema.parse(getStringOption(interaction, 'prompt'))
 
-  ctx.waitUntil(
-    executeImagine(ctx, {
-      identity,
-      model: resolvedModel,
-      positivePrompt,
-      referenceImages: getReferenceImageUrl(interaction),
-      dimensions: ctx.ig.parseDimensionValue(getStringOption(interaction, 'aspect')),
-    }),
-  )
+  await executeImagine(ctx, {
+    identity,
+    model: resolvedModel,
+    positivePrompt,
+    referenceImages: getReferenceImageUrl(interaction),
+    dimensions: ctx.ig.parseDimensionValue(getStringOption(interaction, 'aspect')),
+  })
 }

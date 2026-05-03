@@ -9,7 +9,7 @@ type GetArtifactProcedure = AppRouterClient['artifacts']['get']
 type SearchModelsProcedure = AppRouterClient['models']['search']
 type CreateGenerationResult = Awaited<ReturnType<CreateGenerationProcedure>>
 
-export type IgCreateGenerationInput = Parameters<CreateGenerationProcedure>[0] & { sync: true }
+export type IgCreateGenerationInput = Parameters<CreateGenerationProcedure>[0]
 export type IgSyncGeneration = Extract<
   CreateGenerationResult,
   { generation: unknown; artifacts: unknown[] }
@@ -42,7 +42,13 @@ export function createIgClient(args: { baseUrl: string; apiKey: string }) {
   const client: AppRouterClient = createORPCClient(link)
 
   return {
-    async createGeneration(input: IgCreateGenerationInput): Promise<IgSyncGeneration> {
+    createGeneration(input: IgCreateGenerationInput): Promise<CreateGenerationResult> {
+      return client.generations.create(input)
+    },
+
+    async createSyncGeneration(
+      input: IgCreateGenerationInput & { sync: true },
+    ): Promise<IgSyncGeneration> {
       const result = await client.generations.create(input)
       return assertSyncGenerationResult(result)
     },

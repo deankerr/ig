@@ -12,10 +12,10 @@ Local `apps/server` dev server is disabled due to issues with alchemy's dev mode
 
 ```
 apps/server/     # Hono + oRPC on Cloudflare Workers (port 3220)
-apps/discord-bot/ # Discord bot, uses server
+apps/discord-bot/ # Discord bot consumer, uses server + generation event queue
 apps/web/        # React admin console (Vite, port 3221)
 packages/db/     # Drizzle ORM schema (SQLite/D1)
-packages/env/    # Cloudflare binding types (manual Env declaration)
+packages/env/    # Cloudflare binding/env helpers
 packages/infra/  # Alchemy infrastructure-as-code
 ```
 
@@ -33,10 +33,6 @@ bun run deploy        # Deploy to Cloudflare via Alchemy
 - In React, this should look like `components/` sub-directories.
   - Do not place feature-level code in a 'route' file - this should be for "page" level concerns, and/or glueing major feature components together.
 
-## Env Types
-
-The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. **Do not** use Alchemy's inferred `typeof server.Env` — its `Bound<T>` conditional type chain triggers TS2589 (excessively deep type instantiation). When adding a binding in `packages/infra/alchemy.run.ts`, add the corresponding property to `env.d.ts` using the Cloudflare runtime type (`D1Database`, `R2Bucket`, `DurableObjectNamespace`, etc).
-
 ## API
 
 - **REST** (`/api/*`) — Scalar docs at `/api`, OpenAPI spec at `/api/spec.json`
@@ -44,7 +40,16 @@ The global `Env` interface is declared manually in `packages/env/src/env.d.ts`. 
 - **Webhooks** (`/webhooks/runware`) — provider callbacks
 - **Auth**: All endpoints require `x-api-key` header.
 - All endpoints are POST (oRPC). REST paths mirror the router structure: `/api/generations/create`, `/api/generations/get`, etc.
-- `sync:true` blocks until the webhook returns. Works for fast models but can time out silently on slow ones. Prefer async create + poll for reliability.
+- `sync:true` blocks on provider response and artifact storage. Works for fast models but can time out silently on slow ones. Prefer async create for reliability.
+
+## Tags
+
+Tags are flexible request context, not just user-facing labels.
+
+- `generations.create` accepts `tags`; async inference stores them in live request state and copies them onto produced artifacts.
+- Artifact tags are the persisted/searchable projection of request context. If a generation fails before producing artifacts, its tags may only exist in request state and lifecycle events.
+- Tags may identify source systems, routing context, user-visible labels, slugs, or short-lived consumer state. For example, the Discord bot stores channel/user/interaction context as `discord:*` tags.
+- Reading tags requires the API key. Artifact files can be public by id or slug, but public file URLs do not expose tag metadata.
 
 ### Artifact Slug URLs
 
@@ -56,6 +61,15 @@ The `ig:slug` tag is an optional custom path for resolving an artifact file.
 ## Infrastructure
 
 Alchemy (`packages/infra/alchemy.run.ts`) defines all Cloudflare resources.
+
+## Generation Events
+
+Inference emits lifecycle events to the shared `generation-events` Cloudflare Queue.
+
+- Events are server-owned domain events (`generation.submitted`, `generation.dispatched`, `artifact.created`, `generation.completed`, `generation.failed`).
+- Events include request tags so consumers can route and act without polling.
+- Queue publishing is best-effort from the generation's perspective: log delivery failures, but do not fail inference because an event could not be published.
+- `apps/discord-bot` consumes this queue. `/imagine` submits async generations, tags them with Discord context, then the queue consumer posts completion/failure results back to Discord.
 
 ## Models
 

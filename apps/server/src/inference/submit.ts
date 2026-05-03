@@ -7,6 +7,7 @@ import { profiles } from '../profiles'
 import { dimensionsService, type DimensionsConfig } from '../services/dimensions'
 import { lookupModel } from '../services/models'
 import { dispatch, RUNWARE_API_URL } from './dispatch'
+import { publishGenerationEvent, summarizeArtifact } from './events'
 import * as persist from './persist'
 import { getRequest, type RequestMeta } from './request'
 import { httpError, type Output, type OutputSuccess } from './result'
@@ -69,19 +70,26 @@ async function submitAsync(
     tags,
   })
 
-  // Progressive D1 projection — generation row appears immediately
+  // Progressive D1 projection, event publication, and dispatch run in lifecycle order.
   ctx.waitUntil(
-    persist.insertGeneration(env.DATABASE, {
-      id,
-      model: input.model,
-      input: { ...input },
-      batch: input.numberResults,
-      createdAt: now,
-    }),
+    (async () => {
+      await persist.insertGeneration(env.DATABASE, {
+        id,
+        model: input.model,
+        input: { ...input },
+        batch: input.numberResults,
+        createdAt: now,
+      })
+      await publishGenerationEvent({
+        type: 'generation.submitted',
+        generationId: id,
+        model: input.model,
+        input: { ...input },
+        tags: tags ?? {},
+      })
+      await backgroundDispatch(ctx, { id, input, dimensions, tags })
+    })(),
   )
-
-  // Push dimensions + dispatch to background
-  ctx.waitUntil(backgroundDispatch(ctx, { id, input, dimensions }))
 
   console.log('[inference:submitAsync] returning immediately', { id })
   return { id }
@@ -89,9 +97,14 @@ async function submitAsync(
 
 async function backgroundDispatch(
   ctx: Context,
-  args: { id: string; input: ImageInferenceInput; dimensions: DimensionsConfig },
+  args: {
+    id: string
+    input: ImageInferenceInput
+    dimensions: DimensionsConfig
+    tags?: Record<string, string | null>
+  },
 ) {
-  const { id } = args
+  const { id, tags } = args
   const input = { ...args.input }
   const annotations: Record<string, unknown> = {}
   const request = getRequest(id)
@@ -126,7 +139,18 @@ async function backgroundDispatch(
       error: result.ok ? undefined : result.error,
     })
 
-    // On dispatch failure, mark D1 generation as failed
+    // On dispatch success or failure, publish the updated request shape.
+    if (result.ok) {
+      await publishGenerationEvent({
+        type: 'generation.dispatched',
+        generationId: id,
+        model: input.model,
+        input: result.value.inferenceTask,
+        tags: tags ?? {},
+      })
+    }
+
+    // On dispatch failure, mark D1 generation as failed.
     if (!result.ok) {
       const now = new Date()
       await persist.failGeneration(env.DATABASE, {
@@ -137,6 +161,14 @@ async function backgroundDispatch(
         input: { ...input },
         batch: input.numberResults,
         createdAt: now,
+      })
+      await publishGenerationEvent({
+        type: 'generation.failed',
+        generationId: id,
+        model: input.model,
+        input: { ...input },
+        tags: tags ?? {},
+        error: `[dispatch] ${result.message}`,
       })
     }
 
@@ -160,6 +192,14 @@ async function backgroundDispatch(
       input: { ...input },
       batch: input.numberResults,
       createdAt: now,
+    })
+    await publishGenerationEvent({
+      type: 'generation.failed',
+      generationId: id,
+      model: input.model,
+      input: { ...input },
+      tags: tags ?? {},
+      error: `[dispatch] ${String(err)}`,
     })
   }
 }
@@ -196,6 +236,14 @@ async function submitSync(
   const result = await dispatch({ id, apiKey: env.RUNWARE_KEY, input })
 
   if (!result.ok) {
+    await publishGenerationEvent({
+      type: 'generation.failed',
+      generationId: id,
+      model: input.model,
+      input: { ...input },
+      tags: tags ?? {},
+      error: `[dispatch] ${result.message}`,
+    })
     throw new Error(result.message, { cause: result.error })
   }
 
@@ -207,6 +255,20 @@ async function submitSync(
     batch: input.numberResults,
     createdAt: now,
   })
+  await publishGenerationEvent({
+    type: 'generation.submitted',
+    generationId: id,
+    model: input.model,
+    input: result.value.inferenceTask,
+    tags: tags ?? {},
+  })
+  await publishGenerationEvent({
+    type: 'generation.dispatched',
+    generationId: id,
+    model: input.model,
+    input: result.value.inferenceTask,
+    tags: tags ?? {},
+  })
 
   // Filter for inference results (body.data also contains the auth ack)
   const inferenceData = result.value.data.filter(
@@ -214,6 +276,14 @@ async function submitSync(
   )
   const parsed = imageInferenceWebhook.safeParse({ data: inferenceData })
   if (!parsed.success || 'errors' in parsed.data) {
+    await publishGenerationEvent({
+      type: 'generation.failed',
+      generationId: id,
+      model: input.model,
+      input: result.value.inferenceTask,
+      tags: tags ?? {},
+      error: 'Sync dispatch returned invalid or errored data',
+    })
     throw new Error('Sync dispatch returned invalid or errored data')
   }
 
@@ -252,6 +322,14 @@ async function submitSync(
         input: meta.input,
         tags: meta.tags,
       })
+      await publishGenerationEvent({
+        type: 'artifact.created',
+        generationId: id,
+        model: meta.model,
+        input: meta.input,
+        tags: meta.tags ?? {},
+        artifact: summarizeArtifact(r),
+      })
     }
   }
 
@@ -275,6 +353,15 @@ async function submitSync(
 
   // Build response
   const successes = outputs.filter((o): o is OutputSuccess => o.type === 'success')
+  await publishGenerationEvent({
+    type: 'generation.completed',
+    generationId: id,
+    model: meta.model,
+    input: meta.input,
+    tags: meta.tags ?? {},
+    artifacts: successes.map(summarizeArtifact),
+  })
+
   const inputObj = meta.input as Record<string, unknown>
   const width = typeof inputObj.width === 'number' ? inputObj.width : null
   const height = typeof inputObj.height === 'number' ? inputObj.height : null
