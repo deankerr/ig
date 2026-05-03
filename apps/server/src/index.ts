@@ -100,6 +100,7 @@ app.get('/favicon.ico', (c) => {
 })
 
 export { InferenceDO } from './inference/request'
+export type { GenerationLifecycleEvent } from './inference'
 export type { RunwareModel } from './services/models'
 
 export default {

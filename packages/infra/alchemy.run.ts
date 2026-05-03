@@ -5,6 +5,7 @@ import {
   DurableObjectNamespace,
   Images,
   KVNamespace,
+  Queue,
   R2Bucket,
   Vite,
   Worker,
@@ -52,6 +53,8 @@ const cache = await KVNamespace('cache')
 const images = Images()
 const ai = Ai()
 
+export const generationEvents = await Queue('generation-events')
+
 export const server = await Worker('server', {
   url: false,
   cwd: '../../apps/server',
@@ -69,6 +72,7 @@ export const server = await Worker('server', {
 
     CACHE: cache,
     IMAGES: images,
+    GENERATION_EVENTS: generationEvents,
 
     API_KEY: alchemy.secret.env.API_KEY!,
     PUBLIC_URL: `https://${domain('server')}`,
@@ -110,9 +114,22 @@ export const discordBot = await Worker('discord-bot', {
     DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID!,
     DISCORD_MODEL_ALLOWLIST: process.env.DISCORD_MODEL_ALLOWLIST!,
     DISCORD_PUBLIC_KEY: alchemy.secret.env.DISCORD_PUBLIC_KEY!,
+    GENERATION_EVENTS: generationEvents,
     IG_API_KEY: alchemy.secret.env.API_KEY!,
     IG_BASE_URL: process.env.OVERRIDE_SERVER_URL ?? url(server),
   },
+  eventSources: [
+    {
+      queue: generationEvents,
+      settings: {
+        batchSize: 10,
+        maxConcurrency: 2,
+        maxRetries: 3,
+        maxWaitTimeMs: 1000,
+        retryDelay: 30,
+      },
+    },
+  ],
   dev: {
     port: 3222,
   },

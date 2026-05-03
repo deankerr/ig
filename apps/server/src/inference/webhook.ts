@@ -4,9 +4,10 @@ import { env } from '@ig/env/server'
 import { Hono } from 'hono'
 
 import type { Context } from '../context'
+import { publishGenerationEvent, summarizeArtifact } from './events'
 import * as persist from './persist'
 import { getRequest, type WebhookItem, type RequestMeta } from './request'
-import type { Output } from './result'
+import type { Output, OutputSuccess } from './result'
 import { getContentType } from './schema'
 import { storeArtifact } from './store'
 
@@ -75,6 +76,14 @@ async function processWebhookResults(args: ProcessArgs) {
         input: meta.input,
         tags: meta.tags,
       })
+      await publishGenerationEvent({
+        type: 'artifact.created',
+        generationId,
+        model: meta.model,
+        input: meta.input,
+        tags: meta.tags ?? {},
+        artifact: summarizeArtifact(result),
+      })
     }
   }
 
@@ -89,6 +98,17 @@ async function processWebhookResults(args: ProcessArgs) {
       await persist.completeGeneration(env.DATABASE, {
         id: generationId,
         completedAt: state.completedAt,
+      })
+      const successes = state.outputs.filter(
+        (item): item is OutputSuccess => item.type === 'success',
+      )
+      await publishGenerationEvent({
+        type: 'generation.completed',
+        generationId,
+        model: state.model,
+        input: state.input,
+        tags: state.tags ?? {},
+        artifacts: successes.map(summarizeArtifact),
       })
     }
   }

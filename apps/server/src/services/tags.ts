@@ -9,7 +9,7 @@ import { z } from 'zod'
 // -- Constants --
 
 const MAX_KEY_LENGTH = 64
-const MAX_VALUE_LENGTH = 256
+const MAX_VALUE_LENGTH = 512
 const MAX_TAGS_PER_OPERATION = 20
 
 const SLUG_MAX_LENGTH = 128

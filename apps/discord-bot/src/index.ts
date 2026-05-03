@@ -1,12 +1,13 @@
 import type { discordBot } from '@ig/infra/alchemy.run'
+import type { GenerationLifecycleEvent } from '@ig/server'
 import { isChatInputApplicationCommandInteraction } from 'discord-api-types/utils/v10'
 import { InteractionType, type APIInteraction } from 'discord-api-types/v10'
 import { Hono } from 'hono'
 
+import { createContext } from './context'
 import { createDiscordClient } from './discord'
-import { createIgClient } from './ig'
 import { handleImagineAutocomplete, runImagine } from './imagine'
-import { createModels } from './models'
+import { handleGenerationEvent } from './queue'
 import { verifyDiscordWebhook } from './webhook'
 
 export const app = new Hono<{
@@ -37,44 +38,52 @@ export const app = new Hono<{
     }
 
     const interaction = JSON.parse(rawBody) as APIInteraction
-
-    const discord = createDiscordClient(c.env)
+    const ctx = createContext(c.env)
 
     if (interaction.type === InteractionType.Ping) {
-      return c.json(discord.pong())
-    }
-
-    const ctx = {
-      waitUntil: c.executionCtx.waitUntil.bind(c.executionCtx),
-      env: c.env,
-      ig: createIgClient({ baseUrl: c.env.IG_BASE_URL, apiKey: c.env.IG_API_KEY }),
-      discord,
-      models: createModels(c.env),
+      return c.json(ctx.discord.pong())
     }
 
     if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
       if (interaction.data.name === 'imagine') {
         const result = await handleImagineAutocomplete(ctx, interaction)
 
-        return c.json(discord.autocomplete(result))
+        return c.json(ctx.discord.autocomplete(result))
       }
 
-      return c.json(discord.autocomplete([]))
+      return c.json(ctx.discord.autocomplete([]))
     }
 
     if (interaction.type === InteractionType.ApplicationCommand) {
       if (isChatInputApplicationCommandInteraction(interaction)) {
         if (interaction.data.name === 'imagine') {
-          runImagine(ctx, interaction)
+          await runImagine(ctx, interaction)
 
-          return c.json(discord.defer())
+          return c.json(ctx.discord.defer())
         }
       }
     }
 
-    return c.json(discord.defer())
+    return c.json(ctx.discord.defer())
   })
 
 export default {
   fetch: app.fetch,
+  async queue(batch: MessageBatch<GenerationLifecycleEvent>, env: typeof discordBot.Env) {
+    const ctx = createContext(env)
+
+    for (const message of batch.messages) {
+      try {
+        await handleGenerationEvent(ctx, message.body)
+        message.ack()
+      } catch (error) {
+        console.error('[discord-bot:queue] message failed', {
+          id: message.id,
+          attempts: message.attempts,
+          error,
+        })
+        message.retry({ delaySeconds: 30 })
+      }
+    }
+  },
 }
