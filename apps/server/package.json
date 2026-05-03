@@ -2,9 +2,6 @@
   "name": "@ig/server",
   "type": "module",
   "main": "src/index.ts",
-  "scripts": {
-    "check-types": "tsc -b"
-  },
   "dependencies": {
     "@better-fetch/fetch": "^1.1.21",
     "@ig/db": "workspace:*",

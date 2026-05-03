@@ -2,9 +2,6 @@
   "$schema": "https://turbo.build/schema.json",
   "ui": "stream",
   "tasks": {
-    "check-types": {
-      "dependsOn": ["^check-types"]
-    },
     "dev": {
       "cache": false,
       "persistent": true
@@ -29,9 +26,6 @@
         "DISCORD_PUBLIC_KEY",
         "DISCORD_ALLOWED_CHANNEL_IDS",
         "DISCORD_MODEL_ALLOWLIST",
-        "PROD_SERVER_DOMAIN",
-        "PROD_WEB_DOMAIN",
-        "CF_WORKERS_SUBDOMAIN",
         "VITE_BUILD_ID"
       ]
     },
@@ -43,8 +37,7 @@
         "ALCHEMY_STATE_TOKEN",
         "CLOUDFLARE_API_TOKEN",
         "CLOUDFLARE_ACCOUNT_ID",
-        "CLOUDFLARE_EMAIL",
-        "CF_WORKERS_SUBDOMAIN"
+        "CLOUDFLARE_EMAIL"
       ]
     }
   }

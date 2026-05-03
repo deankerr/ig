@@ -4,7 +4,6 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "check-types": "tsc -b",
     "register:commands": "bun run scripts/register-commands.ts"
   },
   "dependencies": {
