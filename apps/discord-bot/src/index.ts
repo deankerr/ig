@@ -57,7 +57,14 @@ export const app = new Hono<{
     if (interaction.type === InteractionType.ApplicationCommand) {
       if (isChatInputApplicationCommandInteraction(interaction)) {
         if (interaction.data.name === 'imagine') {
-          await runImagine(ctx, interaction)
+          c.executionCtx.waitUntil(
+            runImagine(ctx, interaction).catch(async (error) => {
+              const token = interaction.token
+              const message = error instanceof Error ? error.message : 'Something went wrong.'
+              console.error('[discord-bot:imagine] generation failed', { error })
+              await ctx.discord.editOriginalInteractionResponse(token, { content: message })
+            }),
+          )
 
           return c.json(ctx.discord.defer())
         }

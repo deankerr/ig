@@ -75,56 +75,37 @@ function parseInteractionIdentity(
   return interactionIdentitySchema.parse(interaction)
 }
 
-async function executeImagine(
-  ctx: ImagineContext,
-  args: {
-    identity: ReturnType<typeof parseInteractionIdentity>
-    model: { air: string; label: string }
-    positivePrompt: string
-    referenceImages?: string[]
-    dimensions: IgCreateGenerationInput['dimensions']
-  },
-) {
-  const input: IgCreateGenerationInput = {
-    model: args.model.air,
-    positivePrompt: args.positivePrompt,
-    referenceImages: args.referenceImages,
-    numberResults: 1,
-    dimensions: args.dimensions,
-    tags: {
-      'discord:guild_id': args.identity.guildId,
-      'discord:channel_id': args.identity.channelId,
-      'discord:user_id': args.identity.userId,
-      'discord:username': args.identity.username,
-      'discord:interaction_id': args.identity.interactionId,
-      'discord:interaction_token': args.identity.interactionToken,
-      'discord:command': 'imagine',
-    },
-  }
-
-  console.log(`[runImage:create] ${input.positivePrompt}`, {
-    model: input.model,
-    channelId: args.identity.channelId,
-    userId: args.identity.userId,
-  })
-  const result = await ctx.ig.createGeneration(input)
-  console.log(`[runImage:queued] ${input.positivePrompt}`, { id: result.id })
-}
-
 export async function runImagine(
   ctx: ImagineContext,
   interaction: APIChatInputApplicationCommandInteraction,
 ) {
   const identity = parseInteractionIdentity(ctx, interaction)
   const requestedModel = getStringOption(interaction, 'model')
-  const resolvedModel = ctx.models.resolve(requestedModel)
+  const model = ctx.models.resolve(requestedModel)
   const positivePrompt = promptSchema.parse(getStringOption(interaction, 'prompt'))
 
-  await executeImagine(ctx, {
-    identity,
-    model: resolvedModel,
-    positivePrompt,
+  const input: IgCreateGenerationInput = {
+    model: model.air,
+    positivePrompt: positivePrompt,
     referenceImages: getReferenceImageUrl(interaction),
+    numberResults: 1,
     dimensions: ctx.ig.parseDimensionValue(getStringOption(interaction, 'aspect')),
+    tags: {
+      'discord:guild_id': identity.guildId,
+      'discord:channel_id': identity.channelId,
+      'discord:user_id': identity.userId,
+      'discord:username': identity.username,
+      'discord:interaction_id': identity.interactionId,
+      'discord:interaction_token': identity.interactionToken,
+      'discord:command': 'imagine',
+    },
+  }
+
+  console.log(`[runImage:create] ${input.positivePrompt}`, {
+    model: input.model,
+    channelId: identity.channelId,
+    userId: identity.userId,
   })
+  const result = await ctx.ig.createGeneration(input)
+  console.log(`[runImage:queued] ${input.positivePrompt}`, { id: result.id })
 }
