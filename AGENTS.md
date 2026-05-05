@@ -6,8 +6,6 @@ Always read @VISION.md for a high level understanding of the project.
 
 Experimental with low-traffic production deployment. Breaking changes are acceptable.
 
-Local `apps/server` dev server is disabled due to issues with alchemy's dev mode. `dev:web` is configured to point at the remote dev environment, and may be used for `apps/web` changes only.
-
 ## Structure
 
 ```
@@ -23,21 +21,13 @@ packages/infra/  # Alchemy infrastructure-as-code
 
 ```bash
 bun run check         # type check + fix + format, use when work complete/as needed
-bun run deploy        # Deploy to Cloudflare via Alchemy
+bun run deploy        # Deploy to Cloudflare dev environment via Alchemy
 ```
-
-## Features
-
-- Organise code into directories by "feature", "service", etc.
-- The exact shape is not strict and may shift over time.
-- In React, this should look like `components/` sub-directories.
-  - Do not place feature-level code in a 'route' file - this should be for "page" level concerns, and/or glueing major feature components together.
 
 ## API
 
 - **REST** (`/api/*`) — Scalar docs at `/api`, OpenAPI spec at `/api/spec.json`
 - **RPC** (`/rpc/*`) — oRPC endpoints (used by the web app via RPCLink)
-- **Webhooks** (`/webhooks/runware`) — provider callbacks
 - **Auth**: All endpoints require `x-api-key` header.
 - All endpoints are POST (oRPC). REST paths mirror the router structure: `/api/generations/create`, `/api/generations/get`, etc.
 - `sync:true` blocks on provider response and artifact storage. Works for fast models but can time out silently on slow ones. Prefer async create for reliability.
@@ -48,7 +38,7 @@ Tags are flexible request context, not just user-facing labels.
 
 - `generations.create` accepts `tags`; async inference stores them in live request state and copies them onto produced artifacts.
 - Artifact tags are the persisted/searchable projection of request context. If a generation fails before producing artifacts, its tags may only exist in request state and lifecycle events.
-- Tags may identify source systems, routing context, user-visible labels, slugs, or short-lived consumer state. For example, the Discord bot stores channel/user/interaction context as `discord:*` tags.
+- Tags may identify source systems, routing context, user-visible labels, slugs, or short-lived consumer state.
 - Reading tags requires the API key. Artifact files can be public by id or slug, but public file URLs do not expose tag metadata.
 
 ### Artifact Slug URLs
@@ -62,14 +52,17 @@ The `ig:slug` tag is an optional custom path for resolving an artifact file.
 
 Alchemy (`packages/infra/alchemy.run.ts`) defines all Cloudflare resources.
 
+Artifact files are publicly accessible via the server if the id/slug is known by the client. An API key is required to access the oRPC endpoints.
+
+Production sub-domains (e.g. `*.ig.orb.town`) are covered by a blanket Cloudflare Access policy.
+
 ## Generation Events
 
 Inference emits lifecycle events to the shared `generation-events` Cloudflare Queue.
 
-- Events are server-owned domain events (`generation.submitted`, `generation.dispatched`, `artifact.created`, `generation.completed`, `generation.failed`).
+- Events are server-owned domain events (e.g. `artifact.created`).
 - Events include request tags so consumers can route and act without polling.
-- Queue publishing is best-effort from the generation's perspective: log delivery failures, but do not fail inference because an event could not be published.
-- `apps/discord-bot` consumes this queue. `/imagine` submits async generations, tags them with Discord context, then the queue consumer posts completion/failure results back to Discord.
+- `apps/discord-bot` consumes this queue.
 
 ## Models
 
