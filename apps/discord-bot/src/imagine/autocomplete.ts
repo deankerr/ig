@@ -4,7 +4,7 @@ import {
 } from 'discord-api-types/v10'
 import { z } from 'zod'
 
-import type { ImagineContext } from './context'
+import type { BotContext } from '../context'
 
 const autocompleteModelOptionSchema = z.object({
   type: z.literal(ApplicationCommandOptionType.String),
@@ -35,7 +35,7 @@ function parseImagineAutocompleteInput(interaction: APIApplicationCommandAutocom
 }
 
 export async function handleImagineAutocomplete(
-  ctx: ImagineContext,
+  ctx: BotContext,
   interaction: APIApplicationCommandAutocompleteInteraction,
 ) {
   const { query } = parseImagineAutocompleteInput(interaction)

@@ -7,7 +7,7 @@ import { Hono } from 'hono'
 import { createContext } from './context'
 import { createDiscordClient } from './discord'
 import { handleImagineAutocomplete, runImagine } from './imagine'
-import { handleGenerationEvent } from './queue'
+import { handleImagineEvent } from './imagine/events'
 import { verifyDiscordWebhook } from './webhook'
 
 export const app = new Hono<{
@@ -81,7 +81,10 @@ export default {
 
     for (const message of batch.messages) {
       try {
-        await handleGenerationEvent(ctx, message.body)
+        const event = message.body
+        if (event.tags['discord:command'] === 'imagine') {
+          await handleImagineEvent(ctx, event)
+        }
         message.ack()
       } catch (error) {
         console.error('[discord-bot:queue] message failed', {

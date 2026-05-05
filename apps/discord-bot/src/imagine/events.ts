@@ -13,9 +13,9 @@ function getPrompt(event: GenerationLifecycleEvent) {
 
 async function handleCompleted(ctx: BotContext, event: GenerationLifecycleEvent) {
   const {
-    'discord:channel_id': channelId,
-    'discord:interaction_token': interactionToken,
-    'discord:username': username = 'unknown',
+    'discord-bot:channel_id': channelId,
+    'discord-bot:interaction_token': interactionToken,
+    'discord-bot:username': username = 'unknown',
   } = event.tags
 
   const [firstArtifact] = event.artifacts ?? []

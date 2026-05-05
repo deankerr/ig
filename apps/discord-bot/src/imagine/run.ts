@@ -4,8 +4,8 @@ import {
 } from 'discord-api-types/v10'
 import { z } from 'zod'
 
+import type { BotContext } from '../context'
 import type { IgCreateGenerationInput } from '../ig'
-import type { ImagineContext } from './context'
 
 const promptSchema = z.string().min(1, 'Prompt is required')
 
@@ -43,7 +43,7 @@ function getReferenceImageUrl(interaction: APIChatInputApplicationCommandInterac
 }
 
 function parseInteractionIdentity(
-  ctx: ImagineContext,
+  ctx: BotContext,
   interaction: APIChatInputApplicationCommandInteraction,
 ) {
   const interactionIdentitySchema = z
@@ -76,7 +76,7 @@ function parseInteractionIdentity(
 }
 
 export async function runImagine(
-  ctx: ImagineContext,
+  ctx: BotContext,
   interaction: APIChatInputApplicationCommandInteraction,
 ) {
   const identity = parseInteractionIdentity(ctx, interaction)
@@ -91,13 +91,13 @@ export async function runImagine(
     numberResults: 1,
     dimensions: ctx.ig.parseDimensionValue(getStringOption(interaction, 'aspect')),
     tags: {
-      'discord:guild_id': identity.guildId,
-      'discord:channel_id': identity.channelId,
-      'discord:user_id': identity.userId,
-      'discord:username': identity.username,
-      'discord:interaction_id': identity.interactionId,
-      'discord:interaction_token': identity.interactionToken,
-      'discord:command': 'imagine',
+      'discord-bot:guild_id': identity.guildId,
+      'discord-bot:channel_id': identity.channelId,
+      'discord-bot:user_id': identity.userId,
+      'discord-bot:username': identity.username,
+      'discord-bot:interaction_id': identity.interactionId,
+      'discord-bot:interaction_token': identity.interactionToken,
+      'discord-bot:command': 'imagine',
     },
   }
 
