@@ -4,8 +4,8 @@ import {
 } from 'discord-api-types/v10'
 import { z } from 'zod'
 
-import type { BotContext } from '../context'
-import type { IgCreateGenerationInput } from '../ig'
+import type { BotContext } from '../../context'
+import type { IgCreateGenerationInput } from '../../ig'
 
 const promptSchema = z.string().min(1, 'Prompt is required')
 
@@ -53,9 +53,7 @@ function parseInteractionIdentity(
       guild_id: z
         .string()
         .refine((value) => ctx.discord.isConfiguredGuild(value), 'Unauthorized guild'),
-      channel_id: z
-        .string()
-        .refine((value) => ctx.discord.isAllowedChannel(value), 'Unauthorized channel'),
+      channel_id: z.string(),
       member: z.object({
         user: z.object({
           id: z.string(),

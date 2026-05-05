@@ -3,9 +3,7 @@
   "private": true,
   "type": "module",
   "main": "src/index.ts",
-  "scripts": {
-    "register:commands": "bun run scripts/register-commands.ts"
-  },
+  "scripts": {},
   "dependencies": {
     "@ig/infra": "workspace:*",
     "@ig/server": "workspace:*",

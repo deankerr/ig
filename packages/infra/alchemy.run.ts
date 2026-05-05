@@ -26,7 +26,7 @@ const app = await alchemy('ig', {
 
 const productionStages = new Map(Object.entries(stageConfig.production))
 
-const domain = (service: 'server' | 'web') => {
+const domain = (service: 'server' | 'web' | 'discord-bot') => {
   const stage = productionStages.get(app.stage)
   if (stage) {
     return stage[service].domain
@@ -49,6 +49,8 @@ const inferenceDO = DurableObjectNamespace('inference', {
 })
 
 const cache = await KVNamespace('cache')
+
+const discordBotConfig = await KVNamespace('discord-bot-config')
 
 const images = Images()
 const ai = Ai()
@@ -108,16 +110,16 @@ export const discordBot = await Worker('discord-bot', {
     headSamplingRate: 1,
   },
   bindings: {
-    DISCORD_ALLOWED_CHANNEL_IDS: process.env.DISCORD_ALLOWED_CHANNEL_IDS!,
     DISCORD_APPLICATION_ID: alchemy.secret.env.DISCORD_APPLICATION_ID!,
+    DISCORD_BOT_CONFIG: discordBotConfig,
     DISCORD_BOT_TOKEN: alchemy.secret.env.DISCORD_BOT_TOKEN!,
     DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID!,
-    DISCORD_MODEL_ALLOWLIST: process.env.DISCORD_MODEL_ALLOWLIST!,
     DISCORD_PUBLIC_KEY: alchemy.secret.env.DISCORD_PUBLIC_KEY!,
     GENERATION_EVENTS: generationEvents,
     IG_API_KEY: alchemy.secret.env.API_KEY!,
     IG_BASE_URL: process.env.OVERRIDE_SERVER_URL ?? url(server),
   },
+  domains: [{ domainName: domain('discord-bot') }],
   eventSources: [
     {
       queue: generationEvents,
