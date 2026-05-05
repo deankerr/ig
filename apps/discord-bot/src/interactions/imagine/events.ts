@@ -1,6 +1,6 @@
 import type { GenerationLifecycleEvent } from '@ig/server'
 
-import type { BotContext } from '../context'
+import type { BotContext } from '../../context'
 
 function truncate(value: string, max = 180) {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`
@@ -71,7 +71,7 @@ async function handleCompleted(ctx: BotContext, event: GenerationLifecycleEvent)
 }
 
 async function handleFailed(ctx: BotContext, event: GenerationLifecycleEvent) {
-  const interactionToken = event.tags['discord:interaction_token']
+  const interactionToken = event.tags['discord-bot:interaction_token']
   if (!interactionToken) return
 
   await ctx.discord.editOriginalInteractionResponse(interactionToken, {

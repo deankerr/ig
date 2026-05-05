@@ -6,20 +6,10 @@ import {
   type RESTPostAPIChannelMessageJSONBody,
   type RESTPatchAPIInteractionOriginalResponseJSONBody,
   type RESTPostAPIInteractionCallbackJSONBody,
+  type RESTPutAPIApplicationGuildCommandsJSONBody,
 } from 'discord-api-types/v10'
 
-type DiscordAutocompleteChoice = {
-  name: string
-  value: string
-}
-
 export function createDiscordClient(env: typeof discordBot.Env) {
-  const allowedChannelIds = new Set(
-    env.DISCORD_ALLOWED_CHANNEL_IDS.split(',')
-      .map((item) => item.trim())
-      .filter(Boolean),
-  )
-
   async function request<T>(path: string, init: RequestInit): Promise<T> {
     const url = new URL(`https://discord.com/api/v10${path}`)
 
@@ -44,13 +34,6 @@ export function createDiscordClient(env: typeof discordBot.Env) {
   }
 
   return {
-    autocomplete(choices: DiscordAutocompleteChoice[]): RESTPostAPIInteractionCallbackJSONBody {
-      return {
-        type: InteractionResponseType.ApplicationCommandAutocompleteResult,
-        data: { choices },
-      }
-    },
-
     defer() {
       return {
         type: InteractionResponseType.DeferredChannelMessageWithSource,
@@ -86,12 +69,13 @@ export function createDiscordClient(env: typeof discordBot.Env) {
       return request<APIMessage>(path, { method: 'POST', body: JSON.stringify(body) })
     },
 
-    pong() {
-      return { type: InteractionResponseType.Pong }
+    registerGuildCommands(guildId: string, commands: RESTPutAPIApplicationGuildCommandsJSONBody) {
+      const path = `/applications/${env.DISCORD_APPLICATION_ID}/guilds/${guildId}/commands`
+      return request<unknown>(path, { method: 'PUT', body: JSON.stringify(commands) })
     },
 
-    isAllowedChannel(channelId: string) {
-      return allowedChannelIds.has(channelId)
+    pong() {
+      return { type: InteractionResponseType.Pong }
     },
 
     isConfiguredGuild(guildId: string) {

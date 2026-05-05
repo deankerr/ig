@@ -10,6 +10,9 @@ export default {
       web: {
         domain: 'console.ig-1.orb.town',
       },
+      'discord-bot': {
+        domain: 'discord-bot.ig-1.orb.town',
+      },
     },
 
     'prod-2': {
@@ -18,6 +21,9 @@ export default {
       },
       web: {
         domain: 'console.ig.orb.town',
+      },
+      'discord-bot': {
+        domain: 'discord-bot.ig.orb.town',
       },
     },
   },
