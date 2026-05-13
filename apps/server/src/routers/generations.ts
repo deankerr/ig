@@ -3,7 +3,7 @@
 import { db } from '@ig/db'
 import { artifacts, generations, tags } from '@ig/db/schema'
 import { env } from '@ig/env/server'
-import { and, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { getRequest } from '../inference/request'
@@ -42,7 +42,13 @@ export const generationsRouter = {
     // Relational query auto-loads child artifacts + tags (excluding soft-deleted)
     const items = await db.query.generations.findMany({
       where: cursorCondition,
-      with: { artifacts: { where: isNull(artifacts.deletedAt), with: { tags: true } } },
+      with: {
+        artifacts: {
+          where: isNull(artifacts.deletedAt),
+          with: { tags: true },
+          orderBy: [asc(artifacts.createdAt), asc(artifacts.id)],
+        },
+      },
       orderBy: [desc(generations.createdAt), desc(generations.id)],
       limit: limit + 1,
     })
@@ -68,7 +74,13 @@ export const generationsRouter = {
   get: procedure.input(z.object({ id: z.string() })).handler(async ({ input }) => {
     const generation = await db.query.generations.findFirst({
       where: eq(generations.id, input.id),
-      with: { artifacts: { where: isNull(artifacts.deletedAt), with: { tags: true } } },
+      with: {
+        artifacts: {
+          where: isNull(artifacts.deletedAt),
+          with: { tags: true },
+          orderBy: [asc(artifacts.createdAt), asc(artifacts.id)],
+        },
+      },
     })
     if (!generation) return null
 
