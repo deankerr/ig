@@ -32,7 +32,7 @@ async function getArtifactById(id: string, kv: KVNamespace) {
         .select()
         .from(artifacts)
         .where(and(eq(artifacts.generationId, artifact.generationId), isNull(artifacts.deletedAt)))
-        .orderBy(desc(artifacts.createdAt))
+        .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
     : []
 
   // Fetch tags for this artifact and all siblings
@@ -137,7 +137,7 @@ export const artifactsRouter = {
         .from(artifacts)
         .leftJoin(generations, eq(artifacts.generationId, generations.id))
         .where(and(inArray(artifacts.id, artifactIds), isNull(artifacts.deletedAt)))
-        .orderBy(desc(artifacts.createdAt))
+        .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
 
       // Merge tags and enrich with model data
       const tagMap = await tagsService.fetchForArtifacts(items.map((i) => i.id))
