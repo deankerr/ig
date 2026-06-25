@@ -6,14 +6,25 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
   workflow_dispatch:
+    inputs:
+      stage:
+        description: Stage to deploy or destroy
+        required: false
+        type: string
+      destroy:
+        description: Destroy the selected PR preview stage
+        default: false
+        required: false
+        type: boolean
 
+# Keep PR cleanup grouped by PR number even after merge, when github.ref becomes main.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || inputs.stage || github.ref }}
+  cancel-in-progress: ${{ !((github.event_name == 'pull_request' && github.event.action == 'closed') || (github.event_name == 'workflow_dispatch' && inputs.destroy)) }}
 
 jobs:
   check:
-    if: github.event.action != 'closed'
+    if: github.event.action != 'closed' && !inputs.destroy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -27,7 +38,7 @@ jobs:
         run: bun run check:ci
 
   deploy:
-    if: github.event.action != 'closed'
+    if: github.event.action != 'closed' && !inputs.destroy
     runs-on: ubuntu-latest
     env:
       ALCHEMY_PASSWORD: ${{ secrets.ALCHEMY_PASSWORD }}
@@ -45,9 +56,18 @@ jobs:
 
       - name: Determine stage
         id: stage
+        env:
+          INPUT_STAGE: ${{ inputs.stage }}
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "stage=pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          elif [[ -n "$INPUT_STAGE" ]]; then
+            if [[ ! "$INPUT_STAGE" =~ ^[A-Za-z0-9][A-Za-z0-9-]*$ ]]; then
+              echo "ERROR: Invalid stage: $INPUT_STAGE"
+              exit 1
+            fi
+
+            echo "stage=$INPUT_STAGE" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "stage=prod-2" >> $GITHUB_OUTPUT
           else
@@ -70,7 +90,7 @@ jobs:
         timeout-minutes: 10
 
   cleanup:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    if: (github.event_name == 'pull_request' && github.event.action == 'closed') || (github.event_name == 'workflow_dispatch' && inputs.destroy)
     runs-on: ubuntu-latest
     env:
       ALCHEMY_PASSWORD: ${{ secrets.ALCHEMY_PASSWORD }}
@@ -88,12 +108,20 @@ jobs:
 
       - name: Determine stage
         id: stage
+        env:
+          INPUT_STAGE: ${{ inputs.stage }}
         run: |
-          STAGE="pr-${{ github.event.pull_request.number }}"
-          if [[ "$STAGE" == prod* ]]; then
-            echo "ERROR: Refusing to destroy production"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            STAGE="pr-${{ github.event.pull_request.number }}"
+          else
+            STAGE="$INPUT_STAGE"
+          fi
+
+          if [[ ! "$STAGE" =~ ^pr-[0-9]+$ ]]; then
+            echo "ERROR: Refusing to destroy non-preview stage: $STAGE"
             exit 1
           fi
+
           echo "stage=$STAGE" >> $GITHUB_OUTPUT
 
       - name: Destroy preview environment
