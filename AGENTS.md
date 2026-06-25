@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Always read @VISION.md for a high level understanding of the project.
+Read @README.md for a high level understanding of the project.
 
 ## Status
 
